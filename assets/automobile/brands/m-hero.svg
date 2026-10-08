@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 120" role="img" aria-label="M-HERO">
+  <rect width="320" height="120" fill="#f6f2ee"/>
+  <rect x="18" y="26" width="284" height="68" rx="2" fill="#ffffff" stroke="#e2dbd1"/>
+  <rect x="18" y="26" width="8" height="68" fill="#d71920"/>
+  <text x="42" y="72" fill="#111111" font-family="Arial, Helvetica, sans-serif" font-size="30" font-weight="700" letter-spacing="2">M-HERO</text>
+</svg>

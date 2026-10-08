@@ -1,0 +1,221 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="theme-color" content="#080808">
+    <meta name="description" content="Electrony Automobile presents a curated selection of electric, hybrid, REV, petrol and utility vehicles from selected automotive brands.">
+    <meta name="canonical" content="https://automobile.electrony.xyz/">
+    <title>Electrony Automobile | Explore the Next Generation of Mobility</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="../styles/tokens.css">
+    <link rel="stylesheet" href="../styles/automobile.css">
+    <script src="../src/config.js" defer></script>
+    <script src="../src/automobile.js" defer></script>
+  </head>
+  <body class="automobile-page">
+    <a class="skip-link" href="#main">Skip to content</a>
+
+    <header class="automobile-header" id="top">
+      <div class="automobile-header__inner container">
+        <a class="automobile-wordmark" href="../" aria-label="Electrony home">
+          <span>Electrony</span><span class="automobile-wordmark__slash">/</span><span>Automobile</span>
+        </a>
+
+        <button class="automobile-menu-toggle" type="button" aria-expanded="false" aria-controls="automobile-navigation" aria-label="Open navigation menu">
+          <span>Menu</span>
+          <span class="automobile-menu-icon" aria-hidden="true"><span></span><span></span></span>
+        </button>
+
+        <nav class="automobile-navigation" id="automobile-navigation" aria-label="Electrony Automobile navigation">
+          <ul class="automobile-navigation__list">
+            <li><a class="automobile-nav-link" href="#home">Home</a></li>
+            <li><a class="automobile-nav-link" href="#vehicles">Vehicles</a></li>
+            <li><a class="automobile-nav-link" href="#brands">Brands</a></li>
+            <li><a class="automobile-nav-link" href="#powertrain">Powertrain</a></li>
+            <li><a class="automobile-nav-link" href="#rox">ROX 01</a></li>
+            <li class="automobile-mobile-contact"><a class="automobile-nav-link" href="#contact">Contact</a></li>
+          </ul>
+          <a class="automobile-enquire-link" href="#contact">Enquire <span aria-hidden="true">↗</span></a>
+        </nav>
+      </div>
+    </header>
+
+    <main id="main">
+      <section class="automobile-hero" id="home" aria-labelledby="automobile-title">
+        <div class="automobile-hero__image" aria-hidden="true">
+          <img src="../assets/automobile/vehicles/m-hero-917.svg" alt="" loading="eager" fetchpriority="high" decoding="async">
+        </div>
+        <div class="automobile-hero__shade" aria-hidden="true"></div>
+        <div class="automobile-hero__inner container">
+          <div class="automobile-hero__copy">
+            <p class="automobile-kicker"><span></span> Electrony Automobile</p>
+            <h1 id="automobile-title">Drive what<br><em>moves next.</em></h1>
+            <p class="automobile-hero__description">A curated automotive selection spanning electric, hybrid, REV, petrol and utility approaches to modern mobility.</p>
+            <div class="automobile-hero__actions">
+              <a class="automobile-button automobile-button--red" href="#vehicle-inventory">Explore vehicles</a>
+              <a class="automobile-button automobile-button--ghost" href="#contact">Enquire now</a>
+            </div>
+          </div>
+          <div class="automobile-hero__index" aria-hidden="true">
+            <span>01</span>
+            <span class="automobile-hero__line"></span>
+            <span>Selected range</span>
+          </div>
+        </div>
+        <div class="automobile-hero__meta container" aria-label="Selected vehicle categories">
+          <span>Selected brands</span><span>Electric</span><span>Hybrid</span><span>REV</span><span>Petrol</span><span>Pickup</span>
+        </div>
+      </section>
+
+      <section class="automobile-brand-intro section" id="brands" aria-labelledby="brands-title">
+        <div class="container">
+          <div class="automobile-section-heading automobile-section-heading--split">
+            <div>
+              <p class="automobile-kicker automobile-kicker--dark"><span></span> Selected brands</p>
+              <h2 id="brands-title">A considered range,<br>from distinct marques.</h2>
+            </div>
+            <p>Electrony Automobile brings selected vehicles together in one clear, contemporary showroom. Brand selection is presented for discovery, not as an endorsement or dealer claim.</p>
+          </div>
+
+          <div class="automobile-brand-rail" aria-label="Automotive brands represented">
+            <button class="automobile-brand-button is-active" type="button" data-brand="all" aria-pressed="true"><span>All brands</span></button>
+            <button class="automobile-brand-button" type="button" data-brand="dongfeng" aria-pressed="false"><img src="../assets/automobile/brands/dongfeng.svg" alt="Dongfeng" loading="lazy" decoding="async"></button>
+            <button class="automobile-brand-button" type="button" data-brand="voyah" aria-pressed="false"><img src="../assets/automobile/brands/voyah.svg" alt="VOYAH" loading="lazy" decoding="async"></button>
+            <button class="automobile-brand-button" type="button" data-brand="m-hero" aria-pressed="false"><img src="../assets/automobile/brands/m-hero.svg" alt="M-HERO" loading="lazy" decoding="async"></button>
+            <button class="automobile-brand-button" type="button" data-brand="nammi" aria-pressed="false"><img src="../assets/automobile/brands/nammi.svg" alt="NAMMI" loading="lazy" decoding="async"></button>
+            <button class="automobile-brand-button" type="button" data-brand="rox-motor" aria-pressed="false"><img src="../assets/automobile/brands/rox-motor.svg" alt="ROX Motor" loading="lazy" decoding="async"></button>
+          </div>
+          <p class="automobile-brand-note">Select a brand to refine the catalogue below.</p>
+        </div>
+      </section>
+
+      <section class="automobile-featured section" id="vehicles" aria-labelledby="featured-title">
+        <div class="container">
+          <div class="automobile-section-heading automobile-section-heading--split">
+            <div>
+              <p class="automobile-kicker automobile-kicker--dark"><span></span> Featured</p>
+              <h2 id="featured-title">The range,<br>in focus.</h2>
+            </div>
+            <p>Explore a selection of distinctive models across several powertrains. Each entry is shown as current selection information and should be confirmed directly before purchase.</p>
+          </div>
+          <div class="automobile-featured-grid" id="featured-grid" aria-live="polite"></div>
+        </div>
+      </section>
+
+      <section class="automobile-inventory section" id="vehicle-inventory" aria-labelledby="inventory-title">
+        <div class="container">
+          <div class="automobile-section-heading automobile-section-heading--split">
+            <div>
+              <p class="automobile-kicker automobile-kicker--dark"><span></span> The collection</p>
+              <h2 id="inventory-title">Explore the<br>current selection.</h2>
+            </div>
+            <p>Filter the showroom by powertrain and brand. Availability is presented as an enquiry status, not a guarantee.</p>
+          </div>
+
+          <div class="automobile-filter-bar" role="group" aria-label="Filter vehicles by powertrain">
+            <button class="automobile-filter is-active" type="button" data-filter="all" aria-pressed="true">All</button>
+            <button class="automobile-filter" type="button" data-filter="ev" aria-pressed="false">EV</button>
+            <button class="automobile-filter" type="button" data-filter="hybrid" aria-pressed="false">Hybrid / PHEV</button>
+            <button class="automobile-filter" type="button" data-filter="rev" aria-pressed="false">REV</button>
+            <button class="automobile-filter" type="button" data-filter="petrol" aria-pressed="false">Petrol</button>
+            <button class="automobile-filter" type="button" data-filter="pickup" aria-pressed="false">Pickup</button>
+          </div>
+          <div class="automobile-inventory-grid" id="vehicle-cards" aria-live="polite"></div>
+        </div>
+      </section>
+
+      <section class="automobile-rox section" id="rox" aria-labelledby="rox-title">
+        <div class="container automobile-rox__inner">
+          <div class="automobile-rox__copy">
+            <p class="automobile-kicker"><span></span> ROX Motor</p>
+            <h2 id="rox-title">ROX 01 SUV</h2>
+            <p class="automobile-rox__lead">Explore the ROX 01 through Electrony Automobile's automotive selection.</p>
+            <p>ROX Motor is presented as a selected brand and its model is shown as a current candidate for enquiry. No manufacturing or dealership relationship is claimed.</p>
+            <div class="automobile-rox__meta"><span>ROX 01 SUV</span><span>EV</span><span>Availability on enquiry</span></div>
+            <a class="automobile-button automobile-button--red" href="#contact">Enquire about ROX 01</a>
+          </div>
+          <figure class="automobile-rox__visual">
+            <img src="../assets/automobile/vehicles/rox-01.svg" alt="ROX 01 SUV editorial showcase" loading="lazy" decoding="async" width="1200" height="900">
+            <figcaption>ROX 01 SUV · Selected for enquiry</figcaption>
+          </figure>
+        </div>
+      </section>
+
+      <section class="automobile-powertrain section" id="powertrain" aria-labelledby="powertrain-title">
+        <div class="container">
+          <div class="automobile-section-heading automobile-section-heading--split">
+            <div>
+              <p class="automobile-kicker automobile-kicker--dark"><span></span> Choose your drive</p>
+              <h2 id="powertrain-title">Different paths.<br>One clear choice.</h2>
+            </div>
+            <p>Compare the powertrain approaches that fit your priorities, then use the collection filters to find a model that matches.</p>
+          </div>
+          <div class="automobile-power-grid" id="powertrain-cards"></div>
+        </div>
+      </section>
+
+      <section class="automobile-story section" aria-labelledby="story-title">
+        <div class="container">
+          <div class="automobile-story__heading">
+            <p class="automobile-kicker automobile-kicker--dark"><span></span> Selected for what’s next</p>
+            <h2 id="story-title">A curated selection<br>for a changing industry.</h2>
+          </div>
+          <div class="automobile-story__grid">
+            <article class="automobile-story-card automobile-story-card--wide">
+              <div class="automobile-story-card__visual"><img src="../assets/automobile/vehicles/voyah-free.svg" alt="VOYAH FREE editorial showcase" loading="lazy" decoding="async" width="1200" height="900"></div>
+              <div class="automobile-story-card__body">
+                <p class="automobile-story-card__label">VOYAH FREE</p>
+                <h3>Electric mobility,<br>considered.</h3>
+                <p>Explore a selected electric model from an established automotive brand and compare its place in the wider collection.</p>
+                <a class="automobile-text-link" href="#vehicle-inventory">Explore the collection <span aria-hidden="true">→</span></a>
+              </div>
+            </article>
+            <div class="automobile-story-side">
+              <article class="automobile-story-side__item">
+                <span>01</span>
+                <div><h3>Curated selection</h3><p>Electrony Automobile brings together vehicles from established automotive brands across multiple powertrain approaches.</p></div>
+              </article>
+              <article class="automobile-story-side__item">
+                <span>02</span>
+                <div><h3>Direct enquiry</h3><p>Contact Electrony for current availability and vehicle information. Confirm every detail directly.</p></div>
+              </article>
+              <article class="automobile-story-side__item">
+                <span>03</span>
+                <div><h3>Clear comparison</h3><p>Review models by brand and powertrain without introducing unsupported specifications.</p></div>
+              </article>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="automobile-contact section" id="contact" aria-labelledby="contact-title">
+        <div class="container automobile-contact__inner">
+          <div>
+            <p class="automobile-kicker"><span></span> Find your next drive</p>
+            <h2 id="contact-title">Explore the collection<br>or speak with Electrony.</h2>
+          </div>
+          <div class="automobile-contact__actions">
+            <a class="automobile-button automobile-button--red" href="#vehicle-inventory">View vehicles</a>
+            <a class="automobile-button automobile-button--ghost" href="#top">Return to top</a>
+          </div>
+        </div>
+        <div class="container automobile-contact__note"><p>For current availability, vehicle information and specific enquiries, contact Electrony directly. No phone number, email address or WhatsApp destination is invented here.</p></div>
+      </section>
+    </main>
+
+    <footer class="automobile-footer">
+      <div class="container automobile-footer__inner">
+        <div>
+          <a class="automobile-wordmark automobile-wordmark--footer" href="../"><span>Electrony</span><span class="automobile-wordmark__slash">/</span><span>Automobile</span></a>
+          <p>A curated automotive showcase for considered modern mobility.</p>
+        </div>
+        <div class="automobile-footer__links">
+          <a href="#vehicles">Vehicles</a><a href="#brands">Brands</a><a href="#powertrain">Powertrain</a><a href="#contact">Enquire</a>
+        </div>
+      </div>
+    </footer>
+  </body>
+</html>

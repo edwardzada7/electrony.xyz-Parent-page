@@ -1,0 +1,79 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="theme-color" content="#071d18">
+    <meta name="description" content="Electrony Bills is a secure utility checkout for electricity, airtime, data and TV subscriptions in Nigeria.">
+    <title>Electrony Bills | Secure Utility Checkout</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="../../styles/tokens.css">
+    <link rel="stylesheet" href="../../styles/bills-app.css">
+    <script src="../../src/config.js" defer></script>
+    <script src="../../src/bills-app.js" defer></script>
+  </head>
+  <body class="bills-app-page">
+    <a class="skip-link" href="#main">Skip to content</a>
+    <header class="bills-app-header">
+      <div class="bills-app-container app-header-inner">
+        <a class="wordmark" href="../../" aria-label="Electrony home">Electrony<span class="wordmark-period" aria-hidden="true">.</span></a>
+        <div class="header-meta">
+          <span class="status-pill">Guest checkout</span>
+          <a class="label-link" href="../">Back to Bills</a>
+        </div>
+      </div>
+    </header>
+
+    <main class="bills-app-shell bills-app-container" id="main">
+      <aside class="bills-app-sidebar" aria-label="Bills service shortcuts">
+        <div class="brand-card app-card">
+          <p class="eyebrow eyebrow-soft">Electrony Bills</p>
+          <h1>Everyday payments,<br>made simpler.</h1>
+          <p class="subtle-copy">Fast purchasing for everyday Nigerian utility and digital services—without an account.</p>
+        </div>
+
+        <div class="app-card sidebar-card">
+          <p class="eyebrow eyebrow-soft">Quick purchase</p>
+          <ul id="service-list" class="service-list" aria-label="Service categories"></ul>
+        </div>
+
+        <div class="security-card app-card">
+          <p class="eyebrow eyebrow-soft">Secure checkout</p>
+          <ul>
+            <li>Server-side payment validation</li>
+            <li>Reference-based status checks</li>
+            <li>Monnify-ready architecture</li>
+          </ul>
+        </div>
+      </aside>
+
+      <section class="bills-app-main" aria-live="polite">
+        <div class="app-card hero-panel">
+          <div class="hero-panel-copy">
+            <p class="eyebrow eyebrow-soft">Nigeria</p>
+            <h2>Buy utility services in a few taps.</h2>
+          </div>
+          <div class="stat-row" aria-label="Service summary">
+            <div>
+              <span class="stat-label">Service types</span>
+              <strong>4</strong>
+            </div>
+            <div>
+              <span class="stat-label">No account</span>
+              <strong>Required</strong>
+            </div>
+            <div>
+              <span class="stat-label">Currency</span>
+              <strong>₦</strong>
+            </div>
+          </div>
+        </div>
+
+        <div id="service-panel" class="app-card" aria-live="polite"></div>
+        <div id="checkout-panel" class="app-card hidden" aria-live="polite"></div>
+      </section>
+    </main>
+  </body>
+</html>

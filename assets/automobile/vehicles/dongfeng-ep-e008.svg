@@ -1,0 +1,36 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 900" role="img" aria-label="Dongfeng Eπ E008">
+  <defs>
+    <linearGradient id="bg-dongfeng-ep-e008" x1="0" x2="1">
+      <stop offset="0%" stop-color="#121212"/>
+      <stop offset="40%" stop-color="#191919"/>
+      <stop offset="100%" stop-color="#0b0b0b"/>
+    </linearGradient>
+    <linearGradient id="car-dongfeng-ep-e008" x1="0" x2="1">
+      <stop offset="0%" stop-color="#f1f1f1"/>
+      <stop offset="55%" stop-color="#c8c8c8"/>
+      <stop offset="100%" stop-color="#8c8c8c"/>
+    </linearGradient>
+  </defs>
+  <rect width="1200" height="900" fill="url(#bg-dongfeng-ep-e008)"/>
+  <g opacity="0.35">
+    <circle cx="220" cy="160" r="120" fill="none" stroke="#ffffff" stroke-opacity="0.12"/>
+    <circle cx="920" cy="260" r="150" fill="none" stroke="#ffffff" stroke-opacity="0.1"/>
+    <path d="M0 650 L1200 650" stroke="#ffffff" stroke-opacity="0.1"/>
+    <path d="M0 700 L1200 700" stroke="#ffffff" stroke-opacity="0.08"/>
+  </g>
+  <g transform="translate(120 210)">
+    <ellipse cx="480" cy="330" rx="390" ry="80" fill="#000000" opacity="0.36"/>
+    <path d="M70 300 L240 220 L510 180 L710 220 L880 300 L905 330 L528 330 L495 348 L370 348 L210 330 Z" fill="url(#car-dongfeng-ep-e008)"/>
+    <path d="M230 250 L340 194 L565 180 L705 245 L775 287 L205 287 Z" fill="#d71920" opacity="0.93"/>
+    <rect x="332" y="236" width="120" height="54" rx="8" fill="#111111" opacity="0.9"/>
+    <rect x="615" y="234" width="110" height="52" rx="8" fill="#111111" opacity="0.9"/>
+    <circle cx="338" cy="332" r="42" fill="#0a0a0a"/>
+    <circle cx="338" cy="332" r="18" fill="#cfcfcf"/>
+    <circle cx="718" cy="332" r="42" fill="#0a0a0a"/>
+    <circle cx="718" cy="332" r="18" fill="#cfcfcf"/>
+    <path d="M290 223 L410 194" stroke="#ffffff" stroke-opacity="0.28" stroke-width="6"/>
+    <path d="M540 182 L660 220" stroke="#ffffff" stroke-opacity="0.25" stroke-width="6"/>
+  </g>
+  <text x="90" y="760" fill="#f3f1ed" font-family="Arial, Helvetica, sans-serif" font-size="46" letter-spacing="6" opacity="0.8">DONGFENG</text>
+  <text x="90" y="820" fill="#ffffff" font-family="Arial, Helvetica, sans-serif" font-size="64" font-weight="700" letter-spacing="2">EΠ E008</text>
+</svg>

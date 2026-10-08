@@ -1,0 +1,9 @@
+{
+  "name": "electrony-parent-site",
+  "private": true,
+  "scripts": {
+    "dev": "python3 -m http.server 4173",
+    "dev:api": "node bills-api/server.js",
+    "check": "node --check src/config.js && node --check src/products.js && node --check src/main.js && node --check src/automobile.js && node --check src/bills-app.js && node --check bills-api/server.js"
+  }
+}
