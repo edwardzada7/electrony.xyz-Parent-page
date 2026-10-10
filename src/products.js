@@ -52,7 +52,7 @@ window.ElectronyProducts = Object.freeze([
     landingPageUrl: productLinks.bills.landingPageUrl,
     appUrl: productLinks.bills.appUrl,
     featured: false,
-    status: "coming-soon",
+    status: "prototype",
     ctaLabel: "Open Bills app"
   }),
   Object.freeze({

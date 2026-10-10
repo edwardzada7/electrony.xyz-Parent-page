@@ -1,5 +1,6 @@
 window.ElectronyConfig = Object.freeze({
   contactUrl: null,
+  whatsappNumber: "",
   billsApiBaseUrl: "http://localhost:4174",
   productLinks: Object.freeze({
     electronyos: Object.freeze({ landingPageUrl: null, appUrl: null }),

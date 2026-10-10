@@ -14,7 +14,7 @@
 
 .automobile-page {
   min-width: 0;
-  overflow: clip;
+  overflow-x: clip;
   background: var(--automobile-ivory);
   color: var(--color-ink);
   font-family: var(--font-body);
@@ -70,6 +70,7 @@
 .automobile-hero h1 { max-width: 10ch; margin-bottom: 1.6rem; font-family: var(--font-display); font-size: clamp(4rem, 8.2vw, 8.7rem); font-weight: 600; line-height: 0.84; letter-spacing: -0.075em; text-transform: uppercase; }
 .automobile-hero h1 em { color: var(--automobile-red); font-style: normal; }
 .automobile-hero__description { max-width: 34rem; margin-bottom: 2rem; color: rgba(255, 255, 255, 0.72); font-size: clamp(1rem, 1.3vw, 1.18rem); line-height: 1.7; }
+.automobile-hero__concept { display: inline-block; min-width: 14ch; color: var(--automobile-white); }
 .automobile-hero__actions { display: flex; flex-wrap: wrap; gap: 0.8rem; }
 .automobile-button { display: inline-flex; min-height: 3.7rem; align-items: center; justify-content: center; padding: 0.9rem 1.35rem; border: 1px solid transparent; font-family: var(--font-label); font-size: 0.66rem; letter-spacing: 0.1em; text-decoration: none; text-transform: uppercase; transition: transform 180ms ease, background-color 180ms ease, border-color 180ms ease, color 180ms ease; }
 .automobile-button:hover { transform: translateY(-2px); }
@@ -120,6 +121,7 @@
 .automobile-status { display: inline-flex; align-items: center; min-height: 1.7rem; padding: 0.3rem 0.55rem; border: 1px solid currentColor; font-family: var(--font-label); font-size: 0.55rem; letter-spacing: 0.08em; text-transform: uppercase; }
 .status-enquire { color: var(--automobile-red-deep); }
 .automobile-featured-card__footer a, .automobile-vehicle-card__cta { color: var(--automobile-red-deep); font-family: var(--font-label); font-size: 0.62rem; letter-spacing: 0.1em; text-decoration: none; text-transform: uppercase; }
+.automobile-gallery-trigger { padding: 0; border: 0; background: none; color: var(--automobile-red-deep); font-family: var(--font-label); font-size: 0.62rem; letter-spacing: 0.1em; text-transform: uppercase; cursor: pointer; }
 .automobile-featured-card__footer a span, .automobile-vehicle-card__cta span { display: inline-block; transition: transform 180ms ease; }
 .automobile-featured-card__footer a:hover span, .automobile-vehicle-card__cta:hover span { transform: translate(0.2rem, -0.2rem); }
 
@@ -133,6 +135,8 @@
 .automobile-vehicle-card:hover { transform: translateY(-0.25rem); box-shadow: 0 1.25rem 2.5rem rgba(17, 17, 16, 0.08); }
 .automobile-vehicle-card__image { position: relative; overflow: hidden; background: #c9c3bc; }
 .automobile-vehicle-card__image img { width: 100%; aspect-ratio: 4 / 3; object-fit: cover; transition: transform 320ms ease; }
+.automobile-image-placeholder { width: 100%; aspect-ratio: 4 / 3; background: linear-gradient(135deg, #343434, #171717 58%, #272727); }
+.automobile-featured-card__visual .automobile-image-placeholder { aspect-ratio: 16 / 10; }
 .automobile-vehicle-card:hover .automobile-vehicle-card__image img { transform: scale(1.035); }
 .automobile-vehicle-card__index { position: absolute; top: 1rem; left: 1rem; color: rgba(255, 255, 255, 0.8); font-family: var(--font-label); font-size: 0.57rem; letter-spacing: 0.1em; }
 .automobile-vehicle-card__body { display: grid; align-content: space-between; gap: 1.25rem; padding: 1.4rem; }
@@ -142,6 +146,36 @@
 .automobile-empty-state { grid-column: 1 / -1; padding: clamp(3rem, 8vw, 6rem); border: 1px dashed var(--color-gray-500); text-align: center; }
 .automobile-empty-state p { margin-bottom: 0.5rem; font-family: var(--font-display); font-size: clamp(2rem, 4vw, 3.5rem); letter-spacing: -0.05em; }
 .automobile-empty-state span { color: var(--color-gray-700); }
+
+.automobile-gallery, .automobile-lightbox { color: var(--automobile-white); background: #101010; }
+.automobile-gallery { width: min(88vw, 84rem); max-width: 88vw; max-height: 92dvh; padding: 0; border: 1px solid rgba(255, 255, 255, 0.18); overflow: hidden; }
+.automobile-gallery::backdrop { background: rgba(0, 0, 0, 0.82); backdrop-filter: blur(8px); }
+.automobile-gallery__header { display: flex; align-items: center; gap: 1rem; min-height: 4.5rem; padding: 0.8rem 1.25rem; border-bottom: 1px solid rgba(255, 255, 255, 0.14); }
+.automobile-gallery__header h2 { flex: 1; margin: 0; font-family: var(--font-display); font-size: clamp(1.2rem, 2vw, 1.8rem); }
+.automobile-gallery__counter { color: rgba(255, 255, 255, 0.68); font-family: var(--font-label); font-size: 0.7rem; letter-spacing: 0.1em; }
+.automobile-gallery__close { display: grid; width: 2.5rem; height: 2.5rem; place-items: center; border: 1px solid rgba(255, 255, 255, 0.32); background: transparent; color: white; font-size: 1.5rem; line-height: 1; cursor: pointer; }
+.automobile-gallery__content { display: grid; grid-template-columns: minmax(0, 1fr) 7rem; gap: 0.85rem; padding: 1rem; }
+.automobile-gallery__stage { position: relative; display: grid; min-width: 0; aspect-ratio: 16 / 10; place-items: center; overflow: hidden; background: #050505; }
+.automobile-gallery__stage > img { width: 100%; height: 100%; object-fit: contain; transition: opacity 180ms ease; }
+.automobile-gallery__stage > img.is-changing { opacity: 0.45; }
+.automobile-gallery__stage > img[hidden] { display: none; }
+.automobile-gallery__arrow { position: absolute; z-index: 1; top: 50%; display: grid; width: 2.8rem; height: 2.8rem; place-items: center; border: 1px solid rgba(255, 255, 255, 0.35); border-radius: 50%; background: rgba(0, 0, 0, 0.58); color: white; font-size: 1.8rem; line-height: 1; transform: translateY(-50%); cursor: pointer; }
+.automobile-gallery__arrow[hidden] { display: none; }
+.automobile-gallery__arrow--previous { left: 0.9rem; }
+.automobile-gallery__arrow--next { right: 0.9rem; }
+.automobile-gallery__open-image { position: absolute; right: 0.9rem; bottom: 0.9rem; padding: 0.6rem 0.8rem; border: 1px solid rgba(255, 255, 255, 0.5); background: rgba(0, 0, 0, 0.65); color: white; font-family: var(--font-label); font-size: 0.58rem; letter-spacing: 0.08em; text-transform: uppercase; cursor: pointer; }
+.automobile-gallery__open-image:disabled { display: none; }
+.automobile-gallery__thumbnails { display: flex; min-width: 0; max-height: min(64vh, 42rem); flex-direction: column; gap: 0.5rem; overflow: auto; }
+.automobile-gallery__thumbnails[hidden] { display: none; }
+.automobile-gallery__thumbnail { flex: 0 0 auto; padding: 0; border: 2px solid transparent; background: #222; cursor: pointer; }
+.automobile-gallery__thumbnail.is-active { border-color: var(--automobile-red); }
+.automobile-gallery__thumbnail img { width: 100%; aspect-ratio: 4 / 3; object-fit: cover; }
+.automobile-lightbox { width: 100vw; max-width: none; height: 100dvh; max-height: none; padding: 2.5rem; border: 0; overflow: hidden; }
+.automobile-lightbox::backdrop { background: rgba(0, 0, 0, 0.96); }
+.automobile-lightbox > img { width: 100%; height: 100%; object-fit: contain; }
+.automobile-lightbox form { position: absolute; z-index: 2; top: 1rem; right: 1rem; }
+.automobile-lightbox .automobile-gallery__arrow--previous { left: 1rem; }
+.automobile-lightbox .automobile-gallery__arrow--next { right: 1rem; }
 
 .automobile-rox { position: relative; overflow: hidden; background: var(--automobile-charcoal); color: var(--automobile-white); }
 .automobile-rox::after { position: absolute; right: -10rem; bottom: -13rem; width: 35rem; height: 35rem; border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 50%; content: ""; }
@@ -224,7 +258,7 @@
   .automobile-menu-icon span:last-child { top: 0.5rem; }
   .automobile-menu-toggle[aria-expanded="true"] .automobile-menu-icon span:first-child { top: 0.25rem; transform: rotate(45deg); }
   .automobile-menu-toggle[aria-expanded="true"] .automobile-menu-icon span:last-child { top: 0.25rem; transform: rotate(-45deg); }
-  .automobile-navigation { position: fixed; z-index: -1; top: 100%; right: 0; left: 0; display: flex; visibility: hidden; flex-direction: column; align-items: stretch; gap: 1.1rem; padding: 1.25rem 1rem 2rem; border-bottom: 1px solid rgba(255, 255, 255, 0.1); background: rgba(8, 8, 8, 0.98); opacity: 0; transform: translateY(-0.75rem); transition: opacity 180ms ease, transform 180ms ease, visibility 180ms ease; }
+  .automobile-navigation { position: fixed; z-index: 101; top: 4.5rem; right: 0; left: 0; display: flex; max-height: calc(100dvh - 4.5rem); flex-direction: column; align-items: stretch; gap: 1.1rem; overflow-y: auto; padding: 1.25rem 1rem 2rem; border-bottom: 1px solid rgba(255, 255, 255, 0.1); background: rgba(8, 8, 8, 0.98); visibility: hidden; opacity: 0; transform: translateY(-0.75rem); transition: opacity 180ms ease, transform 180ms ease, visibility 180ms ease; }
   .automobile-navigation.is-open { visibility: visible; opacity: 1; transform: translateY(0); }
   .automobile-navigation__list { flex-direction: column; align-items: stretch; gap: 0; }
   .automobile-navigation__list li { border-bottom: 1px solid rgba(255, 255, 255, 0.09); }
@@ -244,6 +278,9 @@
   .automobile-inventory-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .automobile-power-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .automobile-power-card { min-height: 16rem; }
+  .automobile-gallery { width: 94vw; max-width: 94vw; }
+  .automobile-gallery__content { grid-template-columns: minmax(0, 1fr) 5.5rem; }
+  .automobile-gallery__thumbnails { max-height: 55vh; }
   .automobile-footer__inner { align-items: flex-start; flex-direction: column; }
   .automobile-footer__links { justify-content: flex-start; }
 }
@@ -266,6 +303,14 @@
   .automobile-power-card:nth-child(n + 4) { border-top: 0; }
   .automobile-contact__actions { flex-direction: column; align-items: stretch; }
   .automobile-contact__actions .automobile-button { width: 100%; }
+  .automobile-gallery { width: 100vw; max-width: 100vw; max-height: 100dvh; border: 0; }
+  .automobile-gallery__content { grid-template-columns: minmax(0, 1fr); padding: 0.65rem; }
+  .automobile-gallery__stage { max-height: 55dvh; aspect-ratio: 4 / 3; }
+  .automobile-gallery__thumbnails { max-height: none; flex-direction: row; overflow-x: auto; overflow-y: hidden; }
+  .automobile-gallery__thumbnail { width: 5rem; }
+  .automobile-gallery__header { min-height: 3.8rem; padding-inline: 0.75rem; }
+  .automobile-gallery__open-image { right: 0.6rem; bottom: 0.6rem; }
+  .automobile-lightbox { padding: 1rem; }
 }
 
 @media (max-width: 24rem) {

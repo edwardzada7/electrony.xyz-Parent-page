@@ -20,7 +20,7 @@
 
     <header class="automobile-header" id="top">
       <div class="automobile-header__inner container">
-        <a class="automobile-wordmark" href="../" aria-label="Electrony home">
+        <a class="automobile-wordmark" href="https://electrony.xyz/" aria-label="Electrony Home — main website">
           <span>Electrony</span><span class="automobile-wordmark__slash">/</span><span>Automobile</span>
         </a>
 
@@ -37,6 +37,7 @@
             <li><a class="automobile-nav-link" href="#powertrain">Powertrain</a></li>
             <li><a class="automobile-nav-link" href="#rox">ROX 01</a></li>
             <li class="automobile-mobile-contact"><a class="automobile-nav-link" href="#contact">Contact</a></li>
+            <li><a class="automobile-nav-link" href="https://electrony.xyz/" aria-label="Electrony Home — main website">Electrony Home</a></li>
           </ul>
           <a class="automobile-enquire-link" href="#contact">Enquire <span aria-hidden="true">↗</span></a>
         </nav>
@@ -46,14 +47,14 @@
     <main id="main">
       <section class="automobile-hero" id="home" aria-labelledby="automobile-title">
         <div class="automobile-hero__image" aria-hidden="true">
-          <img src="../assets/automobile/vehicles/m-hero-917.svg" alt="" loading="eager" fetchpriority="high" decoding="async">
+          <img alt="" loading="eager" fetchpriority="high" decoding="async">
         </div>
         <div class="automobile-hero__shade" aria-hidden="true"></div>
         <div class="automobile-hero__inner container">
           <div class="automobile-hero__copy">
             <p class="automobile-kicker"><span></span> Electrony Automobile</p>
             <h1 id="automobile-title">Drive what<br><em>moves next.</em></h1>
-            <p class="automobile-hero__description">A curated automotive selection spanning electric, hybrid, REV, petrol and utility approaches to modern mobility.</p>
+            <p class="automobile-hero__description">A curated automotive selection for <span class="automobile-hero__concept" data-automobile-concept aria-live="polite">Electric</span> mobility and more.</p>
             <div class="automobile-hero__actions">
               <a class="automobile-button automobile-button--red" href="#vehicle-inventory">Explore vehicles</a>
               <a class="automobile-button automobile-button--ghost" href="#contact">Enquire now</a>
@@ -138,7 +139,7 @@
             <a class="automobile-button automobile-button--red" href="#contact">Enquire about ROX 01</a>
           </div>
           <figure class="automobile-rox__visual">
-            <img src="../assets/automobile/vehicles/rox-01.svg" alt="ROX 01 SUV editorial showcase" loading="lazy" decoding="async" width="1200" height="900">
+            <img data-vehicle-image="rox-01" alt="Electrony Automobile — ROX 01 SUV" loading="lazy" decoding="async" width="1200" height="900">
             <figcaption>ROX 01 SUV · Selected for enquiry</figcaption>
           </figure>
         </div>
@@ -165,7 +166,7 @@
           </div>
           <div class="automobile-story__grid">
             <article class="automobile-story-card automobile-story-card--wide">
-              <div class="automobile-story-card__visual"><img src="../assets/automobile/vehicles/voyah-free.svg" alt="VOYAH FREE editorial showcase" loading="lazy" decoding="async" width="1200" height="900"></div>
+              <div class="automobile-story-card__visual"><img data-vehicle-image="voyah-free" alt="Electrony Automobile — VOYAH FREE" loading="lazy" decoding="async" width="1200" height="900"></div>
               <div class="automobile-story-card__body">
                 <p class="automobile-story-card__label">VOYAH FREE</p>
                 <h3>Electric mobility,<br>considered.</h3>
@@ -206,10 +207,34 @@
       </section>
     </main>
 
+    <dialog class="automobile-gallery" id="automobile-gallery" aria-labelledby="automobile-gallery-heading">
+      <div class="automobile-gallery__header">
+        <h2 id="automobile-gallery-heading" data-gallery-title></h2>
+        <span class="automobile-gallery__counter" id="automobile-gallery-counter" aria-live="polite"></span>
+        <form method="dialog"><button class="automobile-gallery__close" type="submit" aria-label="Close gallery">×</button></form>
+      </div>
+      <div class="automobile-gallery__content">
+        <div class="automobile-gallery__stage" id="automobile-gallery-stage">
+          <button class="automobile-gallery__arrow automobile-gallery__arrow--previous" id="automobile-gallery-previous" type="button" aria-label="Previous image">‹</button>
+          <img id="automobile-gallery-image" alt="" decoding="async">
+          <button class="automobile-gallery__open-image" id="automobile-gallery-open-image" type="button" aria-label="Open image gallery">Open image</button>
+          <button class="automobile-gallery__arrow automobile-gallery__arrow--next" id="automobile-gallery-next" type="button" aria-label="Next image">›</button>
+        </div>
+        <div class="automobile-gallery__thumbnails" id="automobile-gallery-thumbnails" role="group" aria-label="Gallery thumbnails"></div>
+      </div>
+    </dialog>
+
+    <dialog class="automobile-lightbox" id="automobile-lightbox" aria-label="Image gallery">
+      <form method="dialog"><button class="automobile-gallery__close" type="submit" aria-label="Close gallery">×</button></form>
+      <button class="automobile-gallery__arrow automobile-gallery__arrow--previous" id="automobile-lightbox-previous" type="button" aria-label="Previous image">‹</button>
+      <img id="automobile-lightbox-image" alt="" decoding="async">
+      <button class="automobile-gallery__arrow automobile-gallery__arrow--next" id="automobile-lightbox-next" type="button" aria-label="Next image">›</button>
+    </dialog>
+
     <footer class="automobile-footer">
       <div class="container automobile-footer__inner">
         <div>
-          <a class="automobile-wordmark automobile-wordmark--footer" href="../"><span>Electrony</span><span class="automobile-wordmark__slash">/</span><span>Automobile</span></a>
+          <a class="automobile-wordmark automobile-wordmark--footer" href="https://electrony.xyz/" aria-label="Electrony Home — main website"><span>Electrony</span><span class="automobile-wordmark__slash">/</span><span>Automobile</span></a>
           <p>A curated automotive showcase for considered modern mobility.</p>
         </div>
         <div class="automobile-footer__links">

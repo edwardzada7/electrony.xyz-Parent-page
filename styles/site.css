@@ -250,6 +250,35 @@ button:focus-visible {
   opacity: 0.62;
 }
 
+.whatsapp-float-button {
+  position: fixed;
+  right: clamp(1rem, 2vw, 1.5rem);
+  bottom: clamp(1rem, 2vw, 1.5rem);
+  z-index: 35;
+  display: inline-flex;
+  width: 3.5rem;
+  height: 3.5rem;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 50%;
+  background: #25d366;
+  box-shadow: 0 1rem 2rem rgba(19, 26, 30, 0.2);
+  color: var(--color-white);
+  transition: transform 180ms ease, box-shadow 180ms ease;
+}
+
+.whatsapp-float-button:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 1.25rem 2.2rem rgba(19, 26, 30, 0.24);
+}
+
+.whatsapp-float-button svg {
+  width: 1.5rem;
+  height: 1.5rem;
+  fill: currentColor;
+}
+
 .menu-toggle {
   display: none;
 }
@@ -336,12 +365,51 @@ button:focus-visible {
 }
 
 .hero h1 {
-  max-width: 11ch;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.2em;
+  max-width: 100%;
   margin: 0;
   font-family: var(--font-display);
   font-size: var(--text-display);
   font-weight: 500;
   line-height: 0.93;
+}
+
+.hero-static-copy {
+  white-space: nowrap;
+}
+
+.hero-typing {
+  position: relative;
+  display: inline-block;
+  min-width: 8.5ch;
+  white-space: nowrap;
+}
+
+.hero-typing::after {
+  position: absolute;
+  top: 0.14em;
+  right: -0.14em;
+  width: 0.08em;
+  height: 0.9em;
+  background: currentColor;
+  border-radius: 0.08em;
+  animation: hero-caret 1s steps(1) infinite;
+  content: "";
+}
+
+@keyframes hero-caret {
+  50% {
+    opacity: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hero-typing::after {
+    animation: none;
+  }
 }
 
 .hero-description {

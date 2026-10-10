@@ -28,6 +28,102 @@ function setHeaderState() {
   header.classList.toggle("is-scrolled", window.scrollY > 24);
 }
 
+function getWhatsAppNumber() {
+  const configuredNumber = window.ElectronyConfig && window.ElectronyConfig.whatsappNumber;
+  return typeof configuredNumber === "string" ? configuredNumber.replace(/\D/g, "") : "";
+}
+
+function getWhatsAppMessage() {
+  const pathname = window.location.pathname || "/";
+
+  if (pathname.startsWith("/bills/")) {
+    return "Hello Electrony, I have an enquiry about Electrony Bills.";
+  }
+
+  return "Hello Electrony, I would like to make an enquiry.";
+}
+
+function buildWhatsAppUrl(number, message) {
+  if (!number) return null;
+
+  const encodedMessage = encodeURIComponent(message || getWhatsAppMessage());
+  return `https://wa.me/${number}${encodedMessage ? `?text=${encodedMessage}` : ""}`;
+}
+
+function initFloatingWhatsAppButton() {
+  const configuredNumber = getWhatsAppNumber();
+  if (!configuredNumber) return;
+
+  const existingButton = document.querySelector(".whatsapp-float-button");
+  if (existingButton) return;
+
+  const button = document.createElement("a");
+  button.className = "whatsapp-float-button";
+  button.href = buildWhatsAppUrl(configuredNumber, getWhatsAppMessage());
+  button.target = "_blank";
+  button.rel = "noreferrer noopener";
+  button.setAttribute("aria-label", "Contact Electrony on WhatsApp");
+  button.title = "Contact Electrony on WhatsApp";
+
+  button.innerHTML = `
+    <svg viewBox="0 0 32 32" aria-hidden="true" focusable="false" role="img">
+      <path d="M16.14 4.5c-6.4 0-11.59 4.85-11.59 10.82 0 2.04.56 3.97 1.58 5.69L5.1 27.5l6.48-2.04a11.14 11.14 0 0 0 4.56 1.01c6.4 0 11.6-4.85 11.6-10.82S22.54 4.5 16.14 4.5Zm0 18.62c-1.53 0-3.02-.4-4.34-1.16l-.31-.18-3.81 1.2 1.19-3.57-.2-.33a8.18 8.18 0 0 1-1.18-4.34c0-4.5 3.62-8.15 8.06-8.15s8.07 3.65 8.07 8.15c0 4.5-3.62 8.15-8.07 8.15Zm4.53-6.19c-.25-.13-1.44-.71-1.66-.79-.22-.08-.38-.13-.54.13-.16.25-.62.79-.76.95-.14.16-.28.18-.53.06-.25-.13-1.05-.39-2-1.25-.74-.66-1.24-1.47-1.38-1.72-.15-.25-.02-.39.11-.51.11-.11.25-.28.38-.42.13-.14.17-.24.25-.4.08-.17.04-.31-.02-.43-.06-.13-.54-1.31-.74-1.8-.19-.47-.39-.41-.54-.42h-.46c-.16 0-.42.06-.64.31-.22.25-.85.83-.85 2.04s.87 2.37.99 2.53c.12.17 1.71 2.63 4.15 3.68.58.25 1.04.4 1.4.51.58.18 1.12.15 1.53.09.47-.07 1.44-.59 1.65-1.16.2-.57.2-1.05.14-1.15-.06-.1-.22-.16-.47-.29Z"></path>
+    </svg>
+  `;
+
+  document.body.appendChild(button);
+}
+
+function initHeroTypingEffect() {
+  const heroTitle = document.getElementById("hero-title");
+  const heroTyping = document.querySelector("[data-hero-typing]");
+  if (!heroTitle || !heroTyping) return;
+
+  const phrases = ["What's Next", "Smart Living", "Digital Commerce", "Clean Energy", "Electric Mobility", "Connected Communities", "Everyday Technology"];
+  const reducedMotion = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+  if (reducedMotion) {
+    heroTyping.textContent = phrases[0];
+    heroTitle.setAttribute("aria-label", `Technology for ${phrases[0]}`);
+    heroTyping.setAttribute("aria-hidden", "true");
+    return;
+  }
+
+  let phraseIndex = 0;
+  let charIndex = 0;
+  let deleting = false;
+  const tick = () => {
+    const phrase = phrases[phraseIndex];
+
+    if (!deleting) {
+      charIndex += 1;
+      heroTyping.textContent = phrase.slice(0, charIndex);
+
+      if (charIndex === phrase.length) {
+        deleting = true;
+        window.setTimeout(tick, 1200);
+        return;
+      }
+    } else {
+      charIndex -= 1;
+      heroTyping.textContent = phrase.slice(0, charIndex);
+
+      if (charIndex === 0) {
+        deleting = false;
+        phraseIndex = (phraseIndex + 1) % phrases.length;
+        window.setTimeout(tick, 280);
+        return;
+      }
+    }
+
+    window.setTimeout(tick, deleting ? 35 : 90);
+  };
+
+  heroTitle.setAttribute("aria-label", `Technology for ${phrases[0]}`);
+  heroTyping.textContent = phrases[0];
+  window.setTimeout(tick, 500);
+}
+
 function activatePrimaryNav(currentId) {
   if (!primaryNavLinks.length) return;
 
@@ -128,14 +224,14 @@ if (backToTopButton) {
 function getProductStatusText(product) {
   const status = String(product.status || "").toLowerCase();
 
-  if (["conceptual", "coming-soon", "coming soon"].includes(status)) return "COMING SOON";
+  if (["conceptual", "prototype"].includes(status) || status.includes("soon")) return "PROTOTYPE";
   if (["live", "active"].includes(status)) return "LIVE";
   return status ? status.toUpperCase() : "LIVE";
 }
 
 function getProductCtaText(product) {
   if (product.ctaLabel) return product.ctaLabel;
-  return product.status === "conceptual" ? "Coming Soon" : "Explore";
+  return "Explore";
 }
 
 function getProductVisualMarkup(product) {
@@ -226,5 +322,7 @@ function renderSpotlightLink() {
   setSafeLink(spotlightLink, electronyos.landingPageUrl || electronyos.appUrl || null);
 }
 
+initHeroTypingEffect();
+initFloatingWhatsAppButton();
 renderSoftwareProducts();
 renderSpotlightLink();
