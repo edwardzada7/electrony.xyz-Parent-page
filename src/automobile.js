@@ -1,19 +1,19 @@
 const automobileInventory = [
-  { id: "nammi-box", brand: "NAMMI", name: "NAMMI BOX", images: ["../assets/automobile/vehicles/nammi-01.jpg"], fallbackImage: "", featured: false, powertrain: "", powertrainKey: "", status: "enquire", statusLabel: "On enquiry", descriptor: "" },
-  { id: "nammi-06-vigo", brand: "NAMMI", name: "NAMMI 06 VIGO", images: [], fallbackImage: "", featured: false, powertrain: "", powertrainKey: "", status: "enquire", statusLabel: "On enquiry", descriptor: "" },
-  { id: "mage-m57", brand: "Dongfeng", name: "MAGE M57", images: ["../assets/automobile/vehicles/dongfeng-mage-m57.jpg"], fallbackImage: "../assets/automobile/vehicles/dongfeng-mage-m57.svg", featured: true, powertrain: "Petrol", powertrainKey: "petrol", status: "enquire", statusLabel: "On enquiry", descriptor: "A selected petrol model from the current Dongfeng range." },
-  { id: "mage-s01-ev", brand: "Dongfeng", name: "MAGE S01 EV", images: [], fallbackImage: "", featured: false, powertrain: "", powertrainKey: "", status: "enquire", statusLabel: "On enquiry", descriptor: "" },
-  { id: "huge-g59", brand: "Dongfeng", name: "HUGE G59", images: [], fallbackImage: "", featured: false, powertrain: "", powertrainKey: "", status: "enquire", statusLabel: "On enquiry", descriptor: "" },
-  { id: "epi-008", brand: "Dongfeng", name: "eπ 008", images: ["../assets/automobile/vehicles/dongfeng-ep-e008.jpg"], fallbackImage: "../assets/automobile/vehicles/dongfeng-ep-e008.svg", featured: true, hero: true, powertrain: "REV", powertrainKey: "rev", status: "enquire", statusLabel: "On enquiry", descriptor: "A selected model from the current Dongfeng range." },
-  { id: "shine-c65", brand: "Dongfeng", name: "SHINE C65", images: [], fallbackImage: "", featured: false, powertrain: "", powertrainKey: "", status: "enquire", statusLabel: "On enquiry", descriptor: "" },
-  { id: "shine-gs-c68", brand: "Dongfeng", name: "SHINE GS C68", images: [], fallbackImage: "", featured: false, powertrain: "", powertrainKey: "", status: "enquire", statusLabel: "On enquiry", descriptor: "" },
-  { id: "voyah-dream", brand: "VOYAH", name: "VOYAH DREAM", images: [], fallbackImage: "", featured: false, powertrain: "", powertrainKey: "", status: "enquire", statusLabel: "On enquiry", descriptor: "" },
-  { id: "voyah-taishan", brand: "VOYAH", name: "VOYAH TAISHAN", images: ["../assets/automobile/vehicles/voyah-taishan.jpg"], fallbackImage: "../assets/automobile/vehicles/voyah-taishan.svg", featured: true, powertrain: "Hybrid / PHEV", powertrainKey: "hybrid", status: "enquire", statusLabel: "On enquiry", descriptor: "A selected hybrid / PHEV model from the current VOYAH range." },
-  { id: "voyah-free-plus", brand: "VOYAH", name: "VOYAH FREE+", images: [], fallbackImage: "", featured: false, powertrain: "", powertrainKey: "", status: "enquire", statusLabel: "On enquiry", descriptor: "" },
-  { id: "m-hero-ii-817", brand: "M-HERO", name: "M-HERO II 817", images: ["../assets/automobile/vehicles/m-hero-817.jpg"], fallbackImage: "../assets/automobile/vehicles/m-hero-817.svg", featured: true, powertrain: "Hybrid / PHEV", powertrainKey: "hybrid", status: "enquire", statusLabel: "On enquiry", descriptor: "A selected hybrid / PHEV model from the current M-HERO range." },
-  { id: "m-hero-i", brand: "M-HERO", name: "M-HERO I", images: ["../assets/automobile/vehicles/m-hero-917.jpg"], fallbackImage: "../assets/automobile/vehicles/m-hero-917.svg", featured: false, powertrain: "", powertrainKey: "", status: "enquire", statusLabel: "On enquiry", descriptor: "" },
-  { id: "rox-01", brand: "ROX Motor", name: "ROX 01 SUV", images: ["../assets/automobile/vehicles/rox-01.jpg"], fallbackImage: "../assets/automobile/vehicles/rox-01.svg", featured: false, catalogue: false },
-  { id: "voyah-free", brand: "VOYAH", name: "VOYAH FREE", images: ["../assets/automobile/vehicles/voyah-free.jpg"], fallbackImage: "../assets/automobile/vehicles/voyah-free.svg", featured: false, catalogue: false }
+  { id: "nammi-box", brand: "NAMMI", name: "NAMMI BOX", images: ["../assets/automobile/vehicles/nammi-01.jpg"], videos: [], fallbackImage: "", featured: false, powertrain: "", powertrainKey: "", status: "enquire", statusLabel: "On enquiry", descriptor: "" },
+  { id: "nammi-06-vigo", brand: "NAMMI", name: "NAMMI 06 VIGO", images: [], videos: [], fallbackImage: "", featured: false, powertrain: "", powertrainKey: "", status: "enquire", statusLabel: "On enquiry", descriptor: "" },
+  { id: "mage-m57", brand: "Dongfeng", name: "MAGE M57", images: ["../assets/automobile/vehicles/dongfeng-mage-m57.jpg"], videos: [], fallbackImage: "../assets/automobile/vehicles/dongfeng-mage-m57.svg", featured: true, powertrain: "Petrol", powertrainKey: "petrol", status: "enquire", statusLabel: "On enquiry", descriptor: "A selected petrol model from the current Dongfeng range." },
+  { id: "mage-s01-ev", brand: "Dongfeng", name: "MAGE S01 EV", images: [], videos: [], fallbackImage: "", featured: false, powertrain: "", powertrainKey: "", status: "enquire", statusLabel: "On enquiry", descriptor: "" },
+  { id: "huge-g59", brand: "Dongfeng", name: "HUGE G59", images: [], videos: [], fallbackImage: "", featured: false, powertrain: "", powertrainKey: "", status: "enquire", statusLabel: "On enquiry", descriptor: "" },
+  { id: "epi-008", brand: "Dongfeng", name: "eπ 008", images: ["../assets/automobile/vehicles/dongfeng-ep-e008.jpg"], videos: [], fallbackImage: "../assets/automobile/vehicles/dongfeng-ep-e008.svg", featured: true, hero: true, powertrain: "REV", powertrainKey: "rev", status: "enquire", statusLabel: "On enquiry", descriptor: "A selected model from the current Dongfeng range." },
+  { id: "shine-c65", brand: "Dongfeng", name: "SHINE C65", images: [], videos: [], fallbackImage: "", featured: false, powertrain: "", powertrainKey: "", status: "enquire", statusLabel: "On enquiry", descriptor: "" },
+  { id: "shine-gs-c68", brand: "Dongfeng", name: "SHINE GS C68", images: [], videos: [], fallbackImage: "", featured: false, powertrain: "", powertrainKey: "", status: "enquire", statusLabel: "On enquiry", descriptor: "" },
+  { id: "voyah-dream", brand: "VOYAH", name: "VOYAH DREAM", images: [], videos: [], fallbackImage: "", featured: false, powertrain: "", powertrainKey: "", status: "enquire", statusLabel: "On enquiry", descriptor: "" },
+  { id: "voyah-taishan", brand: "VOYAH", name: "VOYAH TAISHAN", images: ["../assets/automobile/vehicles/voyah-taishan.jpg"], videos: [], fallbackImage: "../assets/automobile/vehicles/voyah-taishan.svg", featured: true, powertrain: "Hybrid / PHEV", powertrainKey: "hybrid", status: "enquire", statusLabel: "On enquiry", descriptor: "A selected hybrid / PHEV model from the current VOYAH range." },
+  { id: "voyah-free-plus", brand: "VOYAH", name: "VOYAH FREE+", images: [], videos: [], fallbackImage: "", featured: false, powertrain: "", powertrainKey: "", status: "enquire", statusLabel: "On enquiry", descriptor: "" },
+  { id: "m-hero-ii-817", brand: "M-HERO", name: "M-HERO II 817", images: ["../assets/automobile/vehicles/m-hero-817.jpg"], videos: [], fallbackImage: "../assets/automobile/vehicles/m-hero-817.svg", featured: true, powertrain: "Hybrid / PHEV", powertrainKey: "hybrid", status: "enquire", statusLabel: "On enquiry", descriptor: "A selected hybrid / PHEV model from the current M-HERO range." },
+  { id: "m-hero-i", brand: "M-HERO", name: "M-HERO I", images: ["../assets/automobile/vehicles/m-hero-917.jpg"], videos: [], fallbackImage: "../assets/automobile/vehicles/m-hero-917.svg", featured: false, powertrain: "", powertrainKey: "", status: "enquire", statusLabel: "On enquiry", descriptor: "" },
+  { id: "rox-01", brand: "ROX Motor", name: "ROX 01 SUV", images: ["../assets/automobile/vehicles/rox-01.jpg"], videos: [], fallbackImage: "../assets/automobile/vehicles/rox-01.svg", featured: false, catalogue: false },
+  { id: "voyah-free", brand: "VOYAH", name: "VOYAH FREE", images: ["../assets/automobile/vehicles/voyah-free.jpg"], videos: [], fallbackImage: "../assets/automobile/vehicles/voyah-free.svg", featured: false, catalogue: false }
 ];
 
 const powertrainCategories = [
@@ -58,8 +58,9 @@ function createStatusMarkup(vehicle) {
 }
 
 function createFeaturedVehicleMarkup(vehicle) {
-  const galleryButton = vehicle.images.length > 0
-    ? `<button class="automobile-gallery-trigger" type="button" data-gallery-open="${escapeHtml(vehicle.id)}" aria-label="Open image gallery for ${escapeHtml(vehicle.name)}">View photos <span aria-hidden="true">↗</span></button>`
+  const hasMedia = vehicle.images.length > 0 || vehicle.fallbackImage || vehicle.videos.length > 0;
+  const galleryButton = hasMedia
+    ? `<button class="automobile-gallery-trigger" type="button" data-gallery-open="${escapeHtml(vehicle.id)}" aria-label="Open media gallery for ${escapeHtml(vehicle.name)}">View ${vehicle.videos.length ? "media" : "photos"} <span aria-hidden="true">↗</span></button>`
     : "";
   return `
     <article class="automobile-featured-card" data-vehicle-id="${escapeHtml(vehicle.id)}">
@@ -76,8 +77,9 @@ function createFeaturedVehicleMarkup(vehicle) {
 }
 
 function createVehicleMarkup(vehicle) {
-  const galleryButton = vehicle.images.length > 0
-    ? `<button class="automobile-gallery-trigger" type="button" data-gallery-open="${escapeHtml(vehicle.id)}" aria-label="Open image gallery for ${escapeHtml(vehicle.name)}">View photos <span aria-hidden="true">↗</span></button>`
+  const hasMedia = vehicle.images.length > 0 || vehicle.fallbackImage || vehicle.videos.length > 0;
+  const galleryButton = hasMedia
+    ? `<button class="automobile-gallery-trigger" type="button" data-gallery-open="${escapeHtml(vehicle.id)}" aria-label="Open media gallery for ${escapeHtml(vehicle.name)}">View ${vehicle.videos.length ? "media" : "photos"} <span aria-hidden="true">↗</span></button>`
     : "";
   const details = vehicle.powertrain
     ? `<div class="automobile-vehicle-card__details"><span>${escapeHtml(vehicle.powertrain)}</span>${createStatusMarkup(vehicle)}</div>`
@@ -245,6 +247,7 @@ function initializeConceptTyping() {
 
 function renderGallery() {
   const dialog = document.querySelector("#automobile-gallery");
+  const stage = document.querySelector("#automobile-gallery-stage");
   const image = document.querySelector("#automobile-gallery-image");
   const thumbnails = document.querySelector("#automobile-gallery-thumbnails");
   const previous = document.querySelector("#automobile-gallery-previous");
@@ -253,12 +256,15 @@ function renderGallery() {
   const openImage = document.querySelector("#automobile-gallery-open-image");
   const lightboxPrevious = document.querySelector("#automobile-lightbox-previous");
   const lightboxNext = document.querySelector("#automobile-lightbox-next");
+  const videos = document.querySelector("#automobile-gallery-videos");
+  const videoList = document.querySelector("[data-gallery-video-list]");
   const vehicle = galleryState.vehicle;
   if (!dialog || !image || !thumbnails || !vehicle) return;
 
   const photos = vehicle.images;
   const fallback = photos.length ? "" : vehicle.fallbackImage;
   const source = photos[galleryState.index] || fallback;
+  if (stage) stage.hidden = !source;
   const multiple = photos.length > 1;
   image.classList.add("is-changing");
   image.alt = vehicleAlt(vehicle);
@@ -291,6 +297,21 @@ function renderGallery() {
     }, { once: true });
   });
 
+  if (videos && videoList) {
+    videos.hidden = vehicle.videos.length === 0;
+    videoList.innerHTML = vehicle.videos.map((video, index) => {
+      const title = video.title || `${vehicle.name} video ${index + 1}`;
+      const poster = vehicle.images[0] ? ` poster="${escapeHtml(vehicle.images[0])}"` : "";
+      return `
+        <article class="automobile-gallery__video">
+          <h4>${escapeHtml(title)}</h4>
+          <video controls preload="none" aria-label="${escapeHtml(`${vehicle.name}: ${title}`)}"${poster}>
+            <source src="${escapeHtml(video.src)}" type="video/mp4">
+          </video>
+        </article>`;
+    }).join("");
+  }
+
   if (source) {
     image.onerror = () => {
       const failedPath = image.dataset.photoPath;
@@ -314,7 +335,7 @@ function renderGallery() {
 function openGallery(vehicleId) {
   const vehicle = automobileInventory.find((item) => item.id === vehicleId);
   const dialog = document.querySelector("#automobile-gallery");
-  if (!vehicle || !dialog || (!vehicle.images.length && !vehicle.fallbackImage)) return;
+  if (!vehicle || !dialog || (!vehicle.images.length && !vehicle.fallbackImage && !vehicle.videos.length)) return;
   galleryState.vehicle = vehicle;
   galleryState.index = 0;
   renderGallery();
@@ -334,6 +355,10 @@ function initializeGallery() {
   const gallery = document.querySelector("#automobile-gallery");
   const lightbox = document.querySelector("#automobile-lightbox");
   if (!gallery || !lightbox) return;
+
+  gallery.addEventListener("close", () => {
+    gallery.querySelectorAll("video").forEach((video) => video.pause());
+  });
 
   document.addEventListener("click", (event) => {
     const trigger = event.target.closest("[data-gallery-open]");
@@ -437,6 +462,15 @@ function initializeNavigation() {
   }
 }
 
+function initializeReturnToTop() {
+  const button = document.querySelector("[data-return-to-top]");
+  if (!button) return;
+  button.addEventListener("click", () => {
+    const behavior = window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth";
+    window.scrollTo({ top: 0, behavior });
+  });
+}
+
 function initializeVehicleLinks() {
   document.querySelectorAll("[data-vehicle-link]").forEach((link) => {
     link.addEventListener("click", () => {
@@ -455,5 +489,6 @@ renderPromotionalImages();
 attachFilters();
 initializeGallery();
 initializeNavigation();
+initializeReturnToTop();
 initializeVehicleLinks();
 initializeConceptTyping();

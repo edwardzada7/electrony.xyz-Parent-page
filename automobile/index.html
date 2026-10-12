@@ -78,7 +78,7 @@
               <p class="automobile-kicker automobile-kicker--dark"><span></span> Selected brands</p>
               <h2 id="brands-title">A considered range,<br>from distinct marques.</h2>
             </div>
-            <p>Electrony Automobile brings selected vehicles together in one clear, contemporary showroom. Brand selection is presented for discovery, not as an endorsement or dealer claim.</p>
+            <p>Electrony Automobile brings selected vehicles together in one clear, contemporary showroom. Brand selection is presented for discovery, purchase and distribution through our partners.</p>
           </div>
 
           <div class="automobile-brand-rail" aria-label="Automotive brands represented">
@@ -200,10 +200,10 @@
           </div>
           <div class="automobile-contact__actions">
             <a class="automobile-button automobile-button--red" href="#vehicle-inventory">View vehicles</a>
-            <a class="automobile-button automobile-button--ghost" href="#top">Return to top</a>
+            <button class="automobile-button automobile-button--ghost" type="button" data-return-to-top aria-label="Return to top of page">Return to top</button>
           </div>
         </div>
-        <div class="container automobile-contact__note"><p>For current availability, vehicle information and specific enquiries, contact Electrony directly. No phone number, email address or WhatsApp destination is invented here.</p></div>
+        <div class="container automobile-contact__note"><p>For current availability, vehicle information and specific enquiries, contact Electrony directly. By phone number, email address or WhatsApp.</p></div>
       </section>
     </main>
 
@@ -221,6 +221,10 @@
           <button class="automobile-gallery__arrow automobile-gallery__arrow--next" id="automobile-gallery-next" type="button" aria-label="Next image">›</button>
         </div>
         <div class="automobile-gallery__thumbnails" id="automobile-gallery-thumbnails" role="group" aria-label="Gallery thumbnails"></div>
+        <section class="automobile-gallery__videos" id="automobile-gallery-videos" aria-label="Vehicle videos" hidden>
+          <h3>Vehicle videos</h3>
+          <div class="automobile-gallery__video-list" data-gallery-video-list></div>
+        </section>
       </div>
     </dialog>
 

@@ -28,6 +28,18 @@ The ROX 01 and VOYAH FREE promotional images are also registered centrally for t
 
 The repository does not record a source or license for these JPEG files. Confirm usage rights before publication.
 
+## Vehicle videos
+
+Place MP4 files in the matching model folder under `assets/automobile/vehicles/`, using readable ordered filenames such as `01-exterior.mp4` or `02-driving.mp4`. Register each real file in that model's `videos` array in `src/automobile.js`; the optional `title` is shown above the player:
+
+```js
+videos: [
+  { src: "../assets/automobile/vehicles/nammi-box/01-exterior.mp4", title: "Exterior walkaround" }
+]
+```
+
+The existing photo/media gallery renders registered videos with native controls and uses the vehicle's first registered photograph as the poster when available. Leave `videos: []` for vehicles without videos. This is a static site: browsers cannot discover files in repository folders automatically, and unregistered files are not displayed.
+
 ## Existing vehicle artwork
 
 - `assets/automobile/vehicles/dongfeng-ep-e008.svg` — editorial fallback for eπ 008
