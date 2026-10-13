@@ -2,6 +2,7 @@ const menuToggle = document.querySelector(".menu-toggle");
 const primaryNavigation = document.querySelector(".primary-navigation");
 const header = document.querySelector(".site-header");
 const contactLinks = document.querySelectorAll(".contact-link");
+const hardwareLinks = document.querySelectorAll(".hardware-link");
 const contactUrl = window.ElectronyConfig.contactUrl;
 const backToTopButton = document.querySelector(".back-to-top");
 const primaryNavLinks = document.querySelectorAll(".navigation-list a");
@@ -128,7 +129,7 @@ function activatePrimaryNav(currentId) {
   if (!primaryNavLinks.length) return;
 
   primaryNavLinks.forEach((link) => {
-    const matches = link.getAttribute("href") === `#${currentId}`;
+    const matches = link.getAttribute("href") === `#${currentId}` || link.dataset.section === currentId;
     link.classList.toggle("is-active", matches);
 
     if (matches) {
@@ -168,6 +169,10 @@ document.addEventListener("keydown", (event) => {
 
 contactLinks.forEach((link) => {
   setSafeLink(link, contactUrl);
+});
+
+hardwareLinks.forEach((link) => {
+  setSafeLink(link, window.ElectronyConfig.productLinks.hardware.landingPageUrl);
 });
 
 if (window.matchMedia) {

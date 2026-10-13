@@ -201,6 +201,22 @@ function ensureDataDirectory() {
   fs.chmodSync(DATA_DIR, 0o700);
 }
 
+function moveLegacyRecord(source, destination) {
+  if (!fs.existsSync(source) || fs.existsSync(destination)) return;
+
+  try {
+    fs.renameSync(source, destination);
+  } catch (error) {
+    if (error && error.code !== "EXDEV") {
+      throw error;
+    }
+    fs.copyFileSync(source, destination);
+    fs.unlinkSync(source);
+  }
+
+  fs.chmodSync(destination, 0o600);
+}
+
 function migrateLegacyRecords() {
   if (path.resolve(LEGACY_DATA_DIR) === DATA_DIR || !fs.existsSync(LEGACY_DATA_DIR)) return;
   ensureDataDirectory();
@@ -209,10 +225,7 @@ function migrateLegacyRecords() {
     const destination = filename === "transactions.json"
       ? TRANSACTION_STORE_PATH
       : path.join(DATA_DIR, filename);
-    if (fs.existsSync(source) && !fs.existsSync(destination)) {
-      fs.renameSync(source, destination);
-      fs.chmodSync(destination, 0o600);
-    }
+    moveLegacyRecord(source, destination);
   }
 }
 
