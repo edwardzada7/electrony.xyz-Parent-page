@@ -457,6 +457,76 @@ button:focus-visible {
   gap: 1rem;
 }
 
+.bills-featured-services {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1rem;
+  margin-top: 1rem;
+}
+
+.bills-featured-service-card {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-content: start;
+  align-items: start;
+  gap: 0.25rem 1rem;
+  min-height: 17rem;
+  padding: clamp(1.5rem, 3vw, 2.25rem);
+  border: 1px solid rgb(17 17 16 / 18%);
+  background: #e5e8dd;
+}
+
+.bills-featured-service-card .bills-service-symbol {
+  grid-row: span 2;
+  margin-block: 0.15rem 0;
+}
+
+.bills-featured-service-card .bills-eyebrow {
+  margin: 0 0 0.75rem;
+  color: #5c6253;
+}
+
+.bills-featured-service-card h3 {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: clamp(1.55rem, 2.4vw, 2.1rem);
+  font-weight: 500;
+  letter-spacing: -0.045em;
+}
+
+.bills-featured-service-card p:not(.bills-eyebrow) {
+  max-width: 45ch;
+  margin: 0.75rem 0 0;
+  color: var(--color-gray-700);
+  line-height: 1.6;
+}
+
+.bills-featured-service-card .bills-service-action {
+  grid-column: 2;
+  display: inline-flex;
+  min-height: 2.875rem;
+  align-items: center;
+  justify-self: start;
+  gap: 0.5rem;
+  margin-top: 1rem;
+  color: var(--color-ink);
+  font-size: var(--text-small);
+  font-weight: 600;
+  text-underline-offset: 0.3em;
+}
+
+.bills-featured-service-card .bills-service-action:hover {
+  text-decoration-thickness: 2px;
+}
+
+.bills-symbol-virtual {
+  color: #355b50;
+}
+
+.bills-symbol-gift {
+  color: #74543b;
+}
+
 .bills-service-card {
   position: relative;
   display: flex;
@@ -864,6 +934,14 @@ button:focus-visible {
 @media (max-width: 48rem) {
   html {
     scroll-padding-top: 4.25rem;
+  }
+
+  .bills-featured-services {
+    grid-template-columns: 1fr;
+  }
+
+  .bills-featured-service-card {
+    min-height: 0;
   }
 
   .bills-header .header-inner {

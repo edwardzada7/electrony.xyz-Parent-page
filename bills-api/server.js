@@ -1,15 +1,154 @@
 const fs = require("fs");
 const path = require("path");
 const crypto = require("crypto");
+const { promisify } = require("util");
+const os = require("os");
 const http = require("http");
 const { URL } = require("url");
 const { buildProviderAdapter, readEnv } = require("./provider-adapter");
+const { PLATFORM_FEE_RULES, createPlatformFeeQuote, parseMoneyToMinor } = require("./platform-fees");
 
 const APP_ROOT = path.resolve(__dirname, "..");
-const DATA_DIR = path.join(__dirname, "data");
-const TRANSACTION_STORE_PATH = path.join(DATA_DIR, "transactions.json");
-const WEBHOOK_STORE_PATH = path.join(DATA_DIR, "processed-webhooks.json");
 const ALLOWED_SERVICES = ["electricity", "airtime", "data", "bills"];
+const AUTH_RATE_LIMITS = new Map();
+const FEE_QUOTES = new Map();
+const TOKEN_LIFETIME_SECONDS = 60 * 60;
+const scrypt = promisify(crypto.scrypt);
+
+function readUsers() {
+  ensureDataDirectory();
+  return readJsonFile(USER_STORE_PATH, {});
+}
+
+function getAuthSecret() {
+  const secret = readEnv("BILLS_JWT_SECRET");
+  if (secret.length < 32 || /replace_with|change_me|example/i.test(secret)) {
+    throw new Error("Account authentication is not configured. Set BILLS_JWT_SECRET to a random value of at least 32 characters.");
+  }
+  return secret;
+}
+
+function signAuthToken(user) {
+  const secret = getAuthSecret();
+  const header = Buffer.from(JSON.stringify({ alg: "HS256", typ: "JWT" })).toString("base64url");
+  const payload = Buffer.from(JSON.stringify({
+    sub: user.id,
+    exp: Math.floor(Date.now() / 1000) + TOKEN_LIFETIME_SECONDS
+  })).toString("base64url");
+  const unsigned = `${header}.${payload}`;
+  const signature = crypto.createHmac("sha256", secret).update(unsigned).digest("base64url");
+  return `${unsigned}.${signature}`;
+}
+
+function authenticateRequest(request) {
+  const authorization = request.headers.authorization || "";
+  const token = authorization.match(/^Bearer ([A-Za-z0-9._-]+)$/)?.[1];
+  if (!token) return null;
+
+  try {
+    const secret = getAuthSecret();
+    const [header, payload, signature, extra] = token.split(".");
+    if (!header || !payload || !signature || extra) return null;
+    const expected = crypto.createHmac("sha256", secret).update(`${header}.${payload}`).digest();
+    const received = Buffer.from(signature, "base64url");
+    if (received.length !== expected.length || !crypto.timingSafeEqual(received, expected)) return null;
+
+    const claims = JSON.parse(Buffer.from(payload, "base64url").toString("utf8"));
+    if (typeof claims.sub !== "string" || claims.exp <= Math.floor(Date.now() / 1000)) return null;
+    const user = readUsers()[claims.sub];
+    return user ? { id: user.id, email: user.email, name: user.name } : null;
+  } catch {
+    return null;
+  }
+}
+
+function enforceAuthRateLimit(request) {
+  const key = request.socket.remoteAddress || "unknown";
+  const now = Date.now();
+  const recent = (AUTH_RATE_LIMITS.get(key) || []).filter((timestamp) => now - timestamp < 15 * 60 * 1000);
+  if (recent.length >= 10) return false;
+  recent.push(now);
+  AUTH_RATE_LIMITS.set(key, recent);
+  return true;
+}
+
+function createQuoteToken(quote) {
+  const token = crypto.randomBytes(32).toString("hex");
+  FEE_QUOTES.set(token, {
+    service: quote.service,
+    amountMinor: quote.serviceAmountMinor,
+    platformFeeMinor: quote.platformFeeMinor,
+    expiresAt: Date.now() + 5 * 60 * 1000
+  });
+  for (const [key, value] of FEE_QUOTES) {
+    if (value.expiresAt <= Date.now()) FEE_QUOTES.delete(key);
+  }
+  return token;
+}
+
+function verifyQuoteToken(token, quote) {
+  const claims = FEE_QUOTES.get(token);
+  return Boolean(claims
+    && claims.expiresAt > Date.now()
+    && claims.service === quote.service
+    && claims.amountMinor === quote.serviceAmountMinor
+    && claims.platformFeeMinor === quote.platformFeeMinor);
+}
+
+async function hashPassword(password, salt) {
+  return scrypt(password, salt, 64, { N: 16384, r: 8, p: 1 });
+}
+
+function normalizeEmail(value) {
+  return String(value || "").trim().toLowerCase();
+}
+
+async function createAccount(payload) {
+  const email = normalizeEmail(payload.email);
+  const name = String(payload.name || "").trim();
+  const password = String(payload.password || "");
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    throw new Error("Enter a valid email address.");
+  }
+  if (name.length < 1 || name.length > 100) {
+    throw new Error("Enter a name up to 100 characters.");
+  }
+  if (password.length < 12 || password.length > 128) {
+    throw new Error("Password must be between 12 and 128 characters.");
+  }
+
+  const users = readUsers();
+  if (Object.values(users).some((user) => user.email === email)) {
+    throw new Error("An account with this email already exists.");
+  }
+
+  const salt = crypto.randomBytes(16);
+  const passwordHash = await hashPassword(password, salt);
+  const user = {
+    id: crypto.randomUUID(),
+    email,
+    name,
+    passwordSalt: salt.toString("hex"),
+    passwordHash: passwordHash.toString("hex"),
+    createdAt: nowIso()
+  };
+  users[user.id] = user;
+  writeJsonFile(USER_STORE_PATH, users);
+  return { id: user.id, email: user.email, name: user.name };
+}
+
+async function verifyAccountCredentials(payload) {
+  const email = normalizeEmail(payload.email);
+  const password = String(payload.password || "");
+  const user = Object.values(readUsers()).find((candidate) => candidate.email === email);
+  const salt = user ? Buffer.from(user.passwordSalt, "hex") : Buffer.alloc(16);
+  const actual = await hashPassword(password, salt);
+  const expected = Buffer.from(user?.passwordHash || "0".repeat(128), "hex");
+  if (!user || actual.length !== expected.length || !crypto.timingSafeEqual(actual, expected)) {
+    throw new Error("Email or password is incorrect.");
+  }
+  return { id: user.id, email: user.email, name: user.name };
+}
 
 function loadEnvFromFiles() {
   const files = [
@@ -38,11 +177,46 @@ function loadEnvFromFiles() {
 
 loadEnvFromFiles();
 
+const configuredStorePath = readEnv("BILLS_DATABASE_URL") || path.join(os.homedir(), ".electrony-bills", "transactions.json");
+if (/^[a-z][a-z\d+.-]*:\/\//i.test(configuredStorePath)) {
+  throw new Error("BILLS_DATABASE_URL must be a local JSON file path; this backend does not support database URLs.");
+}
+const expandedStorePath = configuredStorePath.startsWith("~/")
+  ? path.join(os.homedir(), configuredStorePath.slice(2))
+  : configuredStorePath;
+const TRANSACTION_STORE_PATH = path.resolve(APP_ROOT, expandedStorePath);
+const relativeStorePath = path.relative(APP_ROOT, TRANSACTION_STORE_PATH);
+if (relativeStorePath === "" || (!relativeStorePath.startsWith(`..${path.sep}`) && relativeStorePath !== ".." && !path.isAbsolute(relativeStorePath))) {
+  throw new Error("BILLS_DATABASE_URL must point outside the publicly served project directory.");
+}
+const DATA_DIR = path.dirname(TRANSACTION_STORE_PATH);
+const WEBHOOK_STORE_PATH = path.join(DATA_DIR, "processed-webhooks.json");
+const USER_STORE_PATH = path.join(DATA_DIR, "users.json");
+const LEGACY_DATA_DIR = path.join(__dirname, "data");
+
 function ensureDataDirectory() {
   if (!fs.existsSync(DATA_DIR)) {
-    fs.mkdirSync(DATA_DIR, { recursive: true });
+    fs.mkdirSync(DATA_DIR, { recursive: true, mode: 0o700 });
+  }
+  fs.chmodSync(DATA_DIR, 0o700);
+}
+
+function migrateLegacyRecords() {
+  if (path.resolve(LEGACY_DATA_DIR) === DATA_DIR || !fs.existsSync(LEGACY_DATA_DIR)) return;
+  ensureDataDirectory();
+  for (const filename of ["transactions.json", "processed-webhooks.json", "users.json"]) {
+    const source = path.join(LEGACY_DATA_DIR, filename);
+    const destination = filename === "transactions.json"
+      ? TRANSACTION_STORE_PATH
+      : path.join(DATA_DIR, filename);
+    if (fs.existsSync(source) && !fs.existsSync(destination)) {
+      fs.renameSync(source, destination);
+      fs.chmodSync(destination, 0o600);
+    }
   }
 }
+
+migrateLegacyRecords();
 
 function readJsonFile(filePath, fallback) {
   try {
@@ -55,7 +229,8 @@ function readJsonFile(filePath, fallback) {
 }
 
 function writeJsonFile(filePath, content) {
-  fs.writeFileSync(filePath, JSON.stringify(content, null, 2), "utf8");
+  fs.writeFileSync(filePath, JSON.stringify(content, null, 2), { encoding: "utf8", mode: 0o600 });
+  fs.chmodSync(filePath, 0o600);
 }
 
 function readStore() {
@@ -259,7 +434,7 @@ async function createMonnifyReservation(transaction) {
   const { token, config } = await authenticateMonnify();
   const endpoint = `${config.baseUrl.replace(/\/$/, "")}/api/v1/transactions/init-transaction`;
   const payload = {
-    amount: Number(transaction.amount),
+    amount: Number(transaction.totalAmount),
     currency: "NGN",
     reference: transaction.reference,
     contractCode: config.contractCode,
@@ -480,10 +655,25 @@ function validateServiceRequest(payload) {
     throw new Error("Unsupported service type.");
   }
 
-  const rawAmount = Number(payload.amount ?? 0);
-  if (!Number.isFinite(rawAmount) || rawAmount <= 0) {
+  function makeBillFeeQuote(service, amount, network = "", plan = "") {
+    if (!ALLOWED_SERVICES.includes(service) || !PLATFORM_FEE_RULES[service]) {
+      throw new Error("Unsupported service type.");
+    }
+    const amountMinor = parseMoneyToMinor(amount);
+    if (service === "data" || service === "bills") {
+      const expected = getExpectedAmount(service, { network, plan });
+      if (!expected || amountMinor !== expected * 100) {
+        throw new Error("The selected service option does not match its configured price.");
+      }
+    }
+    return createPlatformFeeQuote(service, amountMinor);
+  }
+
+  const amountMinor = parseMoneyToMinor(payload.amount);
+  if (amountMinor <= 0) {
     throw new Error("Amount must be a positive number.");
   }
+  const rawAmount = amountMinor / 100;
 
   const customer = {
     name: String(payload.customerName || payload.name || "Electrony Bills Customer").trim(),
@@ -528,7 +718,7 @@ function validateServiceRequest(payload) {
     if (!customer.plan || !expected) {
       throw new Error("Select a valid data bundle before continuing.");
     }
-    if (rawAmount !== expected) {
+    if (amountMinor !== expected * 100) {
       throw new Error("The selected data bundle amount does not match the configured price.");
     }
   }
@@ -541,7 +731,7 @@ function validateServiceRequest(payload) {
     if (!customer.plan || !expected) {
       throw new Error("Select a valid bill package before continuing.");
     }
-    if (rawAmount !== expected) {
+    if (amountMinor !== expected * 100) {
       throw new Error("The selected package amount does not match the configured price.");
     }
   }
@@ -549,6 +739,7 @@ function validateServiceRequest(payload) {
   return {
     service,
     amount: rawAmount,
+    amountMinor,
     customer
   };
 }
@@ -559,12 +750,16 @@ async function handleWebhook(request, response) {
     const signature = request.headers["x-monnify-signature"] || request.headers["X-Monnify-Signature"] || request.headers["x-monnify-signature"] || "";
     const webhookSecret = readEnv("MONNIFY_WEBHOOK_SECRET") || "";
 
-    if (webhookSecret && signature) {
-      const expected = crypto.createHmac("sha256", webhookSecret).update(rawBody).digest("hex");
-      if (expected !== signature) {
-        sendJson(response, 401, { ok: false, error: "Webhook signature verification failed." });
-        return;
-      }
+    if (!webhookSecret || !signature) {
+      sendJson(response, 401, { ok: false, error: "Webhook signature verification is unavailable or missing." });
+      return;
+    }
+
+    const expected = Buffer.from(crypto.createHmac("sha256", webhookSecret).update(rawBody).digest("hex"), "hex");
+    const received = Buffer.from(signature, "hex");
+    if (received.length !== expected.length || !crypto.timingSafeEqual(received, expected)) {
+      sendJson(response, 401, { ok: false, error: "Webhook signature verification failed." });
+      return;
     }
 
     if (!rawBody.trim()) {
@@ -583,9 +778,6 @@ async function handleWebhook(request, response) {
       return;
     }
 
-    processed[eventId] = { processedAt: nowIso(), reference: transactionReference };
-    persistWebhookStore(processed);
-
     const transaction = getTransaction(transactionReference) || getTransaction(event?.customerReference || event?.paymentReference || "");
 
     if (!transaction) {
@@ -593,11 +785,19 @@ async function handleWebhook(request, response) {
       return;
     }
 
+    if (processed[eventId] || transaction.fulfillmentStartedAt) {
+      sendJson(response, 200, { ok: true, duplicate: true, reference: transaction.reference });
+      return;
+    }
+    processed[eventId] = { processedAt: nowIso(), reference: transactionReference };
+    persistWebhookStore(processed);
+
     const monnifyStatus = extractMonnifyStatus(payload);
     if (monnifyStatus === "paid") {
       transaction.paymentStatus = "payment_success";
       transaction.status = "processing";
       transaction.fulfillmentStatus = "processing";
+      transaction.fulfillmentStartedAt = nowIso();
       transaction.monnifyReference = transaction.monnifyReference || transactionReference;
       transaction.updatedAt = nowIso();
       saveTransaction(transaction.reference, transaction);
@@ -656,8 +856,113 @@ const server = http.createServer(async (request, response) => {
       ok: true,
       service: "electrony-bills",
       mode: hasMonnifyConfig() ? "monnify-sandbox" : "configuration-required",
-      hasDatabase: fs.existsSync(TRANSACTION_STORE_PATH)
+      hasDatabase: fs.existsSync(TRANSACTION_STORE_PATH),
+      persistence: "json-file",
+      virtualCards: "provider_unconfigured",
+      giftCards: "provider_unconfigured"
     });
+    return;
+  }
+
+  if (request.method === "POST" && (url.pathname === "/api/auth/register" || url.pathname === "/api/auth/login")) {
+    if (!enforceAuthRateLimit(request)) {
+      sendJson(response, 429, { ok: false, error: "Too many account attempts. Please try again later." });
+      return;
+    }
+    try {
+      getAuthSecret();
+      const payload = await readPayload(request);
+      const user = url.pathname.endsWith("/register")
+        ? await createAccount(payload)
+        : await verifyAccountCredentials(payload);
+      sendJson(response, url.pathname.endsWith("/register") ? 201 : 200, {
+        ok: true,
+        user,
+        token: signAuthToken(user),
+        expiresIn: TOKEN_LIFETIME_SECONDS
+      });
+    } catch (error) {
+      sendJson(response, error.message.includes("BILLS_JWT_SECRET") ? 503 : 400, { ok: false, error: error.message });
+    }
+    return;
+  }
+
+  if (request.method === "GET" && url.pathname === "/api/auth/me") {
+    const user = authenticateRequest(request);
+    sendJson(response, user ? 200 : 401, user
+      ? { ok: true, user }
+      : { ok: false, error: "Sign in to continue." });
+    return;
+  }
+
+  if (request.method === "GET" && url.pathname === "/api/services/virtual-cards/catalog") {
+    sendJson(response, 200, {
+      ok: true,
+      service: "virtual-cards",
+      available: false,
+      status: "provider_unconfigured",
+      products: [],
+      message: "Virtual-card products cannot be displayed or purchased until a card provider and its product catalogue are configured."
+    });
+    return;
+  }
+
+  if (request.method === "GET" && url.pathname === "/api/services/gift-cards/catalog") {
+    sendJson(response, 200, {
+      ok: true,
+      service: "gift-cards",
+      available: false,
+      status: "provider_unconfigured",
+      products: [],
+      platformFeeMinor: 0,
+      currency: "NGN",
+      message: "Gift-card products cannot be displayed or purchased until a gift-card provider and its product catalogue are configured."
+    });
+    return;
+  }
+
+  if (request.method === "GET" && url.pathname === "/api/services/virtual-cards/eligibility") {
+    if (!authenticateRequest(request)) {
+      sendJson(response, 401, { ok: false, error: "Sign in to check virtual-card eligibility." });
+      return;
+    }
+    sendJson(response, 503, {
+      ok: false,
+      status: "provider_unconfigured",
+      message: "A card provider is not configured, so eligibility and provider KYC status cannot be checked."
+    });
+    return;
+  }
+
+  if (request.method === "POST" && /^\/api\/services\/(virtual-cards|gift-cards)\/purchase$/.test(url.pathname)) {
+    if (!authenticateRequest(request)) {
+      sendJson(response, 401, { ok: false, error: "Sign in before purchasing this service." });
+      return;
+    }
+    sendJson(response, 503, {
+      ok: false,
+      error: "This service is unavailable because its fulfilment provider is not configured. No payment was created."
+    });
+    return;
+  }
+
+  if (request.method === "GET" && url.pathname === "/api/fees/quote") {
+    try {
+      const service = url.searchParams.get("service") || "";
+      const quote = makeBillFeeQuote(
+        service,
+        url.searchParams.get("amount"),
+        url.searchParams.get("network") || "",
+        url.searchParams.get("plan") || ""
+      );
+      sendJson(response, 200, {
+        ok: true,
+        quote,
+        quoteToken: createQuoteToken(quote)
+      });
+    } catch (error) {
+      sendJson(response, 400, { ok: false, error: error.message });
+    }
     return;
   }
 
@@ -665,14 +970,37 @@ const server = http.createServer(async (request, response) => {
     try {
       const payload = await readPayload(request);
       const validation = validateServiceRequest(payload);
+      const quote = createPlatformFeeQuote(validation.service, validation.amountMinor);
+      if (!verifyQuoteToken(payload.quoteToken, quote)) {
+        sendJson(response, 409, { ok: false, error: "Your fee quote is missing or has expired. Refresh the breakdown before confirming payment." });
+        return;
+      }
+      if (payload.totalAmount !== undefined
+        && parseMoneyToMinor(payload.totalAmount) !== quote.totalBeforeProviderFeesMinor) {
+        sendJson(response, 400, { ok: false, error: "The submitted total does not match the server fee quote." });
+        return;
+      }
       const reference = String(payload.reference || createReference());
+      const user = authenticateRequest(request);
 
       const existing = getTransaction(reference);
       if (existing && existing.status !== "cancelled") {
+        if ((existing.userId || null) !== (user?.id || null)) {
+          sendJson(response, 403, { ok: false, error: "This transaction reference belongs to another customer." });
+          return;
+        }
+        if (existing.totalAmountMinor !== quote.totalBeforeProviderFeesMinor) {
+          sendJson(response, 409, { ok: false, error: "The quote has changed. Refresh the breakdown and confirm again." });
+          return;
+        }
         sendJson(response, 200, {
           ok: true,
           reference: existing.reference,
           amount: existing.amount,
+          amountMinor: existing.amountMinor,
+          platformFeeMinor: existing.platformFeeMinor,
+          providerFeeMinor: existing.providerFeeMinor,
+          totalAmountMinor: existing.totalAmountMinor,
           status: existing.status,
           mode: "monnify-sandbox",
           checkoutUrl: existing.checkoutUrl || "",
@@ -685,6 +1013,15 @@ const server = http.createServer(async (request, response) => {
         reference,
         service: validation.service,
         amount: validation.amount,
+        amountMinor: validation.amountMinor,
+        currency: quote.currency,
+        platformFeeMinor: quote.platformFeeMinor,
+        platformFeeCurrency: quote.currency,
+        providerFeeMinor: null,
+        providerFeeCurrency: quote.currency,
+        totalAmountMinor: quote.totalBeforeProviderFeesMinor,
+        totalAmount: quote.totalBeforeProviderFeesMinor / 100,
+        userId: user?.id || null,
         status: "created",
         paymentStatus: "not_started",
         fulfillmentStatus: "not_started",
@@ -697,6 +1034,23 @@ const server = http.createServer(async (request, response) => {
         checkoutUrl: "",
         note: "Transaction stored before external payment authorization."
       };
+
+      const vendingProvider = buildProviderAdapter();
+      if (!vendingProvider.isConfigured()) {
+        sendJson(response, 503, {
+          ok: false,
+          error: "No bill-fulfilment provider is configured. No payment was created.",
+          requiredConfig: ["BILLS_PROVIDER_BASE_URL", "BILLS_PROVIDER_API_KEY", "BILLS_PROVIDER_SECRET_KEY"]
+        });
+        return;
+      }
+      if (typeof vendingProvider.quotePurchase !== "function") {
+        sendJson(response, 503, {
+          ok: false,
+          error: "The configured bill provider cannot quote any applicable provider fee. No payment was created."
+        });
+        return;
+      }
 
       saveTransaction(reference, transaction);
 
@@ -738,7 +1092,11 @@ const server = http.createServer(async (request, response) => {
         sendJson(response, 200, {
           ok: true,
           reference,
-          amount,
+          amount: transaction.amount,
+          amountMinor: transaction.amountMinor,
+          platformFeeMinor: transaction.platformFeeMinor,
+          providerFeeMinor: transaction.providerFeeMinor,
+          totalAmountMinor: transaction.totalAmountMinor,
           status: "awaiting_payment",
           mode: "monnify-sandbox",
           checkoutUrl: result.checkoutUrl,
@@ -781,6 +1139,11 @@ const server = http.createServer(async (request, response) => {
       const transaction = getTransaction(reference);
       if (!transaction) {
         sendJson(response, 404, { ok: false, error: "Transaction reference not found." });
+        return;
+      }
+      const user = authenticateRequest(request);
+      if (transaction.userId && transaction.userId !== user?.id) {
+        sendJson(response, 403, { ok: false, error: "You do not have access to this transaction." });
         return;
       }
 
@@ -846,6 +1209,11 @@ const server = http.createServer(async (request, response) => {
     const transaction = getTransaction(reference);
     if (!transaction) {
       sendJson(response, 404, { ok: false, error: "Transaction reference not found." });
+      return;
+    }
+    const user = authenticateRequest(request);
+    if (transaction.userId && transaction.userId !== user?.id) {
+      sendJson(response, 403, { ok: false, error: "You do not have access to this transaction." });
       return;
     }
 

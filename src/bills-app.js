@@ -80,13 +80,36 @@ const serviceCatalog = {
         { value: "premium", label: "Premium — ₦19,000" }
       ] }
     ]
+  },
+  "virtual-cards": {
+    id: "virtual-cards",
+    label: "Virtual Cards",
+    icon: "▣",
+    title: "Virtual Cards",
+    helper: "Explore provider-supported virtual-card options and eligibility.",
+    digitalService: true
+  },
+  "gift-cards": {
+    id: "gift-cards",
+    label: "Gift Cards",
+    icon: "◇",
+    title: "Gift Cards",
+    helper: "Explore gift cards and supported denominations from a configured provider.",
+    digitalService: true
   }
 };
 
 const state = {
-  activeService: "electricity",
+  activeService: Object.prototype.hasOwnProperty.call(serviceCatalog, new URLSearchParams(window.location.search).get("service"))
+    ? new URLSearchParams(window.location.search).get("service")
+    : "electricity",
   order: null,
-  transactions: []
+  transactions: [],
+  authToken: "",
+  user: null,
+  authMode: "login",
+  feeQuote: null,
+  feeRequestId: 0
 };
 
 const formatCurrency = (value) => new Intl.NumberFormat("en-NG", {
@@ -94,6 +117,13 @@ const formatCurrency = (value) => new Intl.NumberFormat("en-NG", {
   currency: "NGN",
   maximumFractionDigits: 0
 }).format(Number(value || 0));
+
+const formatMinorCurrency = (minor, currency = "NGN") => new Intl.NumberFormat("en-NG", {
+  style: "currency",
+  currency,
+  minimumFractionDigits: 2,
+  maximumFractionDigits: 2
+}).format(Number(minor || 0) / 100);
 
 const generateReference = () => {
   const dateStamp = new Date().toISOString().slice(0, 10).replace(/-/g, "");
@@ -108,11 +138,12 @@ const getBillsApiBaseUrl = () => {
 
 const fetchBillingApi = async (path, options = {}) => {
   const response = await fetch(`${getBillsApiBaseUrl()}${path}`, {
+    ...options,
     headers: {
       "Content-Type": "application/json",
+      ...(state.authToken ? { Authorization: `Bearer ${state.authToken}` } : {}),
       ...(options.headers || {})
-    },
-    ...options
+    }
   });
 
   const rawText = await response.text();
@@ -166,6 +197,7 @@ function renderServiceList() {
     button.addEventListener("click", () => {
       state.activeService = button.dataset.service;
       state.order = null;
+      state.feeQuote = null;
       renderServiceList();
       renderServicePanel();
       renderCheckoutPanel();
@@ -214,6 +246,10 @@ function renderServicePanel() {
   if (!panel) return;
 
   const service = serviceCatalog[state.activeService];
+  if (service.digitalService) {
+    renderDigitalServicePanel(service);
+    return;
+  }
   const isDataService = state.activeService === "data";
   const amountField = service.fields.filter((field) => field.id === "amount").length ? "amount" : "plan";
 
@@ -251,6 +287,7 @@ function renderServicePanel() {
       <div class="field-grid">
         ${fieldMarkup}
       </div>
+      <div class="fee-preview" id="fee-preview" aria-live="polite">Enter an amount or select a service option to see the platform fee breakdown.</div>
       <div class="form-actions">
         <button class="primary-button" type="submit">Review order</button>
       </div>
@@ -268,8 +305,11 @@ function renderServicePanel() {
   const form = panel.querySelector("#purchase-form");
   form.addEventListener("submit", (event) => {
     event.preventDefault();
-    handlePurchaseSubmission();
+    void handlePurchaseSubmission();
   });
+
+  form.addEventListener("input", () => void refreshFeePreview());
+  form.addEventListener("change", () => void refreshFeePreview());
 
   const focusTarget = panel.querySelector("#meterNumber, #recipient, #customerId, #biller, #network");
   if (focusTarget) focusTarget.focus();
@@ -284,6 +324,159 @@ function renderServicePanel() {
   }
 }
 
+function renderDigitalServicePanel(service) {
+  const panel = document.querySelector("#service-panel");
+      const endpoint = service.id === "virtual-cards"
+        ? "/api/services/virtual-cards/catalog"
+        : "/api/services/gift-cards/catalog";
+      const authControls = state.user
+        ? `<p class="account-status">Signed in as <strong>${escapeHtml(state.user.email)}</strong>.</p>
+           <button type="button" class="secondary-button" id="sign-out-button">Sign out</button>`
+        : `<div class="account-panel">
+            <p class="eyebrow eyebrow-soft">Account required to purchase</p>
+            <div class="account-mode-actions">
+              <button type="button" class="secondary-button" data-auth-mode="login">Sign in</button>
+              <button type="button" class="secondary-button" data-auth-mode="register">Create account</button>
+            </div>
+            <form id="account-form" class="account-form">
+              ${state.authMode === "register" ? '<label class="field"><span>Name</span><input name="name" autocomplete="name" required maxlength="100"></label>' : ""}
+              <label class="field"><span>Email</span><input name="email" type="email" autocomplete="email" required></label>
+              <label class="field"><span>Password</span><input name="password" type="password" autocomplete="${state.authMode === "register" ? "new-password" : "current-password"}" minlength="12" maxlength="128" required></label>
+              <p class="subtle-copy">Use at least 12 characters. Your password is sent only to the Bills API over HTTPS in production and is never stored in this browser.</p>
+              <button class="primary-button" type="submit">${state.authMode === "register" ? "Create account" : "Sign in"}</button>
+              <p class="inline-message hidden" id="account-message" role="status"></p>
+            </form>
+          </div>`;
+
+      panel.innerHTML = `
+        <div class="service-panel-header">
+          <div><p class="eyebrow eyebrow-soft">Explore service</p><h3>${service.title}</h3></div>
+          <span class="service-tag">${service.icon} ${service.label}</span>
+        </div>
+        <p class="service-helper">${service.helper}</p>
+        <div class="service-fee-note">${service.id === "virtual-cards"
+          ? "Virtual-card products are intended to be USD-denominated. No fixed ₦100 bill fee or currency conversion applies. Provider products and fees are not configured."
+          : "Electrony platform fee: ₦0. Gift-card products, prices, denominations, currencies, and any provider charges are not available until a provider is configured."}</div>
+        <div class="catalog-state" id="catalog-state" role="status">Checking configured provider catalogue…</div>
+        ${service.id === "virtual-cards" ? '<div class="eligibility-state" id="eligibility-state"></div>' : ""}
+        ${authControls}
+      `;
+
+      panel.querySelectorAll("[data-auth-mode]").forEach((button) => {
+        button.addEventListener("click", () => {
+          state.authMode = button.dataset.authMode;
+          renderServicePanel();
+        });
+      });
+      panel.querySelector("#sign-out-button")?.addEventListener("click", () => {
+        state.authToken = "";
+        state.user = null;
+        const status = document.querySelector(".status-pill");
+        if (status) status.textContent = "Guest checkout";
+        renderServicePanel();
+      });
+      panel.querySelector("#account-form")?.addEventListener("submit", (event) => {
+        event.preventDefault();
+        void submitAccountForm(event.currentTarget);
+      });
+
+      fetchBillingApi(endpoint).then((result) => {
+        if (state.activeService !== service.id) return;
+        const status = panel.querySelector("#catalog-state");
+        if (status) status.textContent = result.message || "Catalogue unavailable.";
+      }).catch((error) => {
+        const status = panel.querySelector("#catalog-state");
+        if (status) status.textContent = `Catalogue status unavailable: ${error.message}`;
+      });
+
+      if (service.id === "virtual-cards" && state.user) {
+        fetchBillingApi("/api/services/virtual-cards/eligibility").then((result) => {
+          const eligibility = panel.querySelector("#eligibility-state");
+          if (eligibility) eligibility.textContent = result.status
+            ? `Verification status: ${result.status}.`
+            : "Verification status unavailable.";
+        }).catch((error) => {
+          const eligibility = panel.querySelector("#eligibility-state");
+          if (eligibility) eligibility.textContent = error.message;
+        });
+      }
+    }
+
+    async function submitAccountForm(form) {
+      const payload = Object.fromEntries(new FormData(form).entries());
+      const message = form.querySelector("#account-message");
+      const endpoint = state.authMode === "register" ? "/api/auth/register" : "/api/auth/login";
+      try {
+        const result = await fetchBillingApi(endpoint, {
+          method: "POST",
+          body: JSON.stringify(payload)
+        });
+        state.authToken = result.token;
+        state.user = result.user;
+        state.authMode = "login";
+        const status = document.querySelector(".status-pill");
+        if (status) status.textContent = result.user.email;
+        renderServicePanel();
+      } catch (error) {
+        message.textContent = error.message;
+        message.classList.remove("hidden");
+        message.classList.add("inline-message-error");
+      }
+    }
+
+    function escapeHtml(value) {
+      return String(value).replace(/[&<>"']/g, (character) => ({
+        "&": "&amp;",
+        "<": "&lt;",
+        ">": "&gt;",
+        '"': "&quot;",
+        "'": "&#39;"
+      })[character]);
+    }
+
+    function feeQuoteUrl(serviceId, amount, values) {
+      const query = new URLSearchParams({
+        service: serviceId,
+        amount: String(amount),
+        network: values.network || "",
+        plan: values.plan || ""
+      });
+      return `/api/fees/quote?${query}`;
+    }
+
+    async function refreshFeePreview() {
+      const form = document.querySelector("#purchase-form");
+      const preview = document.querySelector("#fee-preview");
+      if (!form || !preview) return;
+      const values = Object.fromEntries(new FormData(form).entries());
+      const amount = resolveOrderAmount(state.activeService, values);
+      if (!amount || !Number.isFinite(amount) || amount <= 0) {
+        state.feeQuote = null;
+        preview.textContent = "Enter an amount or select a service option to see the platform fee breakdown.";
+        return;
+      }
+
+      const requestId = ++state.feeRequestId;
+      preview.textContent = "Refreshing the server fee quote…";
+      try {
+        const result = await fetchBillingApi(feeQuoteUrl(state.activeService, amount, values));
+        if (requestId !== state.feeRequestId) return;
+        state.feeQuote = result;
+        const quote = result.quote;
+        preview.innerHTML = `
+          <div><span>Service amount</span><strong>${formatMinorCurrency(quote.serviceAmountMinor, quote.currency)}</strong></div>
+          <div><span>Electrony platform fee</span><strong>${formatMinorCurrency(quote.platformFeeMinor, quote.currency)}</strong></div>
+          <div><span>Provider fee</span><strong>Not quoted</strong></div>
+          <div class="fee-preview-total"><span>Total before any provider fee</span><strong>${formatMinorCurrency(quote.totalBeforeProviderFeesMinor, quote.currency)}</strong></div>
+          <p>Payment is unavailable until the configured provider can disclose any applicable provider charge.</p>
+        `;
+      } catch (error) {
+        if (requestId !== state.feeRequestId) return;
+        state.feeQuote = null;
+        preview.textContent = `Fee quote unavailable: ${error.message}`;
+      }
+}
+
 function renderCheckoutPanel() {
   const panel = document.querySelector("#checkout-panel");
   if (!panel) return;
@@ -295,8 +488,9 @@ function renderCheckoutPanel() {
   }
 
   panel.classList.remove("hidden");
-  const { serviceId, summary, reference, amount, status } = state.order;
+  const { serviceId, summary, reference, amount, status, quote } = state.order;
   const service = serviceCatalog[serviceId];
+  const paymentReady = quote.providerFeeStatus === "quoted";
 
   panel.innerHTML = `
     <div class="checkout-header">
@@ -304,18 +498,22 @@ function renderCheckoutPanel() {
         <p class="eyebrow eyebrow-soft">Order review</p>
         <h3>${service.title}</h3>
       </div>
-      <span class="status-badge ${status === "paid" ? "success" : "pending"}">${status === "paid" ? "Paid" : "Awaiting payment"}</span>
+      <span class="status-badge ${status === "paid" ? "success" : paymentReady ? "pending" : "unavailable"}">${status === "paid" ? "Paid" : paymentReady ? "Awaiting payment" : "Provider quote required"}</span>
     </div>
     <div class="review-grid">
-      ${summary.map((line) => `<div class="review-item"><span>${line.label}</span><strong>${line.value}</strong></div>`).join("")}
-      <div class="review-item review-total"><span>Amount</span><strong>${formatCurrency(amount)}</strong></div>
+      ${summary.map((line) => `<div class="review-item"><span>${escapeHtml(line.label)}</span><strong>${escapeHtml(line.value)}</strong></div>`).join("")}
+      <div class="review-item"><span>Service amount</span><strong>${formatMinorCurrency(quote.serviceAmountMinor, quote.currency)}</strong></div>
+      <div class="review-item"><span>Electrony platform fee</span><strong>${formatMinorCurrency(quote.platformFeeMinor, quote.currency)}</strong></div>
+      <div class="review-item"><span>Provider fee</span><strong>${quote.providerFeeMinor === null ? "Not quoted" : formatMinorCurrency(quote.providerFeeMinor, quote.currency)}</strong></div>
+      <div class="review-item review-total"><span>Total before any unquoted provider fee</span><strong>${formatMinorCurrency(quote.totalBeforeProviderFeesMinor, quote.currency)}</strong></div>
     </div>
+    ${paymentReady ? "" : '<p class="checkout-notice">Payment is unavailable until the configured service provider can disclose any applicable provider fee. No payment will be taken.</p>'}
     <div class="checkout-meta">
       <span>Reference</span>
-      <strong>${reference}</strong>
+      <strong>${escapeHtml(reference)}</strong>
     </div>
     <div class="checkout-actions">
-      <button type="button" class="primary-button" id="pay-button">Pay now</button>
+      <button type="button" class="primary-button" id="pay-button" ${paymentReady ? "" : "disabled"}>Pay now</button>
       <button type="button" class="secondary-button" id="status-button">Check status</button>
     </div>
   `;
@@ -404,7 +602,7 @@ function createSummaryFromForm(serviceId, values) {
   return lines;
 }
 
-function handlePurchaseSubmission() {
+async function handlePurchaseSubmission() {
   const service = serviceCatalog[state.activeService];
   const form = document.querySelector("#purchase-form");
   if (!form) return;
@@ -459,14 +657,25 @@ function handlePurchaseSubmission() {
     }
   }
 
-  const reference = generateReference();
   const amount = resolveOrderAmount(state.activeService, values);
+  let feeQuote;
+  try {
+    feeQuote = await fetchBillingApi(feeQuoteUrl(state.activeService, amount, values));
+  } catch (error) {
+    renderInlineMessage(`Unable to confirm the latest fee breakdown: ${error.message}`, "error");
+    return;
+  }
+  if (feeQuote.quote.providerFeeStatus !== "quoted") {
+    renderInlineMessage("The provider has not supplied a complete fee quote. Review the breakdown, but checkout is not available.", "error");
+  }
 
   state.order = {
     serviceId: state.activeService,
-    reference,
+    reference: generateReference(),
     amount,
     status: "pending",
+    quote: feeQuote.quote,
+    quoteToken: feeQuote.quoteToken,
     summary: createSummaryFromForm(state.activeService, values),
     customer: {
       name: "Electrony Bills Customer",
@@ -516,6 +725,8 @@ async function completePurchase() {
         service: state.order.serviceId,
         reference: state.order.reference,
         amount: state.order.amount,
+        totalAmount: state.order.quote.totalBeforeProviderFeesMinor / 100,
+        quoteToken: state.order.quoteToken,
         ...state.order.customer
       })
     });
