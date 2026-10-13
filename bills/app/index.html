@@ -10,8 +10,10 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="../../styles/tokens.css">
+    <link rel="stylesheet" href="../../styles/site.css">
     <link rel="stylesheet" href="../../styles/bills-app.css">
     <script src="../../src/config.js" defer></script>
+    <script src="../../src/return-to-top.js" defer></script>
     <script src="../../src/bills-app.js" defer></script>
   </head>
   <body class="bills-app-page">
@@ -76,5 +78,38 @@
         <div id="checkout-panel" class="app-card hidden" aria-live="polite"></div>
       </section>
     </main>
+
+    <footer class="site-footer">
+      <div class="container footer-inner">
+        <div class="footer-brand">
+          <a class="wordmark wordmark-light" href="/" aria-label="Electrony home">Electrony<span class="wordmark-period" aria-hidden="true">.</span></a>
+          <p>Technology designed for the modern world — connected, capable and built for what's next.</p>
+        </div>
+        <div class="footer-links">
+          <div>
+            <h3>Explore</h3>
+            <ul>
+              <li><a href="/#software">Software</a></li>
+              <li><a class="hardware-link" href="/hardware/">Hardware</a></li>
+              <li><a href="/energy/">Energy</a></li>
+              <li><a href="/#mobility">Mobility</a></li>
+            </ul>
+          </div>
+          <div>
+            <h3>Company</h3>
+            <ul>
+              <li><a href="/#company">Vision</a></li>
+              <li><a href="/#contact">Partnerships</a></li>
+              <li><a class="contact-link" role="link" aria-disabled="true" tabindex="-1">Contact</a></li>
+            </ul>
+          </div>
+        </div>
+      </div>
+      <div class="container footer-meta">
+        <span>© Electrony</span>
+        <span>Technology for what's next.</span>
+      </div>
+    </footer>
+    <button class="back-to-top" data-return-to-top type="button" aria-label="Return to top">↑</button>
   </body>
 </html>

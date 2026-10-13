@@ -655,3 +655,16 @@ a:focus-visible {
     width: fit-content;
   }
 }
+
+@media (max-width: 48rem) {
+  .bills-app-page .site-footer .footer-inner {
+    grid-template-columns: 1fr;
+    gap: var(--space-6);
+  }
+
+  .bills-app-page .site-footer .footer-meta {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: var(--space-2);
+  }
+}

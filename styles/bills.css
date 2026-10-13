@@ -1162,6 +1162,19 @@ button:focus-visible {
     right: -2%;
     font-size: 0.5rem;
   }
+}
+
+@media (max-width: 48rem) {
+  .bills-page .site-footer .footer-inner {
+    grid-template-columns: 1fr;
+    gap: var(--space-6);
+  }
+
+  .bills-page .site-footer .footer-meta {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: var(--space-2);
+  }
 
   .bills-service-grid,
   .bills-principle-grid {

@@ -203,14 +203,16 @@ button:focus-visible {
   font-size: 1.25rem;
   opacity: 0;
   pointer-events: none;
+  visibility: hidden;
   transform: translateY(0.5rem);
-  transition: opacity 180ms ease, transform 180ms ease, box-shadow 180ms ease;
+  transition: opacity 180ms ease, transform 180ms ease, visibility 180ms ease, box-shadow 180ms ease;
   box-shadow: 0 0.75rem 1.5rem rgba(17, 17, 16, 0.08);
 }
 
 .back-to-top.is-visible {
   opacity: 1;
   pointer-events: auto;
+  visibility: visible;
   transform: translateY(0);
 }
 

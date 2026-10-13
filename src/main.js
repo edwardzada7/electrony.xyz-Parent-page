@@ -211,12 +211,30 @@ window.addEventListener("scroll", setHeaderState, { passive: true });
 setHeaderState();
 
 if (backToTopButton) {
+  const overlapsInteractiveControl = () => {
+    const buttonBounds = backToTopButton.getBoundingClientRect();
+
+    return [...document.querySelectorAll("a[href], button, input, select, textarea")].some((element) => {
+      if (element === backToTopButton || element.disabled || element.hidden || !element.getClientRects().length) return false;
+      const style = window.getComputedStyle(element);
+      if (style.display === "none" || style.visibility === "hidden") return false;
+      const controlBounds = element.getBoundingClientRect();
+      return controlBounds.left < buttonBounds.right
+        && controlBounds.right > buttonBounds.left
+        && controlBounds.top < buttonBounds.bottom
+        && controlBounds.bottom > buttonBounds.top;
+    });
+  };
+
   const toggleBackToTop = () => {
-    backToTopButton.classList.toggle("is-visible", window.scrollY > 520);
+    const isVisible = window.scrollY > 520 && !overlapsInteractiveControl();
+    backToTopButton.classList.toggle("is-visible", isVisible);
+    if (!isVisible && document.activeElement === backToTopButton) backToTopButton.blur();
   };
 
   toggleBackToTop();
   window.addEventListener("scroll", toggleBackToTop, { passive: true });
+  window.addEventListener("resize", toggleBackToTop, { passive: true });
 
   backToTopButton.addEventListener("click", () => {
     window.scrollTo({

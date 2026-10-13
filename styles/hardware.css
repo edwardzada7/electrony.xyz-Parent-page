@@ -1,4 +1,9 @@
 .hardware-page {
+  --hardware-blue: #38bdf8;
+  --hardware-blue-text: #0369a1;
+  --hardware-blue-pale: #e0f2fe;
+  --color-focus: var(--hardware-blue);
+  --focus-ring: 0 0 0 3px #111214, 0 0 0 6px var(--hardware-blue);
   background: var(--color-white);
   color: #111214;
 }
@@ -13,7 +18,6 @@
   --hardware-ink: #111214;
   --hardware-paper: #f5f5f2;
   --hardware-silver: #b9bec5;
-  --hardware-blue: #2563eb;
   --hardware-line: #dfe1e4;
   --hardware-content: min(100% - var(--content-gutter) * 2, var(--content-width));
 }
@@ -104,11 +108,11 @@
 
 .hardware-button-primary {
   background: var(--hardware-blue);
-  color: var(--color-white);
+  color: #082f49;
 }
 
 .hardware-button-primary:hover {
-  background: #1d4ed8;
+  background: #0ea5e9;
   box-shadow: 0 0.75rem 1.5rem rgb(0 0 0 / 18%);
 }
 
@@ -168,7 +172,7 @@
 .hardware-hero-art__orbit--two {
   width: 30%;
   height: 82%;
-  border-color: rgb(37 99 235 / 85%);
+  border-color: rgb(56 189 248 / 85%);
   transform: translate(-50%, -50%) rotate(32deg);
 }
 
@@ -179,7 +183,7 @@
   width: 4.5rem;
   aspect-ratio: 1;
   border: 1px solid var(--hardware-blue);
-  background: rgb(37 99 235 / 15%);
+  background: rgb(56 189 248 / 15%);
   transform: translate(-50%, -50%);
 }
 
@@ -227,7 +231,7 @@
 
 .hardware-eyebrow {
   margin: 0 0 1rem;
-  color: var(--hardware-blue);
+  color: var(--hardware-blue-text);
 }
 
 .hardware-section-heading h2,
@@ -314,7 +318,7 @@
 }
 
 .hardware-category-art--electrical svg {
-  stroke: #334155;
+  stroke: #40484f;
   stroke-width: 2;
 }
 
@@ -325,7 +329,7 @@
 .hardware-category-art--mobility svg {
   width: min(78%, 19rem);
   fill: #d4dbe3;
-  stroke: #303944;
+  stroke: #353c43;
   stroke-width: 1.4;
 }
 
@@ -334,7 +338,7 @@
 }
 
 .hardware-category-art--energy svg {
-  stroke: #36434a;
+  stroke: #3f464b;
 }
 
 .hardware-category-art > span {
@@ -408,7 +412,7 @@
   margin-top: 1rem;
   border: 0;
   background: transparent;
-  color: #174fc9;
+  color: var(--hardware-blue-text);
   font: inherit;
   font-size: 0.87rem;
   font-weight: 600;
@@ -417,7 +421,7 @@
 }
 
 .hardware-text-action:hover {
-  color: #123d9a;
+  color: #075985;
   text-decoration: underline;
   text-underline-offset: 0.25rem;
 }
@@ -480,7 +484,7 @@
   padding-inline: 0.6rem;
   border: 0;
   background: transparent;
-  color: #174fc9;
+  color: var(--hardware-blue-text);
   font: inherit;
   font-size: 0.82rem;
   font-weight: 600;
@@ -629,7 +633,7 @@
 }
 
 .hardware-product-card__footer a {
-  color: #174fc9;
+  color: var(--hardware-blue-text);
   font-size: 0.86rem;
   font-weight: 600;
   text-underline-offset: 0.22rem;
@@ -642,7 +646,7 @@
   gap: 1.5rem;
   padding: clamp(1.5rem, 4vw, 3rem);
   border: 1px solid var(--hardware-line);
-  background: var(--hardware-paper);
+  background: var(--hardware-blue-pale);
 }
 
 .hardware-state-mark {
@@ -686,7 +690,7 @@
 
 .hardware-business .hardware-eyebrow,
 .hardware-quote .hardware-eyebrow {
-  color: #8caeff;
+  color: var(--hardware-blue);
 }
 
 .hardware-business-copy > p {
@@ -736,7 +740,7 @@
 }
 
 .hardware-support-grid article > span {
-  color: var(--hardware-blue);
+  color: var(--hardware-blue-text);
   font-family: var(--font-label);
   font-size: 0.65rem;
 }
@@ -809,7 +813,7 @@
 
 .hardware-field label > span:first-child,
 .hardware-field label > [aria-hidden="true"] {
-  color: #174fc9;
+  color: var(--hardware-blue-text);
 }
 
 .hardware-optional {
@@ -878,7 +882,7 @@
 
 .hardware-footer .footer-links a:focus-visible,
 .hardware-footer-parent:focus-visible {
-  outline: 2px solid #8caeff;
+  outline: 2px solid var(--hardware-blue);
   outline-offset: 4px;
 }
 
