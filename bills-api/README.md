@@ -8,6 +8,10 @@ The Bills app keeps payment creation and verification server-side in this isolat
 npm run dev:api
 ```
 
+The API process also serves the website files from the repository root. For a single-service Railway deployment, set the existing service's start command to `npm start`; it listens on Railway's `PORT` and routes `/api/...` and `/health` to the API while serving other public paths as website files. The frontend uses same-origin API paths outside local development. `npm run dev` remains the separate local Python website server.
+
+The repository does not include Railway or Vercel deployment configuration. Production Bills API routes currently return `503` until a server-side database adapter has been implemented against the actual Supabase schema. In production, the API does not use the local JSON store; `/health` reports database status without exposing customer data or credentials. Payment session, verification, and webhook mutation routes are disabled in all modes until authoritative Monnify verification checks the merchant reference, amount, currency, and payment status and vending uses a verified provider contract.
+
 Expected endpoints:
 
 - `GET /health`
@@ -21,6 +25,8 @@ Expected endpoints:
 This project is intentionally isolated from the parent Electrony site. Keep Bills credentials in a real `.env` file or a deployment secret manager and never commit secrets into source control.
 
 Copy the sample variables from the repository root `.env.example` and update the values before running the Bills API.
+
+The example Monnify values are for local sandbox development only. When `NODE_ENV=production`, the API does not default the payment, redirect, or webhook URLs to sandbox/localhost. Configure `MONNIFY_BASE_URL` as an HTTPS non-sandbox endpoint and set `BILLS_PAYMENT_REDIRECT_URL` and `BILLS_WEBHOOK_BASE_URL` to HTTPS URLs. The API reports missing or unsafe payment configuration as unavailable; it does not select sandbox implicitly in production.
 
 ### Monnify sandbox variables
 
@@ -46,6 +52,8 @@ Copy the sample variables from the repository root `.env.example` and update the
 
 `BILLS_JWT_SECRET` must be a private random value of at least 32 characters. The API uses it to sign short-lived account tokens. Password hashes and user references are stored in the local JSON persistence directory; plaintext passwords and tokens are not persisted by the API.
 
+`BILLS_PROVIDER_TIMEOUT_MS` bounds each vending-provider request. Valid values are 1–120000 milliseconds; invalid values use the 20000 millisecond default.
+
 ## Platform fees and transaction safety
 
 The server-controlled fee table is in `platform-fees.js`. Electricity, airtime, data, and supported bills each have one NGN 100 fee per payment transaction; virtual cards have no fixed NGN fee and use USD product pricing; gift cards have a zero Electrony platform fee. Fee quotes use integer minor units and expire after five minutes. Payment initialization recalculates the quote server-side and rejects a missing, stale, or mismatched quote; client-supplied fees are never authoritative.
@@ -56,7 +64,9 @@ The existing vending adapter does not currently provide a documented provider-fe
 
 Account registration and login are provided by the Bills API. Purchases in the Virtual Cards and Gift Cards sections require a signed-in account at the backend, but their catalogues currently return `provider_unconfigured`; their purchase endpoints do not create transactions. The API has no configured card or gift-card provider, so it cannot verify provider KYC/eligibility, offer provider products, or issue cards/gift cards. Monnify is used only for existing supported bill-payment processing, not assumed to provide these products.
 
-Transaction, account, and webhook-idempotency records use JSON files in `bills-api/data/`. This is persistent local-file storage, not a production database or horizontally safe datastore. Before accepting real customer payments, deploy a durable database with transactional uniqueness/locking, configure and verify bill fulfilment and provider fee quotes, and select/configure the card and gift-card providers and their actual KYC/payment/fulfilment APIs.
+Transaction, account, and webhook-idempotency records use JSON files beside the configured `BILLS_DATABASE_URL` file. By default, they are stored under `~/.electrony-bills/`; the previous `bills-api/data/` files are legacy migration sources. This is persistent local-file storage, not a production database or horizontally safe datastore. Before accepting real customer payments, deploy a durable database with transactional uniqueness/locking, configure and verify bill fulfilment and provider fee quotes, and select/configure the card and gift-card providers and their actual KYC/payment/fulfilment APIs.
+
+The current vending adapter has no provider-fee quote operation, so payment-session creation remains unavailable even when its basic credentials are present. The payment adapter must also be updated against the selected provider's documented settlement response before production to compare the confirmed amount, currency, and reference with the stored transaction; those provider-specific fields cannot safely be inferred from the current generic adapter. A paid Monnify verification or signed webhook starts fulfillment at most once per local transaction record; JSON-file writes do not provide cross-process locking or crash-safe provider idempotency. Treat deployment for real payments as blocked until the provider quote/fulfillment/settlement contract and durable transactional storage are implemented and verified.
 
 ## Payment flow
 

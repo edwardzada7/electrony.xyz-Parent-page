@@ -127,7 +127,9 @@ const formatMinorCurrency = (minor, currency = "NGN") => new Intl.NumberFormat("
 
 const generateReference = () => {
   const dateStamp = new Date().toISOString().slice(0, 10).replace(/-/g, "");
-  const suffix = Math.random().toString(36).slice(2, 8).toUpperCase();
+  const bytes = new Uint8Array(16);
+  window.crypto.getRandomValues(bytes);
+  const suffix = Array.from(bytes, (byte) => byte.toString(16).padStart(2, "0")).join("").toUpperCase();
   return `ELECBILLS-${dateStamp}-${suffix}`;
 };
 
@@ -527,9 +529,7 @@ function renderCheckoutPanel() {
 
     try {
       const response = await fetchBillingApi(`/api/payments/status?reference=${encodeURIComponent(state.order.reference)}`);
-      const status = response.status || "unknown";
-      const note = response.providerReference ? `Provider ref: ${response.providerReference}` : "No provider reference yet.";
-      displayTransactionResult("Status checked successfully.", `${status.toUpperCase()} — ${note}`, status === "successful" ? "success" : "pending");
+      displayPaymentOutcome(response, response.reference || state.order.reference);
     } catch (error) {
       displayTransactionResult("Status check failed.", error.message, "error");
     }
@@ -771,36 +771,63 @@ async function verifyReturnedPayment() {
   if (!reference) return;
 
   try {
-    const response = await fetchBillingApi(`/api/payments/status?reference=${encodeURIComponent(reference)}`);
-    const resolvedStatus = String(response.status || "pending").toLowerCase();
-
-    if (resolvedStatus === "paid" || resolvedStatus === "payment_success" || resolvedStatus === "success") {
-      displayTransactionResult("Payment successful.", `Reference: ${reference}. Your service is being processed.`, "success");
-      return;
-    }
-
-    if (resolvedStatus === "payment_pending" || resolvedStatus === "pending" || resolvedStatus === "processing") {
-      displayTransactionResult("Payment received.", `Reference: ${reference}. Your service is still being processed.`, "pending");
-      return;
-    }
-
-    displayTransactionResult("Payment could not be confirmed.", `Reference: ${reference}. Please review your payment or try again shortly.`, "error");
+    const response = await fetchBillingApi("/api/payments/verify", {
+      method: "POST",
+      body: JSON.stringify({ reference })
+    });
+    displayPaymentOutcome(response, response.reference || reference);
   } catch (error) {
     displayTransactionResult("Payment verification is pending.", `Reference: ${reference}. Please check status again shortly.`, "pending");
   }
+}
+
+function displayPaymentOutcome(response, reference) {
+  const status = String(response.status || "").toLowerCase();
+  const paymentStatus = String(response.paymentStatus || "").toLowerCase();
+  const fulfillmentStatus = String(response.fulfillmentStatus || "").toLowerCase();
+
+  if (status === "success" || fulfillmentStatus === "success") {
+    displayTransactionResult("Payment successful.", `Reference: ${reference}. Your service was confirmed.`, "success");
+    return;
+  }
+
+  if (paymentStatus === "payment_success" || status === "paid" || status === "payment_success") {
+    const deliveryFailed = ["failed", "vending_failed"].includes(status)
+      || ["failed", "vending_failed"].includes(fulfillmentStatus);
+    displayTransactionResult(
+      deliveryFailed ? "Payment confirmed; service delivery needs attention." : "Payment confirmed.",
+      deliveryFailed
+        ? `Reference: ${reference}. Your payment was received, but service delivery was not confirmed.`
+        : `Reference: ${reference}. Your service is still being processed.`,
+      deliveryFailed ? "error" : "pending"
+    );
+    return;
+  }
+
+  if (["payment_failed", "failed", "cancelled", "canceled"].includes(status)
+    || paymentStatus === "payment_failed") {
+    displayTransactionResult("Payment could not be confirmed.", `Reference: ${reference}. Please review your payment or try again.`, "error");
+    return;
+  }
+
+  displayTransactionResult("Payment status is pending.", `Reference: ${reference}. Please check status again shortly.`, "pending");
 }
 
 function displayTransactionResult(message, details, status) {
   const panel = document.querySelector("#checkout-panel");
   if (!panel) return;
 
+  panel.classList.remove("hidden");
   const resultCard = document.createElement("div");
   resultCard.className = `result-card result-card-${status}`;
-  resultCard.innerHTML = `
-    <p class="result-label">Transaction result</p>
-    <h4>${message}</h4>
-    <p>${details}</p>
-  `;
+  const label = document.createElement("p");
+  label.className = "result-label";
+  label.textContent = "Transaction result";
+  const heading = document.createElement("h4");
+  heading.textContent = message;
+  const detail = document.createElement("p");
+  detail.textContent = details;
+  resultCard.append(label, heading, detail);
 
   const previous = panel.querySelector(".result-card");
   if (previous) previous.remove();

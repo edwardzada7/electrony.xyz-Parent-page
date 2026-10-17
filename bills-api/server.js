@@ -168,7 +168,7 @@ function loadEnvFromFiles() {
       const separatorIndex = trimmed.indexOf("=");
       const key = trimmed.slice(0, separatorIndex).trim();
       const value = trimmed.slice(separatorIndex + 1).trim();
-      if (key) {
+      if (key && process.env[key] === undefined) {
         process.env[key] = value;
       }
     }
@@ -202,7 +202,16 @@ function ensureDataDirectory() {
 }
 
 function moveLegacyRecord(source, destination) {
-  if (!fs.existsSync(source) || fs.existsSync(destination)) return;
+  if (!fs.existsSync(source)) return;
+
+  if (fs.existsSync(destination)) {
+    const legacyRecords = readJsonFile(source, {});
+    const destinationRecords = readJsonFile(destination, {});
+    writeJsonFile(destination, { ...legacyRecords, ...destinationRecords });
+    fs.unlinkSync(source);
+    fs.chmodSync(destination, 0o600);
+    return;
+  }
 
   try {
     fs.renameSync(source, destination);
@@ -210,8 +219,16 @@ function moveLegacyRecord(source, destination) {
     if (error && error.code !== "EXDEV") {
       throw error;
     }
-    fs.copyFileSync(source, destination);
-    fs.unlinkSync(source);
+    const temporaryPath = `${destination}.${process.pid}.${crypto.randomUUID()}.tmp`;
+    try {
+      fs.copyFileSync(source, temporaryPath, fs.constants.COPYFILE_EXCL);
+      fs.chmodSync(temporaryPath, 0o600);
+      fs.renameSync(temporaryPath, destination);
+      fs.unlinkSync(source);
+    } catch (copyError) {
+      if (fs.existsSync(temporaryPath)) fs.unlinkSync(temporaryPath);
+      throw copyError;
+    }
   }
 
   fs.chmodSync(destination, 0o600);
@@ -229,21 +246,37 @@ function migrateLegacyRecords() {
   }
 }
 
-migrateLegacyRecords();
+if (process.env.NODE_ENV !== "production") {
+  migrateLegacyRecords();
+}
 
 function readJsonFile(filePath, fallback) {
   try {
     const fileContents = fs.readFileSync(filePath, "utf8");
-    if (!fileContents.trim()) return fallback;
-    return JSON.parse(fileContents);
+    if (!fileContents.trim()) {
+      throw new Error("The file is empty.");
+    }
+    const value = JSON.parse(fileContents);
+    if (!value || typeof value !== "object" || Array.isArray(value)) {
+      throw new Error("The file does not contain an object.");
+    }
+    return value;
   } catch (error) {
-    return fallback;
+    if (error && error.code === "ENOENT") return fallback;
+    throw new Error(`Unable to read Bills data file "${path.basename(filePath)}".`);
   }
 }
 
 function writeJsonFile(filePath, content) {
-  fs.writeFileSync(filePath, JSON.stringify(content, null, 2), { encoding: "utf8", mode: 0o600 });
-  fs.chmodSync(filePath, 0o600);
+  const temporaryPath = `${filePath}.${process.pid}.${crypto.randomUUID()}.tmp`;
+  try {
+    fs.writeFileSync(temporaryPath, JSON.stringify(content, null, 2), { encoding: "utf8", mode: 0o600, flag: "wx" });
+    fs.chmodSync(temporaryPath, 0o600);
+    fs.renameSync(temporaryPath, filePath);
+  } catch (error) {
+    if (fs.existsSync(temporaryPath)) fs.unlinkSync(temporaryPath);
+    throw error;
+  }
 }
 
 function readStore() {
@@ -272,7 +305,7 @@ function nowIso() {
 
 function createReference(prefix = "ELECBILLS") {
   const dateStamp = new Date().toISOString().slice(0, 10).replace(/-/g, "");
-  const suffix = Math.random().toString(36).slice(2, 8).toUpperCase();
+  const suffix = crypto.randomBytes(16).toString("hex").toUpperCase();
   return `${prefix}-${dateStamp}-${suffix}`;
 }
 
@@ -287,14 +320,16 @@ function parseJsonBody(rawBody) {
 }
 
 function getMonnifyConfig() {
+  const isProduction = process.env.NODE_ENV === "production";
   return {
     apiKey: readEnv("MONNIFY_API_KEY"),
     secretKey: readEnv("MONNIFY_SECRET_KEY"),
     contractCode: readEnv("MONNIFY_CONTRACT_CODE"),
-    baseUrl: readEnv("MONNIFY_BASE_URL") || "https://sandbox.monnify.com",
+    baseUrl: readEnv("MONNIFY_BASE_URL") || (isProduction ? "" : "https://sandbox.monnify.com"),
     webhookSecret: readEnv("MONNIFY_WEBHOOK_SECRET"),
-    redirectUrl: readEnv("BILLS_PAYMENT_REDIRECT_URL") || "http://localhost:4173/bills/app/?payment=success",
-    appUrl: readEnv("BILLS_APP_URL") || "http://localhost:4173/bills/app/"
+    redirectUrl: readEnv("BILLS_PAYMENT_REDIRECT_URL") || (isProduction ? "" : "http://localhost:4173/bills/app/?payment=success"),
+    webhookBaseUrl: readEnv("BILLS_WEBHOOK_BASE_URL") || (isProduction ? "" : "http://localhost:4174"),
+    appUrl: readEnv("BILLS_APP_URL") || (isProduction ? "" : "http://localhost:4173/bills/app/")
   };
 }
 
@@ -310,7 +345,33 @@ function getMissingMonnifyConfig() {
     if (!config[key]) missing.push(`MONNIFY_${toEnvName(key)}`);
   });
 
-  if (!config.baseUrl) missing.push("MONNIFY_BASE_URL");
+  if (!config.baseUrl) {
+    missing.push("MONNIFY_BASE_URL");
+  } else if (process.env.NODE_ENV === "production") {
+    try {
+      const baseUrl = new URL(config.baseUrl);
+      if (baseUrl.protocol !== "https:" || /sandbox/i.test(baseUrl.hostname)) {
+        missing.push("MONNIFY_BASE_URL (HTTPS production endpoint required)");
+      }
+    } catch {
+      missing.push("MONNIFY_BASE_URL (valid HTTPS production endpoint required)");
+    }
+  }
+
+  if (process.env.NODE_ENV === "production") {
+    for (const [name, value] of [
+      ["BILLS_PAYMENT_REDIRECT_URL", config.redirectUrl],
+      ["BILLS_WEBHOOK_BASE_URL", config.webhookBaseUrl]
+    ]) {
+      try {
+        if (new URL(value).protocol !== "https:") {
+          missing.push(`${name} (HTTPS URL required)`);
+        }
+      } catch {
+        missing.push(`${name} (HTTPS URL required)`);
+      }
+    }
+  }
 
   return missing;
 }
@@ -328,6 +389,74 @@ function sendJson(response, statusCode, payload) {
     "Access-Control-Allow-Headers": "Content-Type, Authorization, X-Requested-With, x-monnify-signature"
   });
   response.end(JSON.stringify(payload));
+}
+
+function serveWebsite(request, response, url) {
+  if (request.method !== "GET" && request.method !== "HEAD") return false;
+
+  let pathname;
+  try {
+    pathname = decodeURIComponent(url.pathname);
+  } catch {
+    sendJson(response, 400, { ok: false, error: "Invalid URL path." });
+    return true;
+  }
+
+  if (pathname === "/health" || pathname === "/api" || pathname.startsWith("/api/")) {
+    return false;
+  }
+
+  const segments = pathname.split("/").filter(Boolean);
+  if (segments.some((segment) => segment.startsWith("."))
+    || ["bills-api", "node_modules"].includes(segments[0])) {
+    return false;
+  }
+
+  let filePath = path.resolve(APP_ROOT, `.${pathname}`);
+  const relativePath = path.relative(APP_ROOT, filePath);
+  if (relativePath === ".." || relativePath.startsWith(`..${path.sep}`) || path.isAbsolute(relativePath)) {
+    return false;
+  }
+
+  try {
+    let stat = fs.statSync(filePath);
+    if (stat.isDirectory()) {
+      filePath = path.join(filePath, "index.html");
+      stat = fs.statSync(filePath);
+    }
+    if (!stat.isFile()) return false;
+
+    const contentTypes = {
+      ".css": "text/css; charset=utf-8",
+      ".gif": "image/gif",
+      ".html": "text/html; charset=utf-8",
+      ".ico": "image/x-icon",
+      ".jpg": "image/jpeg",
+      ".jpeg": "image/jpeg",
+      ".js": "text/javascript; charset=utf-8",
+      ".json": "application/json; charset=utf-8",
+      ".png": "image/png",
+      ".svg": "image/svg+xml",
+      ".webp": "image/webp",
+      ".woff": "font/woff",
+      ".woff2": "font/woff2"
+    };
+    const content = request.method === "HEAD" ? null : fs.readFileSync(filePath);
+    response.writeHead(200, {
+      "Content-Type": contentTypes[path.extname(filePath).toLowerCase()] || "application/octet-stream",
+      "Content-Length": stat.size,
+      "Cache-Control": "no-cache",
+      "X-Content-Type-Options": "nosniff"
+    });
+    if (content) response.end(content);
+    else response.end();
+    return true;
+  } catch (error) {
+    if (error && error.code === "ENOENT") return false;
+    console.error("Website file could not be served.");
+    sendJson(response, 500, { ok: false, error: "Website file could not be served." });
+    return true;
+  }
 }
 
 function readPayload(request) {
@@ -367,7 +496,10 @@ function readRawBody(request) {
 
 function getTransaction(reference) {
   const store = readStore();
-  return store[reference] || null;
+  if (Object.prototype.hasOwnProperty.call(store, reference)) {
+    return store[reference];
+  }
+  return Object.values(store).find((transaction) => transaction.monnifyReference === reference) || null;
 }
 
 function saveTransaction(reference, transaction) {
@@ -392,11 +524,17 @@ async function requestJson(url, options = {}) {
     ...(options.headers || {})
   };
 
-  const response = await fetch(url, {
-    method: options.method || "GET",
-    headers,
-    body: options.body ? JSON.stringify(options.body) : undefined
-  });
+  let response;
+  try {
+    response = await fetch(url, {
+      method: options.method || "GET",
+      headers,
+      body: options.body ? JSON.stringify(options.body) : undefined,
+      signal: AbortSignal.timeout(20000)
+    });
+  } catch {
+    throw new Error("Payment provider is temporarily unavailable.");
+  }
 
   const rawText = await response.text();
   let payload = {};
@@ -410,8 +548,7 @@ async function requestJson(url, options = {}) {
   }
 
   if (!response.ok) {
-    const errorMessage = payload?.message || payload?.error || payload?.responseMessage || `Request failed with status ${response.status}`;
-    throw new Error(errorMessage);
+    throw new Error(`Payment provider request failed with status ${response.status}.`);
   }
 
   return payload;
@@ -419,7 +556,7 @@ async function requestJson(url, options = {}) {
 
 async function authenticateMonnify() {
   if (!hasMonnifyConfig()) {
-    throw new Error("Monnify sandbox is not configured. Set MONNIFY_API_KEY, MONNIFY_SECRET_KEY, MONNIFY_CONTRACT_CODE, and MONNIFY_WEBHOOK_SECRET.");
+    throw new Error("Monnify is not configured. Set the required payment-provider and Bills return/webhook URL values.");
   }
 
   const config = getMonnifyConfig();
@@ -461,7 +598,7 @@ async function createMonnifyReservation(transaction) {
       service: transaction.service,
       internalReference: transaction.reference,
       provider: "monnify",
-      webhookUrl: `${readEnv("BILLS_WEBHOOK_BASE_URL") || "http://localhost:4174"}/api/payments/webhook`
+      webhookUrl: `${config.webhookBaseUrl.replace(/\/$/, "")}/api/payments/webhook`
     }
   };
 
@@ -475,6 +612,15 @@ async function createMonnifyReservation(transaction) {
 
   const transactionReference = response?.data?.transactionReference || response?.transactionReference || response?.reference || transaction.reference;
   const checkoutUrl = response?.data?.checkoutUrl || response?.checkoutUrl || response?.paymentLink || response?.data?.paymentLink || response?.data?.authorizationUrl || "";
+  let parsedCheckoutUrl;
+  try {
+    parsedCheckoutUrl = new URL(checkoutUrl);
+  } catch {
+    throw new Error("Payment provider did not return a valid checkout URL.");
+  }
+  if (parsedCheckoutUrl.protocol !== "https:" || parsedCheckoutUrl.username || parsedCheckoutUrl.password) {
+    throw new Error("Payment provider returned an unsafe checkout URL.");
+  }
 
   return {
     monnifyReference: transactionReference,
@@ -484,7 +630,7 @@ async function createMonnifyReservation(transaction) {
 }
 
 function extractMonnifyStatus(payload) {
-  const candidate = payload?.data || payload?.result || payload || {};
+  const candidate = payload?.eventData || payload?.data || payload?.result || payload || {};
   const status = candidate.paymentStatus || candidate.status || candidate.transactionStatus || payload.status || payload.paymentStatus || "";
   const normalized = String(status).toUpperCase();
 
@@ -557,7 +703,7 @@ async function processVendingForTransaction(transaction) {
       meterType: transaction.customer?.meterType || "prepaid"
     });
 
-    if (!validation?.ok) {
+    if (validation?.ok !== true) {
       return {
         ok: false,
         status: "payment_failed",
@@ -612,6 +758,43 @@ async function processVendingForTransaction(transaction) {
   };
 }
 
+async function fulfillPaidTransaction(reference) {
+  const current = getTransaction(reference);
+  if (!current || current.fulfillmentStartedAt) return current;
+
+  const transaction = {
+    ...current,
+    paymentStatus: "payment_success",
+    status: "processing",
+    fulfillmentStatus: "processing",
+    fulfillmentStartedAt: nowIso(),
+    updatedAt: nowIso()
+  };
+  saveTransaction(reference, transaction);
+
+  let vendingResult;
+  try {
+    vendingResult = await processVendingForTransaction(transaction);
+  } catch (error) {
+    console.error("Bills fulfillment request failed; reconciliation is required.", { reference });
+    vendingResult = {
+      ok: false,
+      status: "pending_reconciliation",
+      message: "Provider delivery could not be confirmed and requires reconciliation."
+    };
+  }
+  const updated = {
+    ...transaction,
+    providerReference: vendingResult?.providerReference || transaction.providerReference || "",
+    providerMessage: vendingResult?.message || "",
+    fulfillmentStatus: vendingResult?.ok === true ? "success" : (vendingResult?.status || "pending"),
+    status: vendingResult?.ok === true ? "success" : (vendingResult?.status === "pending_reconciliation" ? "pending" : "failed"),
+    updatedAt: nowIso()
+  };
+  saveTransaction(reference, updated);
+  return updated;
+}
+
 function normalizeService(service) {
   if (!service || !ALLOWED_SERVICES.includes(service)) {
     return "";
@@ -662,24 +845,28 @@ function getExpectedAmount(service, customer = {}) {
   return 0;
 }
 
+function makeBillFeeQuote(service, amount, network = "", plan = "") {
+  if (!ALLOWED_SERVICES.includes(service) || !PLATFORM_FEE_RULES[service]) {
+    throw new Error("Unsupported service type.");
+  }
+  const amountMinor = parseMoneyToMinor(amount);
+  if ((service === "electricity" && amountMinor > 5000000 * 100)
+    || (service === "airtime" && amountMinor > 500000 * 100)) {
+    throw new Error("Amount exceeds the supported maximum.");
+  }
+  if (service === "data" || service === "bills") {
+    const expected = getExpectedAmount(service, { network, plan });
+    if (!expected || amountMinor !== expected * 100) {
+      throw new Error("The selected service option does not match its configured price.");
+    }
+  }
+  return createPlatformFeeQuote(service, amountMinor);
+}
+
 function validateServiceRequest(payload) {
   const service = normalizeService(payload.service);
   if (!service) {
     throw new Error("Unsupported service type.");
-  }
-
-  function makeBillFeeQuote(service, amount, network = "", plan = "") {
-    if (!ALLOWED_SERVICES.includes(service) || !PLATFORM_FEE_RULES[service]) {
-      throw new Error("Unsupported service type.");
-    }
-    const amountMinor = parseMoneyToMinor(amount);
-    if (service === "data" || service === "bills") {
-      const expected = getExpectedAmount(service, { network, plan });
-      if (!expected || amountMinor !== expected * 100) {
-        throw new Error("The selected service option does not match its configured price.");
-      }
-    }
-    return createPlatformFeeQuote(service, amountMinor);
   }
 
   const amountMinor = parseMoneyToMinor(payload.amount);
@@ -781,9 +968,14 @@ async function handleWebhook(request, response) {
     }
 
     const payload = parseJsonBody(rawBody);
-    const event = payload?.event || payload?.data || payload;
+    const event = payload?.eventData || payload?.event || payload?.data || payload;
     const transactionReference = event?.transactionReference || event?.reference || payload?.reference || "";
-    const eventId = `${transactionReference}:${event?.eventType || payload?.eventType || "payment"}`;
+    if (!transactionReference) {
+      sendJson(response, 400, { ok: false, error: "Webhook transaction reference is required." });
+      return;
+    }
+    const monnifyStatus = extractMonnifyStatus(payload);
+    const eventId = `${transactionReference}:${event?.eventType || payload?.eventType || "payment"}:${monnifyStatus}`;
     const processed = readWebhookStore();
 
     if (processed[eventId]) {
@@ -791,10 +983,18 @@ async function handleWebhook(request, response) {
       return;
     }
 
-    const transaction = getTransaction(transactionReference) || getTransaction(event?.customerReference || event?.paymentReference || "");
+    const fallbackReference = event?.customerReference || event?.paymentReference || "";
+    const transaction = getTransaction(transactionReference) || getTransaction(fallbackReference);
 
     if (!transaction) {
       sendJson(response, 202, { ok: true, queued: true, reference: transactionReference, note: "Webhook accepted, but no matching local transaction was found." });
+      return;
+    }
+
+    if (transactionReference
+      && transactionReference !== transaction.reference
+      && transactionReference !== transaction.monnifyReference) {
+      sendJson(response, 400, { ok: false, error: "Webhook transaction reference does not match the local payment." });
       return;
     }
 
@@ -805,31 +1005,19 @@ async function handleWebhook(request, response) {
     processed[eventId] = { processedAt: nowIso(), reference: transactionReference };
     persistWebhookStore(processed);
 
-    const monnifyStatus = extractMonnifyStatus(payload);
     if (monnifyStatus === "paid") {
-      transaction.paymentStatus = "payment_success";
-      transaction.status = "processing";
-      transaction.fulfillmentStatus = "processing";
-      transaction.fulfillmentStartedAt = nowIso();
-      transaction.monnifyReference = transaction.monnifyReference || transactionReference;
-      transaction.updatedAt = nowIso();
-      saveTransaction(transaction.reference, transaction);
-
-      const vendingResult = await processVendingForTransaction(transaction);
-
-      transaction.providerReference = vendingResult?.providerReference || transaction.providerReference || "";
-      transaction.providerMessage = vendingResult?.message || "";
-      transaction.fulfillmentStatus = vendingResult?.ok ? "success" : (vendingResult?.status || "pending");
-      transaction.paymentStatus = "payment_success";
-      transaction.status = vendingResult?.ok ? "success" : (vendingResult?.status === "pending_reconciliation" ? "pending" : "failed");
-      transaction.updatedAt = nowIso();
-      saveTransaction(transaction.reference, transaction);
+      const currentTransaction = getTransaction(transaction.reference);
+      if (currentTransaction && !currentTransaction.monnifyReference) {
+        currentTransaction.monnifyReference = transactionReference;
+        saveTransaction(currentTransaction.reference, currentTransaction);
+      }
+      const fulfilled = await fulfillPaidTransaction(transaction.reference);
 
       sendJson(response, 200, {
         ok: true,
         reference: transaction.reference,
-        vendorStatus: transaction.status,
-        providerMessage: vendingResult?.message || "Webhook processed successfully."
+        vendorStatus: fulfilled?.status || "pending",
+        message: "Payment notification processed."
       });
       return;
     }
@@ -850,13 +1038,13 @@ async function handleWebhook(request, response) {
     saveTransaction(transaction.reference, transaction);
     sendJson(response, 200, { ok: true, reference: transaction.reference, status: transaction.status });
   } catch (error) {
-    sendJson(response, 400, { ok: false, error: error.message || "Unable to process webhook." });
+    sendJson(response, 400, { ok: false, error: "Unable to process webhook." });
   }
 }
 
-const port = Number(readEnv("ELECTRONY_BILLS_PORT") || 4174);
+const port = Number(process.env.PORT || readEnv("ELECTRONY_BILLS_PORT") || 4174);
 
-const server = http.createServer(async (request, response) => {
+async function handleRequest(request, response) {
   if (request.method === "OPTIONS") {
     sendJson(response, 204, {});
     return;
@@ -865,14 +1053,41 @@ const server = http.createServer(async (request, response) => {
   const url = new URL(request.url, `http://${request.headers.host}`);
 
   if (request.method === "GET" && url.pathname === "/health") {
+    const production = process.env.NODE_ENV === "production";
     sendJson(response, 200, {
       ok: true,
       service: "electrony-bills",
-      mode: hasMonnifyConfig() ? "monnify-sandbox" : "configuration-required",
-      hasDatabase: fs.existsSync(TRANSACTION_STORE_PATH),
-      persistence: "json-file",
+      database: {
+        status: "not_configured",
+        connected: false
+      },
+      billsApi: production ? "blocked-until-durable-database-is-configured" : "available",
+      payments: "blocked-until-authoritative-verification-and-vending-contracts-are-implemented",
+      mode: !hasMonnifyConfig()
+        ? "configuration-required"
+        : production ? "monnify-production" : "monnify-sandbox",
+      hasDatabase: false,
+      persistence: production ? "disabled" : "json-file",
       virtualCards: "provider_unconfigured",
       giftCards: "provider_unconfigured"
+    });
+    return;
+  }
+
+  if (request.method === "POST"
+    && ["/api/payments/session", "/api/payments/verify", "/api/payments/webhook"].includes(url.pathname)) {
+    sendJson(response, 503, {
+      ok: false,
+      error: "Payment operations are disabled until authoritative Monnify verification and a verified vending-provider contract are implemented."
+    });
+    return;
+  }
+
+  if (process.env.NODE_ENV === "production"
+    && (url.pathname === "/api" || url.pathname.startsWith("/api/"))) {
+    sendJson(response, 503, {
+      ok: false,
+      error: "Bills API persistence is unavailable. Configure the verified production database adapter before using Bills API routes."
     });
     return;
   }
@@ -993,7 +1208,11 @@ const server = http.createServer(async (request, response) => {
         sendJson(response, 400, { ok: false, error: "The submitted total does not match the server fee quote." });
         return;
       }
-      const reference = String(payload.reference || createReference());
+      const reference = String(payload.reference || createReference()).trim();
+      if (!/^ELECBILLS-\d{8}-(?:[A-Z0-9]{6}|[A-F0-9]{32})$/.test(reference)) {
+        sendJson(response, 400, { ok: false, error: "Invalid transaction reference." });
+        return;
+      }
       const user = authenticateRequest(request);
 
       const existing = getTransaction(reference);
@@ -1002,7 +1221,10 @@ const server = http.createServer(async (request, response) => {
           sendJson(response, 403, { ok: false, error: "This transaction reference belongs to another customer." });
           return;
         }
-        if (existing.totalAmountMinor !== quote.totalBeforeProviderFeesMinor) {
+        if (existing.service !== validation.service
+          || existing.amountMinor !== validation.amountMinor
+          || existing.totalAmountMinor !== quote.totalBeforeProviderFeesMinor
+          || JSON.stringify(existing.customer) !== JSON.stringify(validation.customer)) {
           sendJson(response, 409, { ok: false, error: "The quote has changed. Refresh the breakdown and confirm again." });
           return;
         }
@@ -1015,7 +1237,7 @@ const server = http.createServer(async (request, response) => {
           providerFeeMinor: existing.providerFeeMinor,
           totalAmountMinor: existing.totalAmountMinor,
           status: existing.status,
-          mode: "monnify-sandbox",
+          mode: process.env.NODE_ENV === "production" ? "monnify-production" : "monnify-sandbox",
           checkoutUrl: existing.checkoutUrl || "",
           idempotent: true
         });
@@ -1073,17 +1295,17 @@ const server = http.createServer(async (request, response) => {
           ...transaction,
           status: "awaiting_payment",
           paymentStatus: "configuration_required",
-          note: "Monnify sandbox is not configured. Set required environment values before launching a real checkout.",
+          note: "Monnify is not configured. Set required environment values before launching a checkout.",
           requiredConfig: missing
         };
         saveTransaction(reference, updated);
 
         sendJson(response, 503, {
           ok: false,
-          error: "Monnify sandbox is not configured.",
+          error: "Monnify is not configured.",
           reference,
           requiredConfig: missing,
-          note: "Set MONNIFY_API_KEY, MONNIFY_SECRET_KEY, MONNIFY_CONTRACT_CODE, MONNIFY_WEBHOOK_SECRET, and MONNIFY_BASE_URL before processing real transactions."
+          note: "Set the required MONNIFY_* credentials and BILLS_PAYMENT_REDIRECT_URL/BILLS_WEBHOOK_BASE_URL values before processing transactions."
         });
         return;
       }
@@ -1111,7 +1333,7 @@ const server = http.createServer(async (request, response) => {
           providerFeeMinor: transaction.providerFeeMinor,
           totalAmountMinor: transaction.totalAmountMinor,
           status: "awaiting_payment",
-          mode: "monnify-sandbox",
+          mode: process.env.NODE_ENV === "production" ? "monnify-production" : "monnify-sandbox",
           checkoutUrl: result.checkoutUrl,
           monnifyReference: result.monnifyReference,
           note: "Only the payment redirect URL is exposed to the browser. Monnify credentials remain server-side only."
@@ -1128,7 +1350,7 @@ const server = http.createServer(async (request, response) => {
 
         sendJson(response, 502, {
           ok: false,
-          error: error.message || "Unable to create Monnify reservation.",
+          error: "Unable to create a payment session with the configured provider.",
           reference
         });
       }
@@ -1154,6 +1376,7 @@ const server = http.createServer(async (request, response) => {
         sendJson(response, 404, { ok: false, error: "Transaction reference not found." });
         return;
       }
+      const transactionReference = transaction.reference;
       const user = authenticateRequest(request);
       if (transaction.userId && transaction.userId !== user?.id) {
         sendJson(response, 403, { ok: false, error: "You do not have access to this transaction." });
@@ -1163,8 +1386,8 @@ const server = http.createServer(async (request, response) => {
       if (!hasMonnifyConfig()) {
         sendJson(response, 400, {
           ok: false,
-          error: "Monnify sandbox verification is unavailable because the required configuration is missing.",
-          reference,
+          error: "Payment verification is unavailable because the required configuration is missing.",
+          reference: transactionReference,
           status: transaction.status || "unknown"
         });
         return;
@@ -1174,40 +1397,55 @@ const server = http.createServer(async (request, response) => {
       const paymentStatus = verification.status;
 
       if (paymentStatus === "paid") {
-        transaction.paymentStatus = "payment_success";
-        transaction.status = "processing";
-        transaction.fulfillmentStatus = "processing";
-        transaction.updatedAt = nowIso();
-        saveTransaction(reference, transaction);
+        const fulfilled = await fulfillPaidTransaction(transactionReference);
 
         sendJson(response, 200, {
           ok: true,
-          reference,
+          reference: transactionReference,
           verified: true,
-          status: "processing",
+          status: fulfilled?.status || "pending",
+          fulfillmentStatus: fulfilled?.fulfillmentStatus || "pending",
           paymentStatus: "payment_success",
-          mode: "monnify-sandbox"
+          mode: process.env.NODE_ENV === "production" ? "monnify-production" : "monnify-sandbox"
         });
         return;
       }
 
-      transaction.paymentStatus = paymentStatus;
-      transaction.status = paymentStatus === "payment_pending" ? "payment_pending" : "payment_failed";
-      transaction.fulfillmentStatus = paymentStatus === "payment_pending" ? "not_started" : "not_started";
+      const latestTransaction = getTransaction(transactionReference);
+      if (latestTransaction?.paymentStatus === "payment_success"
+        || latestTransaction?.fulfillmentStartedAt
+        || (latestTransaction?.paymentStatus === "payment_failed"
+          && (paymentStatus === "payment_pending" || paymentStatus === "unknown"))) {
+        sendJson(response, 200, {
+          ok: true,
+          reference: transactionReference,
+          verified: true,
+          status: latestTransaction.status,
+          fulfillmentStatus: latestTransaction.fulfillmentStatus,
+          paymentStatus: latestTransaction.paymentStatus,
+          mode: process.env.NODE_ENV === "production" ? "monnify-production" : "monnify-sandbox"
+        });
+        return;
+      }
+
+      const isPending = paymentStatus === "payment_pending" || paymentStatus === "unknown";
+      transaction.status = isPending ? "payment_pending" : "payment_failed";
+      transaction.paymentStatus = isPending && paymentStatus === "unknown" ? "payment_pending" : paymentStatus;
+      transaction.fulfillmentStatus = "not_started";
       transaction.updatedAt = nowIso();
-      saveTransaction(reference, transaction);
+      saveTransaction(transactionReference, transaction);
 
       sendJson(response, 200, {
         ok: true,
-        reference,
+        reference: transactionReference,
         verified: false,
         status: transaction.status,
         paymentStatus: transaction.paymentStatus,
-        mode: "monnify-sandbox"
+        mode: process.env.NODE_ENV === "production" ? "monnify-production" : "monnify-sandbox"
       });
       return;
     } catch (error) {
-      sendJson(response, 400, { ok: false, error: error.message || "Unable to verify payment." });
+      sendJson(response, 400, { ok: false, error: "Unable to verify payment." });
       return;
     }
   }
@@ -1232,9 +1470,10 @@ const server = http.createServer(async (request, response) => {
 
     sendJson(response, 200, {
       ok: true,
-      reference,
+      reference: transaction.reference,
       status: transaction.status,
       paymentStatus: transaction.paymentStatus,
+      fulfillmentStatus: transaction.fulfillmentStatus,
       providerReference: transaction.providerReference || "",
       note: "Status checks are intentionally server-side to avoid exposing payment credentials or provider details."
     });
@@ -1246,7 +1485,26 @@ const server = http.createServer(async (request, response) => {
     return;
   }
 
+  if (serveWebsite(request, response, url)) return;
+
+  if (url.pathname === "/health") {
+    sendJson(response, 404, { ok: false, error: "Route not found." });
+    return;
+  }
+
   sendJson(response, 404, { ok: false, error: "Route not found." });
+}
+
+const server = http.createServer((request, response) => {
+  handleRequest(request, response).catch((error) => {
+    console.error("Bills API request failed.", error);
+    if (response.writableEnded) return;
+    if (response.headersSent) {
+      response.destroy();
+      return;
+    }
+    sendJson(response, 500, { ok: false, error: "Bills API request failed." });
+  });
 });
 
 server.listen(port, () => {
