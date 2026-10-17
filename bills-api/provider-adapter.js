@@ -108,18 +108,26 @@ class ProviderAdapter {
   }
 
   isConfigured() {
-    const required = [
-      "baseUrl",
-      "apiKey",
-      "secretKey"
-    ];
+    if (["baseUrl", "apiKey", "secretKey"].some((field) => {
+      const value = this.config[field];
+      return !value || /replace_with|change_me|example/i.test(value);
+    })) {
+      return false;
+    }
 
-    return required.every((field) => Boolean(this.config[field]));
+    try {
+      const baseUrl = new URL(this.config.baseUrl);
+      return (baseUrl.protocol === "https:" || baseUrl.hostname === "localhost")
+        && !baseUrl.username
+        && !baseUrl.password;
+    } catch (error) {
+      return false;
+    }
   }
 
   getMissingConfiguration() {
     return Object.entries(this.config)
-      .filter(([, value]) => !value)
+      .filter(([, value]) => !value || /replace_with|change_me|example/i.test(value))
       .map(([key]) => key);
   }
 

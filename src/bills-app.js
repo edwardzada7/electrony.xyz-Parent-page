@@ -109,6 +109,7 @@ const state = {
   user: null,
   authMode: "login",
   feeQuote: null,
+  feeQuotePending: null,
   feeRequestId: 0
 };
 
@@ -132,12 +133,31 @@ const generateReference = () => {
 };
 
 const getBillsApiBaseUrl = () => {
-  const baseUrl = (window.ElectronyConfig && window.ElectronyConfig.billsApiBaseUrl) || "http://localhost:4174";
-  return String(baseUrl).replace(/\/$/, "");
+  const configuredUrl = window.ElectronyConfig?.billsApiBaseUrl;
+  if (typeof configuredUrl !== "string" || !configuredUrl.trim()) {
+    throw new Error("The Bills API URL is not configured.");
+  }
+
+  let apiUrl;
+  try {
+    apiUrl = new URL(configuredUrl.trim(), window.location.href);
+  } catch (error) {
+    throw new Error("The configured Bills API URL is invalid.");
+  }
+
+  if (apiUrl.protocol !== "http:" && apiUrl.protocol !== "https:") {
+    throw new Error("The configured Bills API URL must use HTTP or HTTPS.");
+  }
+  if (window.location.protocol === "https:" && apiUrl.protocol !== "https:") {
+    throw new Error("The Bills API must use HTTPS on this secure page.");
+  }
+
+  return apiUrl.href.replace(/\/+$/, "");
 };
 
 const fetchBillingApi = async (path, options = {}) => {
-  const response = await fetch(`${getBillsApiBaseUrl()}${path}`, {
+  const baseUrl = getBillsApiBaseUrl();
+  const response = await fetch(`${baseUrl}/${String(path).replace(/^\/+/, "")}`, {
     ...options,
     headers: {
       "Content-Type": "application/json",
@@ -146,15 +166,11 @@ const fetchBillingApi = async (path, options = {}) => {
     }
   });
 
-  const rawText = await response.text();
-  let payload = {};
-
-  if (rawText) {
-    try {
-      payload = JSON.parse(rawText);
-    } catch (error) {
-      payload = { raw: rawText };
-    }
+  let payload;
+  try {
+    payload = await response.json();
+  } catch (error) {
+    throw new Error(`Billing API returned invalid JSON (HTTP ${response.status}).`);
   }
 
   if (!response.ok) {
@@ -198,6 +214,8 @@ function renderServiceList() {
       state.activeService = button.dataset.service;
       state.order = null;
       state.feeQuote = null;
+      state.feeQuotePending = null;
+      state.feeRequestId += 1;
       renderServiceList();
       renderServicePanel();
       renderCheckoutPanel();
@@ -308,8 +326,15 @@ function renderServicePanel() {
     void handlePurchaseSubmission();
   });
 
-  form.addEventListener("input", () => void refreshFeePreview());
-  form.addEventListener("change", () => void refreshFeePreview());
+  const invalidateOrderAndRefreshFee = () => {
+    if (state.order) {
+      state.order = null;
+      renderCheckoutPanel();
+    }
+    void refreshFeePreview();
+  };
+  form.addEventListener("input", invalidateOrderAndRefreshFee);
+  form.addEventListener("change", invalidateOrderAndRefreshFee);
 
   const focusTarget = panel.querySelector("#meterNumber, #recipient, #customerId, #biller, #network");
   if (focusTarget) focusTarget.focus();
@@ -444,6 +469,73 @@ function renderDigitalServicePanel(service) {
       return `/api/fees/quote?${query}`;
     }
 
+    function feeQuoteRequestKey(serviceId, amount, values) {
+      return JSON.stringify({
+        service: serviceId,
+        amount: String(amount),
+        network: serviceId === "data" ? values.network || "" : "",
+        plan: serviceId === "data" || serviceId === "bills" ? values.plan || "" : ""
+      });
+    }
+
+    function validateFeeQuoteResponse(result, serviceId, amount) {
+      const quote = result?.quote;
+      const expectedAmountMinor = Math.round(amount * 100);
+      if (result?.ok !== true
+        || typeof result.quoteToken !== "string"
+        || !result.quoteToken
+        || !quote
+        || quote.service !== serviceId
+        || quote.currency !== "NGN"
+        || quote.serviceAmountMinor !== expectedAmountMinor
+        || !Number.isSafeInteger(quote.platformFeeMinor)
+        || quote.platformFeeMinor < 0
+        || quote.totalBeforeProviderFeesMinor !== quote.serviceAmountMinor + quote.platformFeeMinor
+        || !["not_quoted", "quoted"].includes(quote.providerFeeStatus)
+        || (quote.providerFeeStatus === "quoted"
+          && (!Number.isSafeInteger(quote.providerFeeMinor) || quote.providerFeeMinor < 0))) {
+        throw new Error("Billing API returned an invalid fee quote.");
+      }
+      return result;
+    }
+
+    async function requestFeeQuote(serviceId, amount, values) {
+      const requestKey = feeQuoteRequestKey(serviceId, amount, values);
+      const quoteIsFresh = state.feeQuote?.requestKey === requestKey
+        && Date.now() - state.feeQuote.fetchedAt < 4 * 60 * 1000;
+      if (quoteIsFresh) return state.feeQuote;
+      if (state.feeQuotePending?.requestKey === requestKey) {
+        return state.feeQuotePending.promise;
+      }
+
+      const requestId = ++state.feeRequestId;
+      const request = fetchBillingApi(feeQuoteUrl(serviceId, amount, values))
+        .then((result) => validateFeeQuoteResponse(result, serviceId, amount))
+        .then((result) => {
+          if (requestId === state.feeRequestId) {
+            state.feeQuote = {
+              ...result,
+              requestKey,
+              fetchedAt: Date.now()
+            };
+          }
+          return result;
+        })
+        .catch((error) => {
+          if (requestId === state.feeRequestId) state.feeQuote = null;
+          throw error;
+        })
+        .finally(() => {
+          if (state.feeQuotePending?.requestKey === requestKey) {
+            state.feeQuotePending = null;
+          }
+        });
+
+      state.feeQuote = null;
+      state.feeQuotePending = { requestKey, promise: request };
+      return request;
+    }
+
     async function refreshFeePreview() {
       const form = document.querySelector("#purchase-form");
       const preview = document.querySelector("#fee-preview");
@@ -451,17 +543,19 @@ function renderDigitalServicePanel(service) {
       const values = Object.fromEntries(new FormData(form).entries());
       const amount = resolveOrderAmount(state.activeService, values);
       if (!amount || !Number.isFinite(amount) || amount <= 0) {
+        state.feeRequestId += 1;
         state.feeQuote = null;
+        state.feeQuotePending = null;
         preview.textContent = "Enter an amount or select a service option to see the platform fee breakdown.";
         return;
       }
 
-      const requestId = ++state.feeRequestId;
+      const requestKey = feeQuoteRequestKey(state.activeService, amount, values);
+      if (state.feeQuote?.requestKey === requestKey) return;
       preview.textContent = "Refreshing the server fee quote…";
       try {
-        const result = await fetchBillingApi(feeQuoteUrl(state.activeService, amount, values));
-        if (requestId !== state.feeRequestId) return;
-        state.feeQuote = result;
+        const result = await requestFeeQuote(state.activeService, amount, values);
+        if (requestKey !== feeQuoteRequestKey(state.activeService, amount, values)) return;
         const quote = result.quote;
         preview.innerHTML = `
           <div><span>Service amount</span><strong>${formatMinorCurrency(quote.serviceAmountMinor, quote.currency)}</strong></div>
@@ -471,11 +565,11 @@ function renderDigitalServicePanel(service) {
           <p>Payment is unavailable until the configured provider can disclose any applicable provider charge.</p>
         `;
       } catch (error) {
-        if (requestId !== state.feeRequestId) return;
+        if (requestKey !== feeQuoteRequestKey(state.activeService, amount, values)) return;
         state.feeQuote = null;
         preview.textContent = `Fee quote unavailable: ${error.message}`;
       }
-}
+    }
 
 function renderCheckoutPanel() {
   const panel = document.querySelector("#checkout-panel");
@@ -658,19 +752,24 @@ async function handlePurchaseSubmission() {
   }
 
   const amount = resolveOrderAmount(state.activeService, values);
+  const serviceId = state.activeService;
+  const requestKey = feeQuoteRequestKey(serviceId, amount, values);
   let feeQuote;
   try {
-    feeQuote = await fetchBillingApi(feeQuoteUrl(state.activeService, amount, values));
+    feeQuote = await requestFeeQuote(serviceId, amount, values);
   } catch (error) {
     renderInlineMessage(`Unable to confirm the latest fee breakdown: ${error.message}`, "error");
     return;
   }
-  if (feeQuote.quote.providerFeeStatus !== "quoted") {
-    renderInlineMessage("The provider has not supplied a complete fee quote. Review the breakdown, but checkout is not available.", "error");
+  const currentForm = document.querySelector("#purchase-form");
+  const currentValues = currentForm ? Object.fromEntries(new FormData(currentForm).entries()) : {};
+  if (state.activeService !== serviceId
+    || requestKey !== feeQuoteRequestKey(state.activeService, resolveOrderAmount(state.activeService, currentValues), currentValues)) {
+    renderInlineMessage("The order details changed while the fee quote was loading. Review the updated breakdown before continuing.", "error");
+    return;
   }
-
   state.order = {
-    serviceId: state.activeService,
+    serviceId,
     reference: generateReference(),
     amount,
     status: "pending",
@@ -693,7 +792,13 @@ async function handlePurchaseSubmission() {
   };
 
   renderCheckoutPanel();
-  renderInlineMessage("Order review ready. Confirm payment to complete the purchase.", "success");
+  const paymentReady = feeQuote.quote.providerFeeStatus === "quoted";
+  renderInlineMessage(
+    paymentReady
+      ? "Order review ready. Confirm payment to continue."
+      : "Order review is available, but payment is blocked until the provider supplies a complete fee quote.",
+    paymentReady ? "success" : "error"
+  );
 }
 
 function renderInlineMessage(message, type = "info") {
@@ -711,6 +816,10 @@ function renderInlineMessage(message, type = "info") {
 
 async function completePurchase() {
   if (!state.order) return;
+  if (state.order.quote.providerFeeStatus !== "quoted") {
+    displayTransactionResult("Payment unavailable.", "The vending provider has not supplied a verified fee quote. No payment was created.", "error");
+    return;
+  }
 
   const payButton = document.querySelector("#pay-button");
   if (payButton) {
@@ -762,31 +871,35 @@ async function verifyReturnedPayment() {
 
   if (!paymentState && !reference) return;
 
-  const statusMessage = reference
-    ? `Verifying payment for ${reference}.`
-    : "Your payment was received and is being verified.";
-
-  displayTransactionResult("Payment received.", statusMessage, "pending");
-
-  if (!reference) return;
+  if (!reference) {
+    displayTransactionResult("Payment not verified.", "No transaction reference was returned. The billing backend cannot confirm payment, and no bill was fulfilled.", "error");
+    return;
+  }
 
   try {
-    const response = await fetchBillingApi(`/api/payments/status?reference=${encodeURIComponent(reference)}`);
-    const resolvedStatus = String(response.status || "pending").toLowerCase();
+    displayTransactionResult("Verifying payment.", `Checking reference ${reference} with the billing backend.`, "pending");
+    const response = await fetchBillingApi("/api/payments/verify", {
+      method: "POST",
+      body: JSON.stringify({ reference })
+    });
+    const resolvedStatus = String(response.paymentStatus || response.status || "pending").toLowerCase();
 
-    if (resolvedStatus === "paid" || resolvedStatus === "payment_success" || resolvedStatus === "success") {
-      displayTransactionResult("Payment successful.", `Reference: ${reference}. Your service is being processed.`, "success");
+    if (response.verified === true && resolvedStatus === "payment_success") {
+      const fulfillment = response.fulfillmentStatus === "success"
+        ? "Your bill was delivered."
+        : "Payment is confirmed; bill fulfillment is still being processed.";
+      displayTransactionResult("Payment confirmed.", `Reference: ${reference}. ${fulfillment}`, "success");
       return;
     }
 
     if (resolvedStatus === "payment_pending" || resolvedStatus === "pending" || resolvedStatus === "processing") {
-      displayTransactionResult("Payment received.", `Reference: ${reference}. Your service is still being processed.`, "pending");
+      displayTransactionResult("Payment not yet confirmed.", `Reference: ${reference}. Check again shortly; bill fulfillment will only follow verified payment.`, "pending");
       return;
     }
 
     displayTransactionResult("Payment could not be confirmed.", `Reference: ${reference}. Please review your payment or try again shortly.`, "error");
   } catch (error) {
-    displayTransactionResult("Payment verification is pending.", `Reference: ${reference}. Please check status again shortly.`, "pending");
+    displayTransactionResult("Payment not verified.", `Reference: ${reference}. The backend did not confirm payment, so no bill is considered fulfilled. ${error.message}`, "error");
   }
 }
 
@@ -794,13 +907,17 @@ function displayTransactionResult(message, details, status) {
   const panel = document.querySelector("#checkout-panel");
   if (!panel) return;
 
+  panel.classList.remove("hidden");
   const resultCard = document.createElement("div");
   resultCard.className = `result-card result-card-${status}`;
-  resultCard.innerHTML = `
-    <p class="result-label">Transaction result</p>
-    <h4>${message}</h4>
-    <p>${details}</p>
-  `;
+  const label = document.createElement("p");
+  label.className = "result-label";
+  label.textContent = "Transaction result";
+  const heading = document.createElement("h4");
+  heading.textContent = message;
+  const description = document.createElement("p");
+  description.textContent = details;
+  resultCard.append(label, heading, description);
 
   const previous = panel.querySelector(".result-card");
   if (previous) previous.remove();

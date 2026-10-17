@@ -3,3 +3,4 @@
 !.env.example
 bills-api/data/*.json
 node_modules/
+/dist/

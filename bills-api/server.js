@@ -168,7 +168,7 @@ function loadEnvFromFiles() {
       const separatorIndex = trimmed.indexOf("=");
       const key = trimmed.slice(0, separatorIndex).trim();
       const value = trimmed.slice(separatorIndex + 1).trim();
-      if (key) {
+      if (key && !process.env[key]) {
         process.env[key] = value;
       }
     }
@@ -307,10 +307,25 @@ function getMissingMonnifyConfig() {
   const missing = [];
 
   ["apiKey", "secretKey", "contractCode", "webhookSecret"].forEach((key) => {
-    if (!config[key]) missing.push(`MONNIFY_${toEnvName(key)}`);
+    if (!config[key] || /replace_with|change_me|example/i.test(config[key])) {
+      missing.push(`MONNIFY_${toEnvName(key)}`);
+    }
   });
 
-  if (!config.baseUrl) missing.push("MONNIFY_BASE_URL");
+  try {
+    const baseUrl = new URL(config.baseUrl);
+    if (baseUrl.protocol !== "https:"
+      || !["sandbox.monnify.com", "api.monnify.com"].includes(baseUrl.hostname)
+      || baseUrl.pathname !== "/"
+      || baseUrl.username
+      || baseUrl.password
+      || baseUrl.search
+      || baseUrl.hash) {
+      missing.push("MONNIFY_BASE_URL");
+    }
+  } catch (error) {
+    missing.push("MONNIFY_BASE_URL");
+  }
 
   return missing;
 }
@@ -319,13 +334,30 @@ function hasMonnifyConfig() {
   return getMissingMonnifyConfig().length === 0;
 }
 
+function getAllowedOrigins() {
+  const configured = [
+    readEnv("BILLS_APP_URL"),
+    ...readEnv("BILLS_ALLOWED_ORIGINS").split(",")
+  ];
+  const origins = new Set(["http://localhost:4173", "http://127.0.0.1:4173"]);
+
+  for (const value of configured) {
+    if (!value) continue;
+    try {
+      const url = new URL(value);
+      if (url.protocol === "http:" || url.protocol === "https:") origins.add(url.origin);
+    } catch (error) {
+      throw new Error("BILLS_APP_URL and BILLS_ALLOWED_ORIGINS must contain valid HTTP(S) URLs.");
+    }
+  }
+
+  return origins;
+}
+
 function sendJson(response, statusCode, payload) {
   response.writeHead(statusCode, {
     "Content-Type": "application/json",
-    "Cache-Control": "no-store",
-    "Access-Control-Allow-Origin": "*",
-    "Access-Control-Allow-Methods": "GET,POST,OPTIONS",
-    "Access-Control-Allow-Headers": "Content-Type, Authorization, X-Requested-With, x-monnify-signature"
+    "Cache-Control": "no-store"
   });
   response.end(JSON.stringify(payload));
 }
@@ -449,7 +481,7 @@ async function createMonnifyReservation(transaction) {
   const payload = {
     amount: Number(transaction.totalAmount),
     currency: "NGN",
-    reference: transaction.reference,
+    paymentReference: transaction.reference,
     contractCode: config.contractCode,
     redirectUrl: config.redirectUrl,
     customerName: transaction.customer?.name || "Electrony Bills Customer",
@@ -473,8 +505,21 @@ async function createMonnifyReservation(transaction) {
     body: payload
   });
 
-  const transactionReference = response?.data?.transactionReference || response?.transactionReference || response?.reference || transaction.reference;
+  const transactionReference = response?.data?.transactionReference || response?.transactionReference || response?.reference || "";
   const checkoutUrl = response?.data?.checkoutUrl || response?.checkoutUrl || response?.paymentLink || response?.data?.paymentLink || response?.data?.authorizationUrl || "";
+  let parsedCheckoutUrl;
+  try {
+    parsedCheckoutUrl = new URL(checkoutUrl);
+  } catch (error) {
+    throw new Error("Monnify did not return a valid checkout URL.");
+  }
+  if (!transactionReference
+    || parsedCheckoutUrl.protocol !== "https:"
+    || parsedCheckoutUrl.origin !== new URL(config.baseUrl).origin
+    || parsedCheckoutUrl.username
+    || parsedCheckoutUrl.password) {
+    throw new Error("Monnify returned an invalid transaction reference or unsafe checkout URL.");
+  }
 
   return {
     monnifyReference: transactionReference,
@@ -492,39 +537,6 @@ function extractMonnifyStatus(payload) {
   if (["PENDING", "AWAITING_PAYMENT", "PROCESSING"].includes(normalized)) return "payment_pending";
   if (["FAILED", "DECLINED", "CANCELLED", "CANCELED"].includes(normalized)) return "payment_failed";
   return normalized || "unknown";
-}
-
-async function getMonnifyTransactionStatus(transaction) {
-  const { token, config } = await authenticateMonnify();
-  const reference = transaction.monnifyReference || transaction.reference;
-  const candidates = [
-    `${config.baseUrl.replace(/\/$/, "")}/api/v1/transactions/query?reference=${encodeURIComponent(reference)}`,
-    `${config.baseUrl.replace(/\/$/, "")}/api/v1/transactions/${encodeURIComponent(reference)}`,
-    `${config.baseUrl.replace(/\/$/, "")}/api/v1/transactions/query?transactionReference=${encodeURIComponent(reference)}`
-  ];
-
-  for (const endpoint of candidates) {
-    try {
-      const payload = await requestJson(endpoint, {
-        method: "GET",
-        headers: {
-          Authorization: `Bearer ${token}`
-        }
-      });
-
-      const status = extractMonnifyStatus(payload);
-      if (status && status !== "unknown") {
-        return {
-          status,
-          raw: payload
-        };
-      }
-    } catch (error) {
-      // try next candidate if one endpoint is unavailable.
-    }
-  }
-
-  return { status: "unknown", raw: {} };
 }
 
 function getProviderAdapter() {
@@ -662,24 +674,33 @@ function getExpectedAmount(service, customer = {}) {
   return 0;
 }
 
+function makeBillFeeQuote(service, amount, network = "", plan = "") {
+  if (!ALLOWED_SERVICES.includes(service) || !PLATFORM_FEE_RULES[service]) {
+    throw new Error("Unsupported service type.");
+  }
+
+  const amountMinor = parseMoneyToMinor(amount);
+  const amountLimits = {
+    electricity: 5000000,
+    airtime: 500000
+  };
+  if (amountLimits[service] && amountMinor > amountLimits[service] * 100) {
+    throw new Error(`${service === "electricity" ? "Electricity" : "Airtime"} amount exceeds the supported maximum.`);
+  }
+
+  if (service === "data" || service === "bills") {
+    const expected = getExpectedAmount(service, { network, plan });
+    if (!expected || amountMinor !== expected * 100) {
+      throw new Error("The selected service option does not match its configured price.");
+    }
+  }
+  return createPlatformFeeQuote(service, amountMinor);
+}
+
 function validateServiceRequest(payload) {
   const service = normalizeService(payload.service);
   if (!service) {
     throw new Error("Unsupported service type.");
-  }
-
-  function makeBillFeeQuote(service, amount, network = "", plan = "") {
-    if (!ALLOWED_SERVICES.includes(service) || !PLATFORM_FEE_RULES[service]) {
-      throw new Error("Unsupported service type.");
-    }
-    const amountMinor = parseMoneyToMinor(amount);
-    if (service === "data" || service === "bills") {
-      const expected = getExpectedAmount(service, { network, plan });
-      if (!expected || amountMinor !== expected * 100) {
-        throw new Error("The selected service option does not match its configured price.");
-      }
-    }
-    return createPlatformFeeQuote(service, amountMinor);
   }
 
   const amountMinor = parseMoneyToMinor(payload.amount);
@@ -802,37 +823,18 @@ async function handleWebhook(request, response) {
       sendJson(response, 200, { ok: true, duplicate: true, reference: transaction.reference });
       return;
     }
-    processed[eventId] = { processedAt: nowIso(), reference: transactionReference };
-    persistWebhookStore(processed);
 
     const monnifyStatus = extractMonnifyStatus(payload);
     if (monnifyStatus === "paid") {
-      transaction.paymentStatus = "payment_success";
-      transaction.status = "processing";
-      transaction.fulfillmentStatus = "processing";
-      transaction.fulfillmentStartedAt = nowIso();
-      transaction.monnifyReference = transaction.monnifyReference || transactionReference;
-      transaction.updatedAt = nowIso();
-      saveTransaction(transaction.reference, transaction);
-
-      const vendingResult = await processVendingForTransaction(transaction);
-
-      transaction.providerReference = vendingResult?.providerReference || transaction.providerReference || "";
-      transaction.providerMessage = vendingResult?.message || "";
-      transaction.fulfillmentStatus = vendingResult?.ok ? "success" : (vendingResult?.status || "pending");
-      transaction.paymentStatus = "payment_success";
-      transaction.status = vendingResult?.ok ? "success" : (vendingResult?.status === "pending_reconciliation" ? "pending" : "failed");
-      transaction.updatedAt = nowIso();
-      saveTransaction(transaction.reference, transaction);
-
-      sendJson(response, 200, {
-        ok: true,
-        reference: transaction.reference,
-        vendorStatus: transaction.status,
-        providerMessage: vendingResult?.message || "Webhook processed successfully."
+      sendJson(response, 503, {
+        ok: false,
+        error: "Payment notification received, but server-side amount, currency, and reference verification is not implemented. No bill was fulfilled."
       });
       return;
     }
+
+    processed[eventId] = { processedAt: nowIso(), reference: transactionReference };
+    persistWebhookStore(processed);
 
     if (monnifyStatus === "payment_failed") {
       transaction.status = "payment_failed";
@@ -854,23 +856,55 @@ async function handleWebhook(request, response) {
   }
 }
 
-const port = Number(readEnv("ELECTRONY_BILLS_PORT") || 4174);
+const port = Number(process.env.PORT || readEnv("ELECTRONY_BILLS_PORT") || 4174);
+if (!Number.isInteger(port) || port < 1 || port > 65535) {
+  throw new Error("PORT or ELECTRONY_BILLS_PORT must be a valid TCP port.");
+}
 
 const server = http.createServer(async (request, response) => {
+  const origin = request.headers.origin;
+  if (origin) {
+    let allowedOrigins;
+    try {
+      allowedOrigins = getAllowedOrigins();
+    } catch (error) {
+      sendJson(response, 500, { ok: false, error: error.message });
+      return;
+    }
+    if (!allowedOrigins.has(origin)) {
+      sendJson(response, 403, { ok: false, error: "Origin is not allowed." });
+      return;
+    }
+    response.setHeader("Access-Control-Allow-Origin", origin);
+    response.setHeader("Access-Control-Allow-Methods", "GET,POST,OPTIONS");
+    response.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization, X-Requested-With, x-monnify-signature");
+    response.setHeader("Vary", "Origin");
+  }
+
   if (request.method === "OPTIONS") {
-    sendJson(response, 204, {});
+    response.writeHead(204);
+    response.end();
     return;
   }
 
   const url = new URL(request.url, `http://${request.headers.host}`);
 
   if (request.method === "GET" && url.pathname === "/health") {
+    const vendingProvider = buildProviderAdapter();
     sendJson(response, 200, {
       ok: true,
       service: "electrony-bills",
-      mode: hasMonnifyConfig() ? "monnify-sandbox" : "configuration-required",
-      hasDatabase: fs.existsSync(TRANSACTION_STORE_PATH),
+      mode: hasMonnifyConfig() ? "monnify-configured-verification-blocked" : "configuration-required",
+      hasTransactionStore: fs.existsSync(TRANSACTION_STORE_PATH),
       persistence: "json-file",
+      configuration: {
+        monnify: hasMonnifyConfig(),
+        missingMonnify: getMissingMonnifyConfig(),
+        monnifyPaymentVerification: false,
+        vendingProvider: vendingProvider.isConfigured(),
+        providerFeeQuote: typeof vendingProvider.quotePurchase === "function",
+        durableTransactionalIdempotency: false
+      },
       virtualCards: "provider_unconfigured",
       giftCards: "provider_unconfigured"
     });
@@ -1170,44 +1204,17 @@ const server = http.createServer(async (request, response) => {
         return;
       }
 
-      const verification = await getMonnifyTransactionStatus(transaction);
-      const paymentStatus = verification.status;
-
-      if (paymentStatus === "paid") {
-        transaction.paymentStatus = "payment_success";
-        transaction.status = "processing";
-        transaction.fulfillmentStatus = "processing";
-        transaction.updatedAt = nowIso();
-        saveTransaction(reference, transaction);
-
-        sendJson(response, 200, {
-          ok: true,
-          reference,
-          verified: true,
-          status: "processing",
-          paymentStatus: "payment_success",
-          mode: "monnify-sandbox"
-        });
-        return;
-      }
-
-      transaction.paymentStatus = paymentStatus;
-      transaction.status = paymentStatus === "payment_pending" ? "payment_pending" : "payment_failed";
-      transaction.fulfillmentStatus = paymentStatus === "payment_pending" ? "not_started" : "not_started";
-      transaction.updatedAt = nowIso();
-      saveTransaction(reference, transaction);
-
-      sendJson(response, 200, {
-        ok: true,
+      sendJson(response, 503, {
+        ok: false,
         reference,
         verified: false,
-        status: transaction.status,
-        paymentStatus: transaction.paymentStatus,
-        mode: "monnify-sandbox"
+        status: transaction.status || "payment_pending",
+        paymentStatus: transaction.paymentStatus || "payment_pending",
+        error: "Authoritative Monnify amount, currency, and transaction-reference verification is not implemented. Payment remains unconfirmed."
       });
       return;
     } catch (error) {
-      sendJson(response, 400, { ok: false, error: error.message || "Unable to verify payment." });
+      sendJson(response, 400, { ok: false, verified: false, error: error.message || "Unable to verify payment." });
       return;
     }
   }
@@ -1249,6 +1256,6 @@ const server = http.createServer(async (request, response) => {
   sendJson(response, 404, { ok: false, error: "Route not found." });
 });
 
-server.listen(port, () => {
-  console.log(`Electrony Bills API listening on http://localhost:${port}`);
+server.listen(port, "0.0.0.0", () => {
+  console.log(`Electrony Bills API listening on 0.0.0.0:${port}`);
 });

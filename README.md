@@ -16,6 +16,8 @@ Place the approved parent Electrony logo in `assets/brand/` when it is available
 
 The public Electrony Bills product page remains available at `/bills/` as the product introduction. The guest purchasing experience is available at `/bills/app/` and is implemented as a separate, mobile-first checkout flow with service-specific validation and payment review.
 
+The static Vercel build requires `BILLS_API_BASE_URL` to be set to the deployed Railway API's HTTPS base URL and redeployed. See [the Bills API deployment notes](./bills-api/README.md#vercel-frontend-and-railway-api) for CORS and Railway configuration.
+
 The `COMING SOON` status and internal landing-page link are maintained in `src/products.js` and `src/config.js`.
 
 ## Electrony Automobile
