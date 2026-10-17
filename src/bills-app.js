@@ -128,7 +128,9 @@ const formatMinorCurrency = (minor, currency = "NGN") => new Intl.NumberFormat("
 
 const generateReference = () => {
   const dateStamp = new Date().toISOString().slice(0, 10).replace(/-/g, "");
-  const suffix = Math.random().toString(36).slice(2, 8).toUpperCase();
+  const bytes = new Uint8Array(16);
+  window.crypto.getRandomValues(bytes);
+  const suffix = Array.from(bytes, (byte) => byte.toString(16).padStart(2, "0")).join("").toUpperCase();
   return `ELECBILLS-${dateStamp}-${suffix}`;
 };
 
@@ -621,9 +623,7 @@ function renderCheckoutPanel() {
 
     try {
       const response = await fetchBillingApi(`/api/payments/status?reference=${encodeURIComponent(state.order.reference)}`);
-      const status = response.status || "unknown";
-      const note = response.providerReference ? `Provider ref: ${response.providerReference}` : "No provider reference yet.";
-      displayTransactionResult("Status checked successfully.", `${status.toUpperCase()} — ${note}`, status === "successful" ? "success" : "pending");
+      displayPaymentOutcome(response, response.reference || state.order.reference);
     } catch (error) {
       displayTransactionResult("Status check failed.", error.message, "error");
     }
@@ -877,11 +877,15 @@ async function verifyReturnedPayment() {
   }
 
   try {
+<<<<<<< HEAD
     displayTransactionResult("Verifying payment.", `Checking reference ${reference} with the billing backend.`, "pending");
+=======
+>>>>>>> 6d2b7d71e988704f91aaeb15c9effd4fd2839db4
     const response = await fetchBillingApi("/api/payments/verify", {
       method: "POST",
       body: JSON.stringify({ reference })
     });
+<<<<<<< HEAD
     const resolvedStatus = String(response.paymentStatus || response.status || "pending").toLowerCase();
 
     if (response.verified === true && resolvedStatus === "payment_success") {
@@ -898,9 +902,44 @@ async function verifyReturnedPayment() {
     }
 
     displayTransactionResult("Payment could not be confirmed.", `Reference: ${reference}. Please review your payment or try again shortly.`, "error");
+=======
+    displayPaymentOutcome(response, response.reference || reference);
+>>>>>>> 6d2b7d71e988704f91aaeb15c9effd4fd2839db4
   } catch (error) {
     displayTransactionResult("Payment not verified.", `Reference: ${reference}. The backend did not confirm payment, so no bill is considered fulfilled. ${error.message}`, "error");
   }
+}
+
+function displayPaymentOutcome(response, reference) {
+  const status = String(response.status || "").toLowerCase();
+  const paymentStatus = String(response.paymentStatus || "").toLowerCase();
+  const fulfillmentStatus = String(response.fulfillmentStatus || "").toLowerCase();
+
+  if (status === "success" || fulfillmentStatus === "success") {
+    displayTransactionResult("Payment successful.", `Reference: ${reference}. Your service was confirmed.`, "success");
+    return;
+  }
+
+  if (paymentStatus === "payment_success" || status === "paid" || status === "payment_success") {
+    const deliveryFailed = ["failed", "vending_failed"].includes(status)
+      || ["failed", "vending_failed"].includes(fulfillmentStatus);
+    displayTransactionResult(
+      deliveryFailed ? "Payment confirmed; service delivery needs attention." : "Payment confirmed.",
+      deliveryFailed
+        ? `Reference: ${reference}. Your payment was received, but service delivery was not confirmed.`
+        : `Reference: ${reference}. Your service is still being processed.`,
+      deliveryFailed ? "error" : "pending"
+    );
+    return;
+  }
+
+  if (["payment_failed", "failed", "cancelled", "canceled"].includes(status)
+    || paymentStatus === "payment_failed") {
+    displayTransactionResult("Payment could not be confirmed.", `Reference: ${reference}. Please review your payment or try again.`, "error");
+    return;
+  }
+
+  displayTransactionResult("Payment status is pending.", `Reference: ${reference}. Please check status again shortly.`, "pending");
 }
 
 function displayTransactionResult(message, details, status) {
@@ -915,9 +954,15 @@ function displayTransactionResult(message, details, status) {
   label.textContent = "Transaction result";
   const heading = document.createElement("h4");
   heading.textContent = message;
+<<<<<<< HEAD
   const description = document.createElement("p");
   description.textContent = details;
   resultCard.append(label, heading, description);
+=======
+  const detail = document.createElement("p");
+  detail.textContent = details;
+  resultCard.append(label, heading, detail);
+>>>>>>> 6d2b7d71e988704f91aaeb15c9effd4fd2839db4
 
   const previous = panel.querySelector(".result-card");
   if (previous) previous.remove();

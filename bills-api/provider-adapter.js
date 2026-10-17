@@ -141,7 +141,8 @@ class ProviderAdapter {
         "Authorization": `Bearer ${this.config.apiKey}`,
         ...(options.headers || {})
       },
-      body: options.body ? JSON.stringify(options.body) : undefined
+      body: options.body ? JSON.stringify(options.body) : undefined,
+      signal: AbortSignal.timeout(this.config.timeoutMs)
     });
 
     const text = await response.text();
@@ -153,7 +154,7 @@ class ProviderAdapter {
     }
 
     if (!response.ok) {
-      throw new Error(payload?.message || payload?.error || `Provider request failed with status ${response.status}.`);
+      throw new Error(`Vending provider request failed with status ${response.status}.`);
     }
 
     return payload;
@@ -229,13 +230,16 @@ class ProviderAdapter {
 }
 
 function buildProviderAdapter() {
+  const configuredTimeoutMs = Number(readEnv("BILLS_PROVIDER_TIMEOUT_MS") || 20000);
   const config = {
     name: readEnv("BILLS_VENDING_PROVIDER") || readEnv("BILLS_PROVIDER_NAME") || "",
     baseUrl: readEnv("BILLS_PROVIDER_BASE_URL") || readEnv("VTU_PROVIDER_BASE_URL") || "",
     apiKey: readEnv("BILLS_PROVIDER_API_KEY") || readEnv("VTU_API_KEY") || "",
     secretKey: readEnv("BILLS_PROVIDER_SECRET_KEY") || readEnv("VTU_SECRET_KEY") || "",
     webhookSecret: readEnv("BILLS_PROVIDER_WEBHOOK_SECRET") || readEnv("VTU_WEBHOOK_SECRET") || "",
-    timeoutMs: Number(readEnv("BILLS_PROVIDER_TIMEOUT_MS") || 20000)
+    timeoutMs: Number.isSafeInteger(configuredTimeoutMs) && configuredTimeoutMs > 0 && configuredTimeoutMs <= 120000
+      ? configuredTimeoutMs
+      : 20000
   };
 
   if (!config.baseUrl && !config.apiKey && !config.secretKey) {
