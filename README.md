@@ -6,9 +6,9 @@ Run `npm run dev` and open `http://localhost:4173`.
 
 Run `npm run check` to check the site scripts for syntax errors.
 
-The existing Railway website service can run the combined Node.js website and Bills API with `npm start`. It serves the static site and Bills API from one origin and listens on Railway's `PORT`. In production the Bills frontend uses same-origin `/api/` routes; local static development continues to use `http://localhost:4174`.
+The Railway deployment is configured in [`railway.json`](./railway.json) to use Railpack and run the combined Node.js website and Bills API with `node bills-api/server.js`. Keep the Railway service root directory set to `/` and deploy it as a Railpack application, not a static site. It serves the site and API from one origin, listens on Railway's `PORT`, and exposes `/health`; in production the Bills frontend uses same-origin `/api/` routes. Local static development continues to use `http://localhost:4174`.
 
-The repository contains no Railway or Vercel deployment manifest. Configure the existing Railway service's start command as `npm start`. If the website is also deployed to Vercel, retain a deployment-specific `billsApiBaseUrl` in `src/config.js` that points to the existing Railway service; no Vercel configuration is present here to update.
+If the Railway service does not load the root `railway.json`, configure its start command as `node bills-api/server.js` and ensure the builder/deployment mode is Railpack rather than a static-site/Caddy deployment. If the website is also deployed to Vercel, retain a deployment-specific `billsApiBaseUrl` in `src/config.js` that points to the existing Railway service.
 
 Production Bills API routes intentionally return `503` until durable Supabase persistence has been implemented against the actual table definitions. Payment session, verification, and webhook mutations return `503` in every mode until authoritative Monnify reference/amount/currency verification and a verified vending-provider contract are implemented. The website remains available while Bills operations are blocked.
 

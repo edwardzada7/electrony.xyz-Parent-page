@@ -8,7 +8,7 @@ The Bills app keeps payment creation and verification server-side in this isolat
 npm run dev:api
 ```
 
-The API process also serves the website files from the repository root. For a single-service Railway deployment, set the existing service's start command to `npm start`; it listens on Railway's `PORT` and routes `/api/...` and `/health` to the API while serving other public paths as website files. The frontend uses same-origin API paths outside local development. `npm run dev` remains the separate local Python website server.
+The API process also serves the website files from the repository root. For a single-service Railway deployment, use the root [`railway.json`](../railway.json), which selects Railpack and starts `node bills-api/server.js`; set the service root directory to `/` and deploy as an application, not a static site. It listens on Railway's `PORT` and routes `/api/...` and `/health` to the API while serving other public paths as website files. The frontend uses same-origin API paths outside local development. `npm run dev` remains the separate local Python website server.
 
 Production Bills API routes remain fail-closed. `/health` is served by the Node API process (Railway in the combined deployment) and performs a read-only `SELECT 1` through its backend PostgreSQL pool when `BILLS_POSTGRES_URL` is set. The Vercel deployment is a static frontend build and does not proxy `/health` to Railway; use the Railway service URL to check API readiness. Health reports connection separately from role, table, grant, and RLS-policy checks, and does not expose credentials, hostnames, SQL, or raw database errors. A successful connection is not proof of policy semantics or business-operation authorization.
 
