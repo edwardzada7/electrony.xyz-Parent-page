@@ -11,7 +11,9 @@
     <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="styles/tokens.css">
     <link rel="stylesheet" href="styles/site.css">
+    <link rel="stylesheet" href="styles/site-shell.css">
     <script src="src/config.js" defer></script>
+    <script src="src/site-shell.js" defer></script>
     <script src="src/products.js" defer></script>
     <script src="src/main.js" defer></script>
   </head>
@@ -19,7 +21,10 @@
     <a class="skip-link" href="#main">Skip to content</a>
     <header class="site-header" id="top">
       <div class="container header-inner">
-        <a class="wordmark" href="#top" aria-label="Electrony home">Electrony<span class="wordmark-period" aria-hidden="true">.</span></a>
+        <a class="wordmark wordmark-with-logo" href="#top" aria-label="Electrony home">
+          <img class="brand-logo-header" data-brand-logo src="assets/brand/electrony-xyz-logo%20.png" alt="Electrony.xyz" hidden>
+          <span class="brand-logo-fallback" data-brand-fallback>Electrony<span class="wordmark-period" aria-hidden="true">.</span></span>
+        </a>
         <button class="menu-toggle" type="button" aria-expanded="false" aria-controls="primary-navigation">
           <span class="menu-toggle-label">Menu</span>
           <span class="menu-icon" aria-hidden="true"><span></span><span></span></span>
@@ -471,7 +476,10 @@
     <footer class="site-footer">
       <div class="container footer-inner">
         <div class="footer-brand">
-          <a class="wordmark wordmark-light" href="#top" aria-label="Electrony home">Electrony<span class="wordmark-period" aria-hidden="true">.</span></a>
+          <a class="wordmark wordmark-light wordmark-with-logo" href="#top" aria-label="Electrony home">
+            <img class="brand-logo-footer" data-brand-logo src="assets/brand/electrony-e-logo.png" alt="Electrony E symbol" hidden>
+            <span class="brand-logo-fallback" data-brand-fallback>Electrony<span class="wordmark-period" aria-hidden="true">.</span></span>
+          </a>
           <p>Technology designed for the modern world — connected, capable and built for what's next.</p>
         </div>
         <div class="footer-links">

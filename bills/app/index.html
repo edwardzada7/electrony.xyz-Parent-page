@@ -12,7 +12,9 @@
     <link rel="stylesheet" href="../../styles/tokens.css">
     <link rel="stylesheet" href="../../styles/site.css">
     <link rel="stylesheet" href="../../styles/bills-app.css">
+    <link rel="stylesheet" href="../../styles/site-shell.css">
     <script src="../../src/config.js" defer></script>
+    <script src="../../src/site-shell.js" defer></script>
     <script src="../../src/return-to-top.js" defer></script>
     <script src="../../src/bills-app.js" defer></script>
   </head>
@@ -20,7 +22,10 @@
     <a class="skip-link" href="#main">Skip to content</a>
     <header class="bills-app-header">
       <div class="bills-app-container app-header-inner">
-        <a class="wordmark" href="../../" aria-label="Electrony home">Electrony<span class="wordmark-period" aria-hidden="true">.</span></a>
+        <a class="wordmark wordmark-with-logo" href="../../" aria-label="Electrony home">
+          <img class="brand-logo-header" data-brand-logo src="../../assets/brand/electrony-xyz-logo%20.png" alt="Electrony.xyz" hidden>
+          <span class="brand-logo-fallback" data-brand-fallback>Electrony<span class="wordmark-period" aria-hidden="true">.</span></span>
+        </a>
         <div class="header-meta">
           <span class="status-pill">Guest checkout</span>
           <a class="label-link" href="../">Back to Bills</a>
@@ -82,7 +87,10 @@
     <footer class="site-footer">
       <div class="container footer-inner">
         <div class="footer-brand">
-          <a class="wordmark wordmark-light" href="/" aria-label="Electrony home">Electrony<span class="wordmark-period" aria-hidden="true">.</span></a>
+          <a class="wordmark wordmark-light wordmark-with-logo" href="/" aria-label="Electrony home">
+            <img class="brand-logo-footer" data-brand-logo src="../../assets/brand/electrony-e-logo.png" alt="Electrony E symbol" hidden>
+            <span class="brand-logo-fallback" data-brand-fallback>Electrony<span class="wordmark-period" aria-hidden="true">.</span></span>
+          </a>
           <p>Technology designed for the modern world — connected, capable and built for what's next.</p>
         </div>
         <div class="footer-links">

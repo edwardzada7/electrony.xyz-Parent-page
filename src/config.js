@@ -1,6 +1,6 @@
 window.ElectronyConfig = Object.freeze({
   contactUrl: null,
-  whatsappNumber: "",
+  whatsappNumber: "2347068613487",
   // Local static development uses the local API; the Vercel build replaces this with BILLS_API_BASE_URL.
   billsApiBaseUrl: "http://localhost:4174",
   productLinks: Object.freeze({

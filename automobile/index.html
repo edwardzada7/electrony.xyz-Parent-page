@@ -12,7 +12,9 @@
     <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="../styles/tokens.css">
     <link rel="stylesheet" href="../styles/automobile.css">
+    <link rel="stylesheet" href="../styles/site-shell.css">
     <script src="../src/config.js" defer></script>
+    <script src="../src/site-shell.js" defer></script>
     <script src="../src/automobile.js" defer></script>
   </head>
   <body class="automobile-page">
@@ -20,8 +22,9 @@
 
     <header class="automobile-header" id="top">
       <div class="automobile-header__inner container">
-        <a class="automobile-wordmark" href="https://electrony.xyz/" aria-label="Electrony Home — main website">
-          <span>Electrony</span><span class="automobile-wordmark__slash">/</span><span>Automobile</span>
+        <a class="automobile-wordmark automobile-wordmark-with-logo" href="https://electrony.xyz/" aria-label="Electrony Home — main website">
+          <img class="brand-logo-header" data-brand-logo src="../assets/brand/electrony-xyz-logo%20.png" alt="Electrony.xyz" hidden>
+          <span class="brand-logo-fallback" data-brand-fallback>Electrony</span><span class="automobile-wordmark__slash">/</span><span>Automobile</span>
         </a>
 
         <button class="automobile-menu-toggle" type="button" aria-expanded="false" aria-controls="automobile-navigation" aria-label="Open navigation menu">
@@ -238,7 +241,10 @@
     <footer class="automobile-footer">
       <div class="container automobile-footer__inner">
         <div>
-          <a class="automobile-wordmark automobile-wordmark--footer" href="https://electrony.xyz/" aria-label="Electrony Home — main website"><span>Electrony</span><span class="automobile-wordmark__slash">/</span><span>Automobile</span></a>
+          <a class="automobile-wordmark automobile-wordmark--footer automobile-wordmark-with-logo" href="https://electrony.xyz/" aria-label="Electrony Home — main website">
+            <img class="brand-logo-footer" data-brand-logo src="../assets/brand/electrony-e-logo.png" alt="Electrony E symbol" hidden>
+            <span class="brand-logo-fallback" data-brand-fallback>Electrony</span>
+          </a>
           <p>A curated automotive showcase for considered modern mobility.</p>
         </div>
         <div class="automobile-footer__links">
