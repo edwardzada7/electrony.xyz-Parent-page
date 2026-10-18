@@ -877,34 +877,12 @@ async function verifyReturnedPayment() {
   }
 
   try {
-<<<<<<< HEAD
     displayTransactionResult("Verifying payment.", `Checking reference ${reference} with the billing backend.`, "pending");
-=======
->>>>>>> 6d2b7d71e988704f91aaeb15c9effd4fd2839db4
     const response = await fetchBillingApi("/api/payments/verify", {
       method: "POST",
       body: JSON.stringify({ reference })
     });
-<<<<<<< HEAD
-    const resolvedStatus = String(response.paymentStatus || response.status || "pending").toLowerCase();
-
-    if (response.verified === true && resolvedStatus === "payment_success") {
-      const fulfillment = response.fulfillmentStatus === "success"
-        ? "Your bill was delivered."
-        : "Payment is confirmed; bill fulfillment is still being processed.";
-      displayTransactionResult("Payment confirmed.", `Reference: ${reference}. ${fulfillment}`, "success");
-      return;
-    }
-
-    if (resolvedStatus === "payment_pending" || resolvedStatus === "pending" || resolvedStatus === "processing") {
-      displayTransactionResult("Payment not yet confirmed.", `Reference: ${reference}. Check again shortly; bill fulfillment will only follow verified payment.`, "pending");
-      return;
-    }
-
-    displayTransactionResult("Payment could not be confirmed.", `Reference: ${reference}. Please review your payment or try again shortly.`, "error");
-=======
     displayPaymentOutcome(response, response.reference || reference);
->>>>>>> 6d2b7d71e988704f91aaeb15c9effd4fd2839db4
   } catch (error) {
     displayTransactionResult("Payment not verified.", `Reference: ${reference}. The backend did not confirm payment, so no bill is considered fulfilled. ${error.message}`, "error");
   }
@@ -915,12 +893,12 @@ function displayPaymentOutcome(response, reference) {
   const paymentStatus = String(response.paymentStatus || "").toLowerCase();
   const fulfillmentStatus = String(response.fulfillmentStatus || "").toLowerCase();
 
-  if (status === "success" || fulfillmentStatus === "success") {
-    displayTransactionResult("Payment successful.", `Reference: ${reference}. Your service was confirmed.`, "success");
-    return;
-  }
+  if (response.verified === true && paymentStatus === "payment_success") {
+    if (fulfillmentStatus === "success") {
+      displayTransactionResult("Payment confirmed.", `Reference: ${reference}. Your service was confirmed.`, "success");
+      return;
+    }
 
-  if (paymentStatus === "payment_success" || status === "paid" || status === "payment_success") {
     const deliveryFailed = ["failed", "vending_failed"].includes(status)
       || ["failed", "vending_failed"].includes(fulfillmentStatus);
     displayTransactionResult(
@@ -933,13 +911,14 @@ function displayPaymentOutcome(response, reference) {
     return;
   }
 
-  if (["payment_failed", "failed", "cancelled", "canceled"].includes(status)
-    || paymentStatus === "payment_failed") {
+  if (response.verified === true
+    && (["payment_failed", "failed", "cancelled", "canceled"].includes(status)
+      || paymentStatus === "payment_failed")) {
     displayTransactionResult("Payment could not be confirmed.", `Reference: ${reference}. Please review your payment or try again.`, "error");
     return;
   }
 
-  displayTransactionResult("Payment status is pending.", `Reference: ${reference}. Please check status again shortly.`, "pending");
+  displayTransactionResult("Payment status is not verified.", `Reference: ${reference}. Please check again shortly. No bill is considered fulfilled until the backend confirms payment.`, "pending");
 }
 
 function displayTransactionResult(message, details, status) {
@@ -954,15 +933,9 @@ function displayTransactionResult(message, details, status) {
   label.textContent = "Transaction result";
   const heading = document.createElement("h4");
   heading.textContent = message;
-<<<<<<< HEAD
   const description = document.createElement("p");
   description.textContent = details;
   resultCard.append(label, heading, description);
-=======
-  const detail = document.createElement("p");
-  detail.textContent = details;
-  resultCard.append(label, heading, detail);
->>>>>>> 6d2b7d71e988704f91aaeb15c9effd4fd2839db4
 
   const previous = panel.querySelector(".result-card");
   if (previous) previous.remove();

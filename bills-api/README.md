@@ -8,13 +8,9 @@ The Bills app keeps payment creation and verification server-side in this isolat
 npm run dev:api
 ```
 
-<<<<<<< HEAD
-Run the API from the repository root. For Railway, configure the service root directory as `/` (the repository root) and the start command as `npm run start:api`. The server listens on Railway's `PORT` and binds to `0.0.0.0`.
-=======
 The API process also serves the website files from the repository root. For a single-service Railway deployment, set the existing service's start command to `npm start`; it listens on Railway's `PORT` and routes `/api/...` and `/health` to the API while serving other public paths as website files. The frontend uses same-origin API paths outside local development. `npm run dev` remains the separate local Python website server.
 
-The repository does not include Railway or Vercel deployment configuration. Production Bills API routes currently return `503` until a server-side database adapter has been implemented against the actual Supabase schema. In production, the API does not use the local JSON store; `/health` reports database status without exposing customer data or credentials. Payment session, verification, and webhook mutation routes are disabled in all modes until authoritative Monnify verification checks the merchant reference, amount, currency, and payment status and vending uses a verified provider contract.
->>>>>>> 6d2b7d71e988704f91aaeb15c9effd4fd2839db4
+Production Bills API routes currently return `503`. `/health` performs a read-only `SELECT 1` through the backend PostgreSQL pool when `BILLS_POSTGRES_URL` is set, then reports connection status separately from the limited role/table/RLS security checks. It does not expose credentials, hostnames, SQL, or raw database errors. A successful connection is not proof of CRUD authorization or persistent Bills storage: no business-table reads or writes are enabled, and production does not fall back to local JSON.
 
 Expected endpoints:
 
@@ -59,6 +55,7 @@ The example Monnify values are for local sandbox development only. When `NODE_EN
 - `BILLS_PAYMENT_REDIRECT_URL`
 - `BILLS_WEBHOOK_BASE_URL`
 - `BILLS_DATABASE_URL`
+- `BILLS_POSTGRES_URL` (Railway backend variable only; PostgreSQL TLS certificate verification is required; never include it in browser/frontend variables)
 - `BILLS_VENDING_PROVIDER`
 - `BILLS_PROVIDER_BASE_URL`
 - `BILLS_PROVIDER_API_KEY`
@@ -79,23 +76,27 @@ The existing vending adapter does not currently provide a documented provider-fe
 
 Account registration and login are provided by the Bills API. Purchases in the Virtual Cards and Gift Cards sections require a signed-in account at the backend, but their catalogues currently return `provider_unconfigured`; their purchase endpoints do not create transactions. The API has no configured card or gift-card provider, so it cannot verify provider KYC/eligibility, offer provider products, or issue cards/gift cards. Monnify is used only for existing supported bill-payment processing, not assumed to provide these products.
 
-<<<<<<< HEAD
-Transaction, account, and webhook-idempotency records use JSON files. On Railway, attach a persistent volume and set `BILLS_DATABASE_URL` to a JSON file path on that volume (for example `/data/transactions.json`, with `/data` mounted as the volume path). This is not a production database or horizontally safe datastore: it does not provide transactional uniqueness/locking. Health reports this limitation. Before accepting real customer payments, deploy a durable database with transactional uniqueness/locking, configure and verify bill fulfilment and provider fee quotes, and select/configure the card and gift-card providers and their actual KYC/payment/fulfilment APIs.
-=======
-Transaction, account, and webhook-idempotency records use JSON files beside the configured `BILLS_DATABASE_URL` file. By default, they are stored under `~/.electrony-bills/`; the previous `bills-api/data/` files are legacy migration sources. This is persistent local-file storage, not a production database or horizontally safe datastore. Before accepting real customer payments, deploy a durable database with transactional uniqueness/locking, configure and verify bill fulfilment and provider fee quotes, and select/configure the card and gift-card providers and their actual KYC/payment/fulfilment APIs.
+Local development continues to use JSON files beside the configured `BILLS_DATABASE_URL` file. By default, they are stored under `~/.electrony-bills/`; the previous `bills-api/data/` files remain legacy migration sources. `BILLS_DATABASE_URL` is a file path, not a database URL, and its local JSON and legacy migration behavior are unchanged.
 
-The current vending adapter has no provider-fee quote operation, so payment-session creation remains unavailable even when its basic credentials are present. The payment adapter must also be updated against the selected provider's documented settlement response before production to compare the confirmed amount, currency, and reference with the stored transaction; those provider-specific fields cannot safely be inferred from the current generic adapter. A paid Monnify verification or signed webhook starts fulfillment at most once per local transaction record; JSON-file writes do not provide cross-process locking or crash-safe provider idempotency. Treat deployment for real payments as blocked until the provider quote/fulfillment/settlement contract and durable transactional storage are implemented and verified.
->>>>>>> 6d2b7d71e988704f91aaeb15c9effd4fd2839db4
+`BILLS_POSTGRES_URL` is read only by the Node.js backend and is configured in Railway's backend service variables. Do not expose it through `BILLS_API_BASE_URL`, Vercel build variables, `src/config.js`, or any browser code. The connection pool enforces certificate-verified TLS, has bounded connection/query timeouts, and is closed on graceful process shutdown. Readiness distinguishes `not_configured`, `configured_unverified` (before a check), `unavailable`, `connection_verified`, and `security_failed`. A `securityFailure` is a non-secret class such as `dedicated_role_required`, `rls_disabled`, `role_owns_table`, or `server_role_policy_missing`.
+
+The six existing tables already exist; this phase performs no migrations or DDL. The current schema has RLS enabled and no policies, so the configured role cannot pass the existing RLS-policy check. No role has been confirmed against Railway from this development environment. Even if `/health` reports `connection_verified` and `controls_verified`, these checks do not prove that the role has the required table grants or that a particular CRUD operation is authorized.
+
+No PostgreSQL business-table repository operations are implemented: fee-quote persistence/consumption, order creation or reads, payment-attempt writes, atomic webhook idempotency, product-catalogue reads, and platform-settings reads are all disabled. There is consequently no PostgreSQL transaction/DML path and no automatic JSON import. Preserve guest `customer_id` as nullable; do not equate the local JSON account identifier with a database customer identity without a verified relationship.
+
+Before production CRUD can be enabled, configure a dedicated server-only database role that is neither a superuser, `BYPASSRLS` role, nor owner of these tables; grant only the specific table privileges needed; and establish narrowly scoped RLS policies for that backend role that enforce the intended customer/data boundaries. Do not disable RLS, add `public`/anonymous access, or use a service-role credential in frontend code. Validate grants, policies, identity mapping, field/status mapping, and each transaction path against the actual schema before enabling any repository method. Existing production API routes remain blocked in the meantime.
+
+The current vending adapter has no provider-fee quote operation, so payment-session creation remains unavailable even when its basic credentials are present. The payment adapter must also be updated against the selected provider's documented settlement response to compare the confirmed amount, currency, and reference with the stored transaction; those provider-specific fields cannot safely be inferred from the current generic adapter. Payment-session creation, verification, and webhook mutations return `503` in all modes; neither a verification response nor a signed webhook can mark an order paid or start fulfillment. Treat deployment for real payments as blocked until the provider quote/fulfillment/settlement contract and durable transactional storage are implemented and verified.
 
 ## Payment flow
 
-The backend now:
+The backend currently:
 
-1. Supports existing guest bill checkout requests and associates signed-in transactions with the account identified by a verified server-side token.
-2. Stores eligible transaction references and separate service, Electrony fee, provider-fee, payment, and fulfilment fields in local JSON files.
+1. Retains guest bill checkout validation and account association using a verified server-side token, but payment operations are disabled in every mode.
+2. Uses local JSON files for development account and transaction records; production API routes remain blocked until durable database persistence is implemented.
 3. Uses server-controlled NGN minor-unit fee rules and rejects payment initialization unless the quote and provider-fee disclosure are complete.
-4. Keeps Monnify credentials and webhook verification server-side.
-5. Verifies webhook signatures. Monnify verification must confirm authoritative payment status, amount, currency, and reference before any bill is fulfilled; webhook signature alone is not payment verification.
-6. Uses the existing provider adapter abstraction for configured electricity, airtime, data, and bill delivery.
+4. Keeps Monnify credentials and webhook signature verification server-side.
+5. Requires authoritative Monnify status, amount, currency, and reference verification before any payment can be confirmed; webhook signatures alone are not payment verification.
+6. Retains the provider adapter abstraction, but does not enable bill delivery without a verified vending-provider contract.
 
 If a provider or required configuration is missing, the backend fails safely with an explicit error instead of inventing products, rates, or fulfillment. The current code does not have an implemented authoritative Monnify amount/currency/reference verification contract, a provider-fee quote operation, or durable transactional idempotency. Do not test a real or sandbox bill purchase or treat a callback as fulfillment until those blockers are resolved against the official provider contracts.
