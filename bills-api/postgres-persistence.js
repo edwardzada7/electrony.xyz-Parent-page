@@ -78,14 +78,27 @@ function sanitizeDatabaseError(error) {
   return persistenceError("Bills PostgreSQL operation failed.", "database_unavailable");
 }
 
-function classifyConnectionFailure(error) {
+function getCausedErrors(error) {
   const errors = [];
   let current = error;
-  while (current && errors.length < 4 && !errors.includes(current)) {
+  while (
+    current
+    && (typeof current === "object" || typeof current === "function")
+    && errors.length < 8
+    && !errors.includes(current)
+  ) {
     errors.push(current);
     current = current.cause;
   }
+  return errors;
+}
 
+function isTlsConnectionErrorCode(code) {
+  return /^(?:ERR_(?:SSL|TLS)_[A-Z0-9_]+|CERT_[A-Z0-9_]+|UNABLE_TO_[A-Z0-9_]*CERT[A-Z0-9_]*|SELF_SIGNED_CERT_IN_CHAIN|DEPTH_ZERO_SELF_SIGNED_CERT)$/.test(code);
+}
+
+function classifyConnectionFailure(error) {
+  const errors = getCausedErrors(error);
   const codes = errors.map((item) => item.code).filter((code) => typeof code === "string");
   if (codes.some((code) => ["ENOTFOUND", "EAI_AGAIN", "EAI_NONAME"].includes(code))) {
     return "dns_error";
@@ -94,7 +107,7 @@ function classifyConnectionFailure(error) {
   if (codes.some((code) => ["ETIMEDOUT", "ESOCKETTIMEDOUT", "CONNECT_TIMEOUT"].includes(code))) {
     return "timeout";
   }
-  if (codes.some((code) => /^(?:ERR_SSL|ERR_TLS|CERT_|UNABLE_TO_VERIFY|SELF_SIGNED)/.test(code))) {
+  if (codes.some(isTlsConnectionErrorCode)) {
     return "tls_error";
   }
   if (codes.some((code) => /^28[A-Z0-9]{3}$/.test(code))) return "authentication_failed";
@@ -116,10 +129,18 @@ function classifyConnectionFailure(error) {
   return "unknown";
 }
 
+function safeConnectionErrorCode(error) {
+  const errors = getCausedErrors(error);
+  const codes = errors.map((item) => item.code).filter((code) => typeof code === "string");
+  return codes.find((code) => /^(?:[A-Z][A-Z0-9_]{0,63}|[0-9A-Z]{5})$/.test(code)) || null;
+}
+
 function logConnectionFailure(error) {
-  console.error("Bills PostgreSQL connection failure.", {
-    category: classifyConnectionFailure(error)
-  });
+  const category = classifyConnectionFailure(error);
+  const errorCode = safeConnectionErrorCode(error);
+  const details = { category };
+  if (errorCode) details.errorCode = errorCode;
+  console.error("Bills PostgreSQL connection failure.", details);
 }
 
 function validateText(value, field, { optional = false, maxLength = 255 } = {}) {

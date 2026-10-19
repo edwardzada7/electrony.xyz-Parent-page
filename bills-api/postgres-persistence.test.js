@@ -151,6 +151,7 @@ test("connection failures are safely classified in server logs while health rema
     ["ECONNREFUSED", "connection_refused"],
     ["ETIMEDOUT", "timeout"],
     ["ERR_TLS_CERT_ALTNAME_INVALID", "tls_error"],
+    ["UNABLE_TO_GET_ISSUER_CERT_LOCALLY", "tls_error"],
     ["28P01", "authentication_failed"],
     ["3D000", "database_missing"],
     ["OTHER", "unknown"]
@@ -174,7 +175,7 @@ test("connection failures are safely classified in server logs while health rema
       });
       assert.deepEqual(logged.at(-1), [
         "Bills PostgreSQL connection failure.",
-        { category }
+        { category, errorCode: code }
       ]);
     }
   } finally {
@@ -182,6 +183,51 @@ test("connection failures are safely classified in server logs while health rema
   }
   assert.equal(JSON.stringify(logged).includes("password"), false);
   assert.equal(JSON.stringify(logged).includes("db.private.example.test"), false);
+});
+
+test("wrapped connection errors expose only a recognized nested code", async () => {
+  const logged = [];
+  const originalError = console.error;
+  console.error = (...args) => logged.push(args);
+
+  try {
+    const tlsError = new Error("private certificate and db.private.example.test details");
+    tlsError.code = "UNABLE_TO_GET_ISSUER_CERT_LOCALLY";
+    const pgPoolError = new Error("private pool connection failure", { cause: tlsError });
+    const readiness = await makePersistence([pgPoolError]).getReadiness();
+
+    assert.equal(readiness.connected, false);
+    assert.equal(readiness.connectionFailure, "connection_failed");
+    assert.deepEqual(logged, [[
+      "Bills PostgreSQL connection failure.",
+      { category: "tls_error", errorCode: "UNABLE_TO_GET_ISSUER_CERT_LOCALLY" }
+    ]]);
+    assert.equal(JSON.stringify(logged).includes("private"), false);
+    assert.equal(JSON.stringify(logged).includes("db.private.example.test"), false);
+  } finally {
+    console.error = originalError;
+  }
+});
+
+test("unknown connection errors do not log unsafe codes or raw messages", async () => {
+  const logged = [];
+  const originalError = console.error;
+  console.error = (...args) => logged.push(args);
+
+  try {
+    const error = new Error("password=private db.private.example.test secret");
+    error.code = "private_database_password";
+    await makePersistence([error]).getReadiness();
+
+    assert.deepEqual(logged, [[
+      "Bills PostgreSQL connection failure.",
+      { category: "unknown" }
+    ]]);
+    assert.equal(JSON.stringify(logged).includes("private"), false);
+    assert.equal(JSON.stringify(logged).includes("db.private.example.test"), false);
+  } finally {
+    console.error = originalError;
+  }
 });
 
 test("missing RLS policies keep security readiness failed after connectivity succeeds", async () => {
