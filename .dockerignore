@@ -1,0 +1,14 @@
+.git
+.github
+.vscode
+node_modules
+**/node_modules
+.env
+.env.*
+**/.env
+**/.env.*
+dist
+build
+coverage
+bills-api/data
+*.log
