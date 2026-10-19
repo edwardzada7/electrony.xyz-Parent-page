@@ -15,6 +15,7 @@ Production Bills API routes remain fail-closed. `/health` is served by the Node 
 Expected endpoints:
 
 - `GET /health`
+- `POST /api/contact` — Hardware and Energy email enquiries (requires server-only Resend configuration)
 - `GET /api/fees/quote?service=electricity|airtime|data|bills&amount=...&network=...&plan=...`
 - `POST /api/payments/session`
 - `POST /api/payments/verify`
@@ -30,6 +31,12 @@ The frontend is a static site: browser JavaScript cannot read Railway/Vercel env
 On Railway, set `BILLS_APP_URL` to the exact deployed Bills app URL, including `/bills/app/`; the API permits that origin and the local development origins. For any other Vercel/custom frontend domains, set `BILLS_ALLOWED_ORIGINS` to a comma-separated list of exact origins. CORS does not permit wildcard origins or credentials. Changes to `BILLS_API_BASE_URL` require a new Vercel deployment because it is compiled into the static frontend at build time.
 
 The repository does not contain an actual Railway deployment URL or a Vercel project/domain configuration. Do not substitute a guessed URL; use the Railway service's assigned public HTTPS domain.
+
+### Hardware and Energy contact enquiries
+
+The combined Railway API and the Vercel function at `/api/contact` use the same server-side Resend delivery module. Configure `CONTACT_EMAIL` to the confirmed recipient, `CONTACT_FROM_EMAIL` to a sender address/domain verified in Resend, and `RESEND_API_KEY` as a private server-side variable. For the Vercel function, define the variables in Vercel's project environment settings; for the Railway route, define them in the Railway service variables. Do not add them to the static frontend or `BILLS_API_BASE_URL`.
+
+Requests are JSON-limited to 16 KiB, validated on the server, rate-limited per client, and include a hidden honeypot field. Missing delivery settings return `503`; a success response is sent only after Resend accepts the message. Provider acceptance does not guarantee inbox delivery. The destination must be supplied by the site owner; this repository does not choose one.
 
 ## Required environment configuration
 

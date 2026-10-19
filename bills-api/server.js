@@ -8,6 +8,11 @@ const { URL } = require("url");
 const { buildProviderAdapter, readEnv } = require("./provider-adapter");
 const { createPostgresPersistence } = require("./postgres-persistence");
 const { PLATFORM_FEE_RULES, createPlatformFeeQuote, parseMoneyToMinor } = require("./platform-fees");
+const {
+  CONTACT_BODY_LIMIT,
+  ContactEnquiryError,
+  submitContactEnquiry
+} = require("./contact-enquiries");
 
 const APP_ROOT = path.resolve(__dirname, "..");
 const ALLOWED_SERVICES = ["electricity", "airtime", "data", "bills"];
@@ -517,6 +522,44 @@ function readRawBody(request) {
       resolve(raw);
     });
     request.on("error", reject);
+  });
+}
+
+function readContactPayload(request) {
+  const contentType = String(request.headers["content-type"] || "");
+  if (!/^application\/json(?:\s*;|$)/i.test(contentType)) {
+    return Promise.reject(new ContactEnquiryError(400, "Submit enquiry details as JSON."));
+  }
+  if (Number(request.headers["content-length"] || 0) > CONTACT_BODY_LIMIT) {
+    request.resume();
+    return Promise.reject(new ContactEnquiryError(413, "The enquiry is too large. Shorten it and try again."));
+  }
+
+  return new Promise((resolve, reject) => {
+    const chunks = [];
+    let size = 0;
+    let tooLarge = false;
+    request.on("data", (chunk) => {
+      size += chunk.length;
+      if (size > CONTACT_BODY_LIMIT) {
+        tooLarge = true;
+        chunks.length = 0;
+        return;
+      }
+      if (!tooLarge) chunks.push(chunk);
+    });
+    request.on("end", () => {
+      if (tooLarge) {
+        reject(new ContactEnquiryError(413, "The enquiry is too large. Shorten it and try again."));
+        return;
+      }
+      try {
+        resolve(JSON.parse(Buffer.concat(chunks).toString("utf8")));
+      } catch {
+        reject(new ContactEnquiryError(400, "Enter valid enquiry details."));
+      }
+    });
+    request.on("error", () => reject(new ContactEnquiryError(400, "Unable to read enquiry details.")));
   });
 }
 
@@ -1098,6 +1141,33 @@ async function handleRequest(request, response) {
       virtualCards: "provider_unconfigured",
       giftCards: "provider_unconfigured"
     });
+    return;
+  }
+
+  if (url.pathname === "/api/contact") {
+    if (request.method !== "POST") {
+      response.setHeader("Allow", "POST");
+      sendJson(response, 405, { ok: false, error: "Use POST to submit an enquiry." });
+      return;
+    }
+    try {
+      const payload = await readContactPayload(request);
+      const forwarded = request.headers["x-forwarded-for"];
+      const clientKey = typeof forwarded === "string" && forwarded.trim()
+        ? forwarded.split(",")[0].trim()
+        : request.socket.remoteAddress || "unknown";
+      await submitContactEnquiry(payload, { clientKey });
+      sendJson(response, 200, {
+        ok: true,
+        message: "Your enquiry was accepted by the email provider for delivery."
+      });
+    } catch (error) {
+      if (error instanceof ContactEnquiryError) {
+        sendJson(response, error.statusCode, { ok: false, error: error.message });
+        return;
+      }
+      sendJson(response, 500, { ok: false, error: "We couldn't process your enquiry right now. Please try again later." });
+    }
     return;
   }
 

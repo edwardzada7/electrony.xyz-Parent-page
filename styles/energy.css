@@ -481,6 +481,262 @@
   background: var(--energy-paper);
 }
 
+.energy-discovery {
+  display: grid;
+  gap: 1rem;
+  margin-bottom: 1.4rem;
+}
+
+.energy-search {
+  display: flex;
+  min-height: 3.5rem;
+  align-items: center;
+  gap: 0.8rem;
+  padding-inline: 1rem;
+  border: 1px solid #a8c7a5;
+  background: #fff;
+}
+
+.energy-search > span {
+  color: var(--energy-muted);
+  font-size: 1.5rem;
+}
+
+.energy-search input {
+  width: 100%;
+  min-width: 0;
+  border: 0;
+  background: transparent;
+  color: var(--energy-ink);
+  font: inherit;
+  outline: 0;
+}
+
+.energy-search input::placeholder {
+  color: #616a63;
+}
+
+.energy-search-clear {
+  min-height: 2.5rem;
+  padding-inline: 0.6rem;
+  border: 0;
+  background: transparent;
+  color: var(--energy-forest);
+  font: inherit;
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.energy-search-clear:disabled {
+  color: #616a63;
+  cursor: default;
+}
+
+.energy-filter-group {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.energy-filter {
+  min-height: 2.75rem;
+  padding: 0.55rem 0.9rem;
+  border: 1px solid #a8c7a5;
+  background: #fff;
+  color: var(--energy-forest);
+  font: inherit;
+  font-size: 0.82rem;
+  cursor: pointer;
+}
+
+.energy-filter:hover {
+  border-color: var(--energy-forest);
+}
+
+.energy-filter.is-selected,
+.energy-filter[aria-pressed="true"] {
+  border-color: var(--energy-forest);
+  background: var(--energy-forest);
+  color: #fff;
+}
+
+.energy-filter:focus-visible,
+.energy-search-clear:focus-visible,
+.energy-product-card__enquire:focus-visible {
+  outline: var(--focus-ring);
+  outline-offset: 3px;
+}
+
+.energy-discovery-help {
+  margin: -0.5rem 0 0;
+  color: var(--energy-muted);
+  font-size: 0.8rem;
+  line-height: 1.6;
+}
+
+.energy-results-status {
+  min-height: 1.5rem;
+  margin: 0.8rem 0;
+  color: var(--energy-muted);
+  font-size: 0.82rem;
+}
+
+.energy-product-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 1rem;
+}
+
+.energy-product-card {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  border: 1px solid var(--energy-line);
+  background: #fff;
+  box-shadow: 0 0.5rem 1.5rem rgb(36 69 43 / 4%);
+}
+
+.energy-product-card__image {
+  display: grid;
+  min-height: 13rem;
+  place-items: center;
+  overflow: hidden;
+  background: #eff6ee;
+}
+
+.energy-product-card__image img {
+  width: 100%;
+  height: 100%;
+  min-height: 13rem;
+  object-fit: cover;
+}
+
+.energy-product-card__fallback {
+  color: var(--energy-muted);
+  font-family: var(--font-label);
+  font-size: 0.68rem;
+  letter-spacing: 0.1em;
+}
+
+.energy-product-card__body {
+  display: grid;
+  flex: 1;
+  align-content: start;
+  gap: 0.7rem;
+  padding: 1.25rem;
+}
+
+.energy-product-card__category {
+  margin: 0;
+  color: var(--energy-forest);
+  font-family: var(--font-label);
+  font-size: 0.65rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.energy-product-card__title {
+  margin: 0;
+  color: var(--energy-ink);
+  font-size: 1.25rem;
+  font-weight: 600;
+  letter-spacing: -0.03em;
+}
+
+.energy-product-card__description {
+  margin: 0;
+  color: var(--energy-muted);
+  font-size: 0.86rem;
+  line-height: 1.65;
+}
+
+.energy-product-card__note {
+  margin: 0;
+  color: var(--energy-muted);
+  font-size: 0.76rem;
+  line-height: 1.5;
+}
+
+.energy-product-card__footer {
+  padding: 0 1.25rem 1.25rem;
+}
+
+.energy-product-card__enquire {
+  display: inline-flex;
+  min-height: 2.75rem;
+  align-items: center;
+  justify-content: center;
+  padding: 0.65rem 1rem;
+  border: 1px solid var(--energy-forest);
+  background: var(--energy-forest);
+  color: #fff;
+  font: inherit;
+  font-size: 0.84rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.energy-product-card__enquire:hover {
+  border-color: #16351f;
+  background: #16351f;
+}
+
+.energy-catalogue-empty {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: start;
+  gap: 1.5rem;
+  padding: clamp(1.5rem, 4vw, 3rem);
+  border: 1px solid var(--energy-line);
+  background: #f3faf1;
+}
+
+.energy-catalogue-empty[hidden] {
+  display: none;
+}
+
+.energy-catalogue-empty .energy-catalogue__mark {
+  width: 4.5rem;
+}
+
+.energy-catalogue-empty h3 {
+  margin: 0;
+  font-size: clamp(1.5rem, 3vw, 2.3rem);
+  font-weight: 500;
+  letter-spacing: -0.05em;
+}
+
+.energy-catalogue-empty > div > p:not(.energy-eyebrow) {
+  max-width: 43rem;
+  color: var(--energy-muted);
+  line-height: 1.7;
+}
+
+.energy-catalogue-cta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 2rem;
+  padding: clamp(1.5rem, 4vw, 2.5rem);
+  margin-top: 1.5rem;
+  border: 1px solid var(--energy-line);
+  background: linear-gradient(120deg, #fcfdfb, #f3faf1);
+}
+
+.energy-catalogue-cta h3 {
+  margin: 0;
+  font-size: clamp(1.4rem, 2.5vw, 2rem);
+  font-weight: 500;
+  letter-spacing: -0.04em;
+}
+
+.energy-catalogue-cta p:last-child {
+  margin-bottom: 0;
+  color: var(--energy-muted);
+  line-height: 1.65;
+}
+
 .energy-catalogue__panel {
   position: relative;
   display: grid;
@@ -810,6 +1066,20 @@
   color: #8d2119;
 }
 
+.energy-button--submit:disabled {
+  cursor: wait;
+  opacity: 0.7;
+}
+
+.contact-form-trap {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
 .energy-related {
   background: #eaf7e8;
 }
@@ -1022,6 +1292,10 @@
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
+  .energy-product-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
   .energy-related-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
@@ -1077,6 +1351,15 @@
     position: static;
   }
 
+  .energy-catalogue-cta {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .energy-catalogue-empty {
+    grid-template-columns: 1fr;
+  }
+
   .energy-process__steps {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
@@ -1125,7 +1408,8 @@
   }
 
   .energy-category-grid,
-  .energy-related-grid {
+  .energy-related-grid,
+  .energy-product-grid {
     grid-template-columns: 1fr;
   }
 
@@ -1187,5 +1471,405 @@
     animation-duration: 0.01ms !important;
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
+  }
+}
+
+.energy-calculator {
+  background: #f3f6f2;
+}
+
+.energy-calculator__heading {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: 2rem;
+}
+
+.energy-calculator__heading > div {
+  max-width: 52rem;
+}
+
+.energy-calculator__heading h2 {
+  margin-bottom: 0.75rem;
+}
+
+.energy-calculator__heading > div > p:last-child {
+  max-width: 45rem;
+  color: var(--energy-muted);
+  line-height: 1.7;
+}
+
+.energy-calculator__estimate-note,
+.energy-calculator__caveats {
+  padding: 1rem 1.2rem;
+  border-left: 2px solid var(--energy-green);
+  background: #eaf7e8;
+  color: var(--energy-forest);
+  font-size: 0.87rem;
+  line-height: 1.65;
+}
+
+.energy-calculator__estimate-note {
+  margin: -1.2rem 0 1.5rem;
+}
+
+.energy-calculator__workspace {
+  display: grid;
+  grid-template-columns: minmax(0, 1.25fr) minmax(18rem, 0.75fr);
+  gap: 1rem;
+  align-items: start;
+}
+
+.energy-calculator__panel {
+  min-width: 0;
+  padding: clamp(1.1rem, 2.5vw, 1.75rem);
+  border: 1px solid var(--energy-line);
+  background: #fff;
+  box-shadow: 0 0.5rem 1.75rem rgb(36 69 43 / 4%);
+}
+
+.energy-calculator__panel-heading,
+.energy-calculator__results-heading,
+.energy-calculator__breakdown-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.energy-calculator__panel-heading {
+  margin-bottom: 1.2rem;
+}
+
+.energy-calculator__panel-heading .energy-eyebrow,
+.energy-calculator__results-heading .energy-eyebrow {
+  margin-bottom: 0.45rem;
+}
+
+.energy-calculator__panel-heading h3,
+.energy-calculator__results-heading h3 {
+  margin: 0;
+  color: var(--energy-forest);
+  font-size: clamp(1.35rem, 2.2vw, 1.9rem);
+}
+
+.energy-calculator__text-button,
+.energy-calculator__add,
+.energy-calculator__remove {
+  border: 1px solid var(--energy-line);
+  background: transparent;
+  color: var(--energy-forest);
+  font: inherit;
+  cursor: pointer;
+}
+
+.energy-calculator__text-button {
+  padding: 0.55rem 0.7rem;
+  font-size: 0.78rem;
+  text-decoration: underline;
+  text-underline-offset: 0.2rem;
+}
+
+.energy-calculator__appliances {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.energy-calculator__appliance-row {
+  display: grid;
+  grid-template-columns: minmax(7rem, 1.05fr) minmax(8rem, 1.3fr) minmax(5rem, 0.7fr) minmax(4rem, 0.55fr) minmax(5rem, 0.7fr) auto;
+  align-items: end;
+  gap: 0.55rem;
+  padding: 0.8rem;
+  border: 1px solid rgb(77 139 87 / 16%);
+  background: #fcfdfb;
+}
+
+.energy-calculator__field {
+  display: grid;
+  min-width: 0;
+  align-content: start;
+  gap: 0.4rem;
+}
+
+.energy-calculator__field label {
+  color: var(--energy-forest);
+  font-size: 0.72rem;
+  font-weight: 600;
+  line-height: 1.35;
+}
+
+.energy-calculator__field input,
+.energy-calculator__field select {
+  width: 100%;
+  min-width: 0;
+  min-height: 2.75rem;
+  padding: 0.55rem 0.6rem;
+  border: 1px solid #a8c7a5;
+  border-radius: 2px;
+  background: #fff;
+  color: var(--energy-ink);
+  font: inherit;
+  font-size: 0.83rem;
+}
+
+.energy-calculator__field input:focus-visible,
+.energy-calculator__field select:focus-visible,
+.energy-calculator__text-button:focus-visible,
+.energy-calculator__add:focus-visible,
+.energy-calculator__remove:focus-visible {
+  outline: 2px solid var(--energy-green);
+  outline-offset: 2px;
+}
+
+.energy-calculator__field [aria-invalid="true"] {
+  border-color: #a1261d;
+}
+
+.energy-calculator__remove {
+  min-height: 2.75rem;
+  padding: 0.5rem;
+  font-size: 0.72rem;
+}
+
+.energy-calculator__remove:hover,
+.energy-calculator__text-button:hover,
+.energy-calculator__add:hover {
+  background: #eaf7e8;
+}
+
+.energy-calculator__add {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-top: 0.8rem;
+  padding: 0.65rem 0.8rem;
+  font-size: 0.82rem;
+  font-weight: 600;
+}
+
+.energy-calculator__add span {
+  font-size: 1.2rem;
+  line-height: 1;
+}
+
+.energy-calculator__helper {
+  margin: 0.9rem 0 0;
+  color: var(--energy-muted);
+  font-size: 0.76rem;
+  line-height: 1.55;
+}
+
+.energy-calculator__assumption-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.8rem;
+}
+
+.energy-calculator__validation {
+  min-height: 1.4rem;
+  margin: 0.9rem 0;
+  color: #8d2119;
+  font-size: 0.85rem;
+  line-height: 1.5;
+}
+
+.energy-calculator__validation.is-success {
+  color: var(--energy-forest);
+}
+
+.energy-calculator__validation:empty {
+  min-height: 0;
+  margin: 0;
+}
+
+.energy-calculator__results {
+  margin-top: 2.5rem;
+}
+
+.energy-calculator__results-heading {
+  align-items: end;
+  margin-bottom: 1.15rem;
+}
+
+.energy-calculator__metric-grid,
+.energy-calculator__sizing-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0.75rem;
+}
+
+.energy-calculator__metric,
+.energy-calculator__size {
+  min-width: 0;
+  padding: 1.15rem;
+  border: 1px solid var(--energy-line);
+  background: #fff;
+}
+
+.energy-calculator__metric > p,
+.energy-calculator__size > p {
+  margin: 0 0 0.7rem;
+  color: var(--energy-muted);
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+
+.energy-calculator__metric output,
+.energy-calculator__size output {
+  display: block;
+  margin-bottom: 0.6rem;
+  color: var(--energy-forest);
+  font-family: var(--font-display);
+  font-size: clamp(1.45rem, 3vw, 2.2rem);
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+
+.energy-calculator__metric small,
+.energy-calculator__size small {
+  display: block;
+  color: var(--energy-muted);
+  font-size: 0.72rem;
+  line-height: 1.5;
+}
+
+.energy-calculator__sizing-grid {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  margin-top: 0.75rem;
+}
+
+.energy-calculator__size {
+  background: #eaf7e8;
+}
+
+.energy-calculator__breakdown {
+  margin-top: 1.5rem;
+  border: 1px solid var(--energy-line);
+  background: #fff;
+}
+
+.energy-calculator__breakdown-heading {
+  padding: 1rem 1.1rem;
+  border-bottom: 1px solid var(--energy-line);
+}
+
+.energy-calculator__breakdown-heading h4 {
+  margin: 0;
+  color: var(--energy-forest);
+  font-size: 1rem;
+}
+
+.energy-calculator__breakdown-heading span {
+  color: var(--energy-muted);
+  font-size: 0.75rem;
+}
+
+.energy-calculator__table-wrap {
+  overflow-x: auto;
+}
+
+.energy-calculator__table-wrap table {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: left;
+}
+
+.energy-calculator__table-wrap th,
+.energy-calculator__table-wrap td {
+  padding: 0.8rem 1rem;
+  border-bottom: 1px solid rgb(77 139 87 / 13%);
+  font-size: 0.8rem;
+  white-space: nowrap;
+}
+
+.energy-calculator__table-wrap th {
+  color: var(--energy-muted);
+  font-size: 0.7rem;
+  font-weight: 600;
+}
+
+.energy-calculator__table-wrap tbody tr:last-child td {
+  border-bottom: 0;
+}
+
+.energy-calculator__caveats {
+  margin-top: 1rem;
+}
+
+.energy-calculator__actions {
+  display: flex;
+  align-items: center;
+  gap: 1.25rem;
+  margin-top: 1.25rem;
+}
+
+.energy-calculator__actions .energy-text-link {
+  flex-shrink: 0;
+}
+
+@media (max-width: 70rem) {
+  .energy-calculator__workspace {
+    grid-template-columns: 1fr;
+  }
+
+  .energy-calculator__appliance-row {
+    grid-template-columns: minmax(8rem, 1fr) minmax(9rem, 1.3fr) repeat(3, minmax(4.5rem, 0.7fr));
+  }
+
+  .energy-calculator__remove {
+    grid-column: 1 / -1;
+    justify-self: end;
+    min-height: 2.25rem;
+  }
+
+  .energy-calculator__metric-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 48rem) {
+  .energy-calculator__heading,
+  .energy-calculator__results-heading {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .energy-calculator__estimate-note {
+    margin-top: 0;
+  }
+
+  .energy-calculator__appliance-row {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.65rem;
+  }
+
+  .energy-calculator__appliance-type,
+  .energy-calculator__appliance-name {
+    grid-column: span 2;
+  }
+
+  .energy-calculator__remove {
+    grid-column: span 2;
+  }
+
+  .energy-calculator__sizing-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .energy-calculator__actions {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+}
+
+@media (max-width: 32rem) {
+  .energy-calculator__assumption-grid,
+  .energy-calculator__metric-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .energy-calculator__panel-heading {
+    align-items: flex-start;
   }
 }

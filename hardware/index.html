@@ -21,7 +21,9 @@
     <script src="../src/site-shell.js" defer></script>
     <script src="../src/products.js" defer></script>
     <script src="../src/main.js" defer></script>
+    <script src="../src/hardware-catalogue.js" defer></script>
     <script src="../src/hardware.js" defer></script>
+    <script src="../src/contact-form.js" defer></script>
   </head>
   <body class="hardware-page">
     <a class="skip-link" href="#main">Skip to content</a>
@@ -83,7 +85,7 @@
             </div>
             <p>Discover the equipment and systems that support homes, businesses and the spaces between them.</p>
           </div>
-          <p class="hardware-catalogue-note">These are planned catalogue categories, not confirmation of current product availability.</p>
+          <p class="hardware-catalogue-note">Illustrative enquiry categories only — these cards do not confirm inventory, models, specifications, prices or availability.</p>
 
           <div class="hardware-category-grid">
             <article class="hardware-category-card">
@@ -94,48 +96,61 @@
               <div class="hardware-category-content">
                 <p class="hardware-category-label">Consumer electronics</p>
                 <h3>Everyday, intelligently connected.</h3>
-                <ul><li>Smartphones and tablets</li><li>Computers and laptops</li><li>TVs and displays</li><li>Audio equipment</li><li>Networking and smart devices</li><li>Chargers, cables and accessories</li></ul>
-                <button class="hardware-text-action" type="button" data-filter-category="consumer-electronics" aria-pressed="false" disabled>Browse electronics <span aria-hidden="true">↗</span></button>
+                <ul><li>Smartphones and tablets</li><li>TVs and displays</li><li>Audio equipment</li><li>Networking and smart devices</li><li>Chargers, cables and accessories</li></ul>
+                <button class="hardware-text-action" type="button" data-filter-category="consumer-electronics" aria-pressed="false">Browse electronics <span aria-hidden="true">↗</span></button>
+              </div>
+            </article>
+
+            <article class="hardware-category-card">
+              <div class="hardware-category-art hardware-category-art--electronics" aria-hidden="true">
+                <svg viewBox="0 0 240 160" focusable="false"><rect x="52" y="26" width="136" height="85" rx="5"></rect><path d="M42 121h156l-15 14H57zM76 49h87M76 64h62M76 79h74"></path><rect x="174" y="91" width="28" height="50" rx="4"></rect></svg>
+                <span>02 / COMPUTING</span>
+              </div>
+              <div class="hardware-category-content">
+                <p class="hardware-category-label">Computers and related technology</p>
+                <h3>Tools for work, creativity and connection.</h3>
+                <ul><li>Laptops and desktop computers</li><li>Monitors and displays</li><li>Computer peripherals</li><li>Networking equipment and accessories</li></ul>
+                <button class="hardware-text-action" type="button" data-filter-category="computers" aria-pressed="false">Browse computers <span aria-hidden="true">↗</span></button>
               </div>
             </article>
 
             <article class="hardware-category-card">
               <div class="hardware-category-art hardware-category-art--appliances" aria-hidden="true">
                 <svg viewBox="0 0 240 160" focusable="false"><rect x="52" y="22" width="57" height="116" rx="4"></rect><path d="M53 72h55M98 39v18M98 88v18"></path><rect x="129" y="50" width="70" height="88" rx="4"></rect><circle cx="164" cy="99" r="22"></circle><path d="M139 63h12M159 63h28"></path></svg>
-                <span>02 / HOME &amp; COMMERCIAL</span>
+                <span>03 / HOME &amp; COMMERCIAL</span>
               </div>
               <div class="hardware-category-content">
                 <p class="hardware-category-label">Home and commercial appliances</p>
                 <h3>Considered equipment for every day.</h3>
                 <ul><li>Refrigerators and freezers</li><li>Washing machines and dryers</li><li>Air conditioners and cooling</li><li>Kitchen appliances</li><li>Small domestic appliances</li></ul>
-                <button class="hardware-text-action" type="button" data-filter-category="appliances" aria-pressed="false" disabled>Browse appliances <span aria-hidden="true">↗</span></button>
+                <button class="hardware-text-action" type="button" data-filter-category="appliances" aria-pressed="false">Browse appliances <span aria-hidden="true">↗</span></button>
               </div>
             </article>
 
             <article class="hardware-category-card">
               <div class="hardware-category-art hardware-category-art--electrical" aria-hidden="true">
                 <svg viewBox="0 0 240 160" focusable="false"><path d="M52 24v36M42 60h20v30H42zM52 90v46M120 24v26M107 50h26v47h-26zM120 97v39M188 24v30M174 54h28v41h-28zM188 95v41"></path><circle cx="52" cy="76" r="4"></circle><circle cx="120" cy="72" r="6"></circle><path d="M180 75h16"></path></svg>
-                <span>03 / ELECTRICAL SYSTEMS</span>
+                <span>04 / ELECTRICAL SYSTEMS</span>
               </div>
               <div class="hardware-category-content">
                 <p class="hardware-category-label">Electrical and power equipment</p>
                 <h3>Infrastructure with purpose.</h3>
                 <ul><li>Transformers and electricity meters</li><li>Electrical cables and wiring</li><li>Switchgear and circuit breakers</li><li>Electrical protection equipment</li><li>Installation accessories</li></ul>
-                <button class="hardware-text-action" type="button" data-filter-category="electrical-power" aria-pressed="false" disabled>Browse power equipment <span aria-hidden="true">↗</span></button>
+                <button class="hardware-text-action" type="button" data-filter-category="electrical-power" aria-pressed="false">Browse power equipment <span aria-hidden="true">↗</span></button>
               </div>
             </article>
 
             <article class="hardware-category-card">
               <div class="hardware-category-art hardware-category-art--mobility" aria-hidden="true">
                 <svg viewBox="0 0 240 160" focusable="false"><path d="m35 99 14-35c3-7 9-11 17-11h94c8 0 14 4 19 11l25 35v23h-17a17 17 0 0 1-34 0H96a17 17 0 0 1-34 0H35z"></path><path d="m63 67-9 26h65V61H69c-3 0-5 2-6 6Zm67-6v32h61l-20-27c-3-4-6-5-11-5z"></path><circle cx="79" cy="122" r="11"></circle><circle cx="170" cy="122" r="11"></circle></svg>
-                <span>04 / MOBILITY</span>
+                <span>05 / MOBILITY</span>
               </div>
               <div class="hardware-category-content">
                 <p class="hardware-category-label">Cars and mobility</p>
                 <h3>Movement, made for what is next.</h3>
                 <ul><li>Electric vehicles</li><li>Petrol and hybrid vehicles</li><li>Commercial and utility vehicles</li><li>EV charging equipment and accessories</li></ul>
                 <div class="hardware-category-actions">
-                  <button class="hardware-text-action" type="button" data-filter-category="cars-mobility" aria-pressed="false" disabled>Browse mobility <span aria-hidden="true">↗</span></button>
+                  <button class="hardware-text-action" type="button" data-filter-category="cars-mobility" aria-pressed="false">Browse mobility <span aria-hidden="true">↗</span></button>
                   <a class="hardware-text-action" href="../automobile/">Explore Automobile <span aria-hidden="true">↗</span></a>
                 </div>
               </div>
@@ -144,14 +159,14 @@
             <article class="hardware-category-card">
               <div class="hardware-category-art hardware-category-art--energy" aria-hidden="true">
                 <svg viewBox="0 0 240 160" focusable="false"><path d="m37 63 76-22 19 68-76 22zM53 68l65-19M58 86l65-19M63 104l65-19M74 57l18 67M97 50l18 67"></path><rect x="157" y="43" width="46" height="76" rx="3"></rect><path d="M171 57h18M171 104h18M180 63l-8 19h13l-8 17"></path></svg>
-                <span>05 / SOLAR &amp; ENERGY</span>
+                <span>06 / SOLAR &amp; ENERGY</span>
               </div>
               <div class="hardware-category-content">
                 <p class="hardware-category-label">Solar and energy products</p>
                 <h3>Power for more connected spaces.</h3>
                 <ul><li>Solar panels and inverters</li><li>Batteries and energy storage</li><li>Solar kits and accessories</li></ul>
                 <div class="hardware-category-actions">
-                  <button class="hardware-text-action" type="button" data-filter-category="solar-energy" aria-pressed="false" disabled>Browse solar products <span aria-hidden="true">↗</span></button>
+                  <button class="hardware-text-action" type="button" data-filter-category="solar-energy" aria-pressed="false">Browse solar products <span aria-hidden="true">↗</span></button>
                   <a class="hardware-text-action" data-energy-link hidden>Explore Electrony Energy <span aria-hidden="true">↗</span></a>
                 </div>
               </div>
@@ -167,37 +182,38 @@
               <p class="hardware-eyebrow">Product discovery</p>
               <h2 id="catalogue-title">Find the right equipment.</h2>
             </div>
-            <p>Product details, prices and availability will appear when a verified catalogue is connected.</p>
+            <p>Browse illustrative enquiry categories and tell us what you are looking for. Specific products, specifications and availability are confirmed individually.</p>
           </div>
           <div class="hardware-discovery">
             <label class="visually-hidden" for="hardware-search">Search products by name, model, SKU, brand or category</label>
             <div class="hardware-search">
               <span aria-hidden="true">⌕</span>
-              <input id="hardware-search" type="search" autocomplete="off" placeholder="Search products, models, brands…" aria-describedby="discovery-help" disabled>
+              <input id="hardware-search" type="search" autocomplete="off" placeholder="Search products or categories…" aria-describedby="discovery-help">
               <button class="hardware-search-clear" id="clear-search" type="button" disabled>Clear</button>
             </div>
             <div class="hardware-filter-group" id="hardware-filter-group" role="group" aria-label="Filter products by category" aria-describedby="discovery-help">
-              <button type="button" class="hardware-filter is-selected" data-filter-category="all" aria-pressed="true" disabled>All categories</button>
-              <button type="button" class="hardware-filter" data-filter-category="consumer-electronics" aria-pressed="false" disabled>Electronics</button>
-              <button type="button" class="hardware-filter" data-filter-category="appliances" aria-pressed="false" disabled>Appliances</button>
-              <button type="button" class="hardware-filter" data-filter-category="electrical-power" aria-pressed="false" disabled>Electrical</button>
-              <button type="button" class="hardware-filter" data-filter-category="cars-mobility" aria-pressed="false" disabled>Mobility</button>
-              <button type="button" class="hardware-filter" data-filter-category="solar-energy" aria-pressed="false" disabled>Solar &amp; energy</button>
+              <button type="button" class="hardware-filter is-selected" data-filter-category="all" aria-pressed="true">All categories</button>
+              <button type="button" class="hardware-filter" data-filter-category="consumer-electronics" aria-pressed="false">Electronics</button>
+              <button type="button" class="hardware-filter" data-filter-category="appliances" aria-pressed="false">Appliances</button>
+              <button type="button" class="hardware-filter" data-filter-category="electrical-power" aria-pressed="false">Electrical</button>
+              <button type="button" class="hardware-filter" data-filter-category="computers" aria-pressed="false">Computers</button>
+              <button type="button" class="hardware-filter" data-filter-category="cars-mobility" aria-pressed="false">Cars &amp; EVs</button>
+              <button type="button" class="hardware-filter" data-filter-category="solar-energy" aria-pressed="false">Solar &amp; energy</button>
             </div>
-            <p class="hardware-discovery-help" id="discovery-help">Search and category filters activate when verified catalogue data is connected.</p>
+            <p class="hardware-discovery-help" id="discovery-help">These illustrative entries help you start an enquiry; product details and availability are confirmed directly.</p>
           </div>
           <p class="hardware-results-status" id="catalogue-status" role="status" aria-live="polite"></p>
           <div class="hardware-product-grid" id="hardware-products" aria-live="polite"></div>
-          <div class="hardware-catalogue-state" id="catalogue-empty">
+          <div class="hardware-catalogue-state" id="catalogue-empty" hidden>
             <span class="hardware-state-mark" aria-hidden="true">E / H</span>
             <div>
-              <p class="hardware-category-label" id="catalogue-state-label">Catalogue setup</p>
-              <h3 id="catalogue-state-title">Our product catalogue is being connected.</h3>
-              <p id="catalogue-state-copy">Contact us for product enquiries and supply requests. Product listings, pricing and availability will be shown only when supplied by a connected catalogue.</p>
+              <p class="hardware-category-label" id="catalogue-state-label">No matching products</p>
+              <h3 id="catalogue-state-title">No matching products.</h3>
+              <p id="catalogue-state-copy">Try another search or category, or request a quote for the equipment you need.</p>
               <a class="button button-dark" href="#quote">Request a Quote <span aria-hidden="true">↗</span></a>
             </div>
           </div>
-          <p class="hardware-data-note">Prices and availability must come from a verified commerce catalogue. Shopping cart and checkout are not available.</p>
+          <p class="hardware-data-note">Catalogue cards are illustrative enquiry prompts, not confirmed stock. Specifications, prices, availability and supply terms must be confirmed. Shopping cart and checkout are not available.</p>
         </div>
       </section>
 
@@ -244,54 +260,71 @@
           <div class="hardware-quote-intro">
             <p class="hardware-eyebrow">Product and project enquiries</p>
             <h2 id="quote-title">Tell us what you need.</h2>
-            <p>Share the equipment, quantity and location you have in mind. Please note that this form is not connected to an enquiry service yet.</p>
-            <p class="hardware-quote-notice">Your details are not sent or stored. A secure submission service must be configured before enquiries can be received.</p>
+            <p>Share the equipment, quantity and location you have in mind. Your enquiry is sent securely to Electrony for follow-up.</p>
           </div>
-          <form class="hardware-quote-form" id="hardware-quote-form" novalidate>
+          <form class="hardware-quote-form" id="hardware-quote-form" data-contact-form data-contact-page="hardware" novalidate>
             <div class="hardware-form-grid">
               <div class="hardware-field">
                 <label for="quote-name">Full name <span aria-hidden="true">*</span></label>
-                <input id="quote-name" name="name" autocomplete="name" required aria-describedby="quote-name-error">
+                <input id="quote-name" name="name" autocomplete="name" maxlength="100" required aria-describedby="quote-name-error">
                 <span class="hardware-field-error" id="quote-name-error"></span>
               </div>
               <div class="hardware-field">
                 <label for="quote-company">Company name <span class="hardware-optional">(optional)</span></label>
-                <input id="quote-company" name="company" autocomplete="organization">
+                <input id="quote-company" name="company" autocomplete="organization" maxlength="120">
               </div>
               <div class="hardware-field">
                 <label for="quote-email">Email address <span aria-hidden="true">*</span></label>
-                <input id="quote-email" name="email" type="email" autocomplete="email" required aria-describedby="quote-email-error">
+                <input id="quote-email" name="email" type="email" autocomplete="email" maxlength="254" required aria-describedby="quote-email-error">
                 <span class="hardware-field-error" id="quote-email-error"></span>
               </div>
               <div class="hardware-field">
                 <label for="quote-phone">Phone number <span class="hardware-optional">(optional)</span></label>
-                <input id="quote-phone" name="phone" type="tel" autocomplete="tel">
+                <input id="quote-phone" name="phone" type="tel" autocomplete="tel" maxlength="50">
               </div>
               <div class="hardware-field hardware-field--full">
-                <label for="quote-product">Product or equipment required <span aria-hidden="true">*</span></label>
-                <input id="quote-product" name="product" required aria-describedby="quote-product-error">
+                <label for="quote-category">Product category <span aria-hidden="true">*</span></label>
+                <select id="quote-category" name="category" required aria-describedby="quote-category-error">
+                  <option value="">Select a category</option>
+                  <option value="consumer-electronics">Consumer electronics</option>
+                  <option value="appliances">Home and kitchen appliances</option>
+                  <option value="electrical-power">Electrical equipment and accessories</option>
+                  <option value="computers">Computers and related technology</option>
+                  <option value="cars-mobility">Cars and electric vehicles</option>
+                  <option value="solar-energy">Solar and energy equipment</option>
+                  <option value="other">Other product or project enquiry</option>
+                </select>
+                <span class="hardware-field-error" id="quote-category-error"></span>
+              </div>
+              <div class="hardware-field hardware-field--full">
+                <label for="quote-product">Product or category of interest <span aria-hidden="true">*</span></label>
+                <input id="quote-product" name="product" maxlength="160" required aria-describedby="quote-product-error">
                 <span class="hardware-field-error" id="quote-product-error"></span>
               </div>
               <div class="hardware-field">
                 <label for="quote-model">Brand or model, if known</label>
-                <input id="quote-model" name="model">
+                <input id="quote-model" name="model" maxlength="120" data-message-label="Brand or model">
               </div>
               <div class="hardware-field">
-                <label for="quote-quantity">Quantity <span aria-hidden="true">*</span></label>
-                <input id="quote-quantity" name="quantity" type="number" inputmode="numeric" min="1" step="1" required aria-describedby="quote-quantity-error">
+                <label for="quote-quantity">Estimated quantity</label>
+                <input id="quote-quantity" name="quantity" type="number" inputmode="numeric" min="1" step="1" data-message-label="Estimated quantity">
                 <span class="hardware-field-error" id="quote-quantity-error"></span>
               </div>
               <div class="hardware-field hardware-field--full">
-                <label for="quote-location">Delivery location <span aria-hidden="true">*</span></label>
-                <input id="quote-location" name="location" autocomplete="shipping street-address" required aria-describedby="quote-location-error">
-                <span class="hardware-field-error" id="quote-location-error"></span>
+                <label for="quote-location">Location for delivery or project</label>
+                <input id="quote-location" name="location" autocomplete="shipping street-address" maxlength="160" data-message-label="Location">
               </div>
               <div class="hardware-field hardware-field--full">
-                <label for="quote-requirements">Additional requirements <span class="hardware-optional">(optional)</span></label>
-                <textarea id="quote-requirements" name="requirements" rows="4"></textarea>
+                <label for="quote-requirements">Enquiry message <span aria-hidden="true">*</span></label>
+                <textarea id="quote-requirements" name="message" rows="4" maxlength="5000" required aria-describedby="quote-requirements-error"></textarea>
+                <span class="hardware-field-error" id="quote-requirements-error"></span>
               </div>
             </div>
-            <button class="button button-dark hardware-submit-button" type="submit">Review quote request <span aria-hidden="true">↗</span></button>
+            <div class="contact-form-trap" aria-hidden="true">
+              <label for="hardware-website">Leave this field empty</label>
+              <input id="hardware-website" name="website" tabindex="-1" autocomplete="off">
+            </div>
+            <button class="button button-dark hardware-submit-button" type="submit">Send enquiry <span aria-hidden="true">↗</span></button>
             <p class="hardware-form-status" id="quote-form-status" role="status" aria-live="polite"></p>
           </form>
         </div>

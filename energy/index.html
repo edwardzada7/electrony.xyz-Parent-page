@@ -21,7 +21,10 @@
     <script src="../src/site-shell.js" defer></script>
     <script src="../src/products.js" defer></script>
     <script src="../src/main.js" defer></script>
+    <script src="../src/energy-catalogue.js" defer></script>
     <script src="../src/energy.js" defer></script>
+    <script src="../src/energy-calculator.js" defer></script>
+    <script src="../src/contact-form.js" defer></script>
   </head>
   <body class="energy-page">
     <a class="skip-link" href="#main">Skip to content</a>
@@ -39,6 +42,8 @@
           <ul class="navigation-list">
             <li><a href="/">Electrony Home</a></li>
             <li><a href="#solutions">Solutions</a></li>
+            <li><a href="#catalogue">Products</a></li>
+            <li><a href="#calculator">Energy Calculator</a></li>
             <li><a href="#process">How it works</a></li>
             <li><a href="#projects">Projects</a></li>
             <li><a href="/hardware/">Hardware</a></li>
@@ -112,7 +117,7 @@
                 <p class="energy-category-label">Solar power systems</p>
                 <h3>From individual components to complete systems.</h3>
                 <p>Enquire about solar panels and system components, or discuss residential and commercial solar requirements. Complete-system enquiries are distinct from requests for individual parts.</p>
-                <a class="energy-text-link" href="#quote" data-quote-category="solar">Enquire about solar <span aria-hidden="true">↗</span></a>
+                <a class="energy-text-link" href="#quote" data-quote-category="solar-panels" data-product-name="Solar panel enquiry">Enquire about solar <span aria-hidden="true">↗</span></a>
               </div>
             </article>
             <article class="energy-category-card">
@@ -124,7 +129,7 @@
                 <p class="energy-category-label">Inverters and energy storage</p>
                 <h3>Storage and conversion, considered together.</h3>
                 <p>Discuss inverters, batteries and associated storage components for a specific application. Product capacity, performance, lifespan and terms require confirmation.</p>
-                <a class="energy-text-link" href="#quote" data-quote-category="storage">Enquire about storage <span aria-hidden="true">↗</span></a>
+                <a class="energy-text-link" href="#quote" data-quote-category="solar-inverters" data-product-name="Solar inverter and storage enquiry">Enquire about storage <span aria-hidden="true">↗</span></a>
               </div>
             </article>
             <article class="energy-category-card">
@@ -136,7 +141,7 @@
                 <p class="energy-category-label">Transformers and power distribution</p>
                 <h3>Equipment for commercial and infrastructure needs.</h3>
                 <p>Enquire about transformers and relevant distribution equipment for commercial facilities, contractors and infrastructure projects.</p>
-                <a class="energy-text-link" href="#quote" data-quote-category="distribution">Enquire about distribution <span aria-hidden="true">↗</span></a>
+                <a class="energy-text-link" href="#quote" data-quote-category="transformers" data-product-name="Transformer and distribution enquiry">Enquire about distribution <span aria-hidden="true">↗</span></a>
               </div>
             </article>
             <article class="energy-category-card">
@@ -148,7 +153,7 @@
                 <p class="energy-category-label">Meters and electrical equipment</p>
                 <h3>Measurement and compatible equipment.</h3>
                 <p>Enquire about electricity meters and related electrical equipment. Regulatory approval, compatibility and utility requirements are not assumed and must be verified.</p>
-                <a class="energy-text-link" href="#quote" data-quote-category="meters">Enquire about meters <span aria-hidden="true">↗</span></a>
+                <a class="energy-text-link" href="#quote" data-quote-category="electricity-meters" data-product-name="Electricity meter enquiry">Enquire about meters <span aria-hidden="true">↗</span></a>
               </div>
             </article>
             <article class="energy-category-card">
@@ -160,7 +165,7 @@
                 <p class="energy-category-label">Cables and electrical accessories</p>
                 <h3>Connections for power systems.</h3>
                 <p>Ask about electrical cables and associated power-system accessories. Cable sizes, standards, ratings, specifications and stock are confirmed per requirement.</p>
-                <a class="energy-text-link" href="#quote" data-quote-category="cables">Enquire about cables <span aria-hidden="true">↗</span></a>
+                <a class="energy-text-link" href="#quote" data-quote-category="cables-accessories" data-product-name="Electrical cables and accessories">Enquire about cables <span aria-hidden="true">↗</span></a>
               </div>
             </article>
             <article class="energy-category-card energy-category-card--project">
@@ -172,7 +177,7 @@
                 <p class="energy-category-label">Energy projects and bulk supply</p>
                 <h3>Plan around scope, location and quantity.</h3>
                 <p>For residential developments, commercial facilities, contractors and larger supply enquiries, share the project scope and estimated quantity for discussion.</p>
-                <a class="energy-text-link" href="#quote" data-quote-category="projects" data-enquiry-type="bulk-project">Discuss a project <span aria-hidden="true">↗</span></a>
+                <a class="energy-text-link" href="#quote" data-quote-category="custom-project" data-product-name="Custom energy installation or project">Discuss a project <span aria-hidden="true">↗</span></a>
               </div>
             </article>
           </div>
@@ -180,17 +185,232 @@
       </section>
 
       <section class="energy-catalogue energy-section" id="catalogue" aria-labelledby="catalogue-title">
-        <div class="container energy-catalogue__panel">
-          <div class="energy-catalogue__mark" aria-hidden="true"><span></span><span></span><span></span></div>
-          <div>
-            <p class="energy-eyebrow">Energy product discovery</p>
-            <h2 id="catalogue-title">A verified catalogue, when it is ready.</h2>
-            <p>No verified Energy product catalogue is connected yet. Product records, prices and availability are not displayed here; this space is reserved for information supplied by a future verified provider.</p>
-            <p>For now, you can share what you are looking for in the quote form. Specifications and availability must be confirmed for each enquiry.</p>
-            <a class="energy-text-link" href="#quote">Ask about a product or project <span aria-hidden="true">↗</span></a>
+        <div class="container">
+          <div class="energy-section-heading">
+            <div>
+              <p class="energy-eyebrow">Energy product discovery</p>
+              <h2 id="catalogue-title">Explore equipment and complete solutions.</h2>
+            </div>
+            <p>These illustrative enquiry categories are not confirmed inventory. Technical details, suitability, availability and terms are verified for each request.</p>
           </div>
-          <p class="energy-catalogue__status"><span aria-hidden="true"></span> CATALOGUE NOT CONNECTED</p>
+          <div class="energy-discovery">
+            <label class="visually-hidden" for="energy-search">Search products by name or category</label>
+            <div class="energy-search">
+              <span aria-hidden="true">⌕</span>
+              <input id="energy-search" type="search" autocomplete="off" placeholder="Search products or categories…" aria-describedby="energy-discovery-help">
+              <button class="energy-search-clear" id="energy-clear-search" type="button" disabled>Clear</button>
+            </div>
+            <div class="energy-filter-group" id="energy-filter-group" role="group" aria-label="Filter energy products by category">
+              <button type="button" class="energy-filter is-selected" data-energy-filter="all" aria-pressed="true">All categories</button>
+              <button type="button" class="energy-filter" data-energy-filter="solar-panels" aria-pressed="false">Solar panels</button>
+              <button type="button" class="energy-filter" data-energy-filter="solar-inverters" aria-pressed="false">Inverters</button>
+              <button type="button" class="energy-filter" data-energy-filter="batteries-storage" aria-pressed="false">Batteries &amp; storage</button>
+              <button type="button" class="energy-filter" data-energy-filter="complete-systems" aria-pressed="false">Complete systems</button>
+              <button type="button" class="energy-filter" data-energy-filter="transformers" aria-pressed="false">Transformers</button>
+              <button type="button" class="energy-filter" data-energy-filter="electricity-meters" aria-pressed="false">Electricity meters</button>
+              <button type="button" class="energy-filter" data-energy-filter="cables-accessories" aria-pressed="false">Cables &amp; accessories</button>
+            </div>
+            <p class="energy-discovery-help" id="energy-discovery-help">Browse illustrative product categories and enquire about an individual item or a customised project.</p>
+          </div>
+          <p class="energy-results-status" id="energy-catalogue-status" role="status" aria-live="polite"></p>
+          <div class="energy-product-grid" id="energy-products" aria-live="polite"></div>
+          <div class="energy-catalogue-empty" id="energy-catalogue-empty" hidden>
+            <span class="energy-catalogue__mark" aria-hidden="true"><span></span><span></span><span></span></span>
+            <div>
+              <p class="energy-eyebrow" id="energy-empty-label">No matching products</p>
+              <h3 id="energy-empty-title">No matching products.</h3>
+              <p id="energy-empty-copy">Try another search or category, or tell us about a customised energy requirement.</p>
+              <a class="energy-text-link" href="#quote" data-quote-category="custom-project" data-product-name="Custom energy installation or project">Discuss a complete installation or project <span aria-hidden="true">↗</span></a>
+            </div>
+          </div>
+          <div class="energy-catalogue-cta">
+            <div>
+              <p class="energy-eyebrow">Complete installation or tailored power solution</p>
+              <h3>Planning a system around your needs?</h3>
+              <p>Enquire about system design, an installation or a customised project, not just individual equipment.</p>
+            </div>
+            <a class="button energy-button energy-button--primary" href="#quote" data-quote-category="custom-project" data-product-name="Custom energy installation or project">Discuss your project <span aria-hidden="true">↗</span></a>
+          </div>
         </div>
+      </section>
+
+      <section class="energy-calculator energy-section" id="calculator" aria-labelledby="energy-calculator-title">
+        <div class="container">
+          <div class="energy-section-heading energy-calculator__heading">
+            <div>
+              <p class="energy-eyebrow">Plan your power requirements</p>
+              <h2 id="energy-calculator-title">Energy Calculator</h2>
+              <p>Estimate your electricity consumption and explore the solar and backup power capacity your household or business may need.</p>
+            </div>
+            <a class="button energy-button energy-button--outline" href="#catalogue">Explore Energy Products <span aria-hidden="true">↗</span></a>
+          </div>
+          <p class="energy-calculator__estimate-note">Appliance wattages are illustrative estimates only. Check the rating label or manual on each appliance and replace these values with its actual rated watts.</p>
+
+          <div class="energy-calculator__workspace">
+            <section class="energy-calculator__panel" aria-labelledby="energy-appliances-title">
+              <div class="energy-calculator__panel-heading">
+                <div>
+                  <p class="energy-eyebrow">01 / Your appliances</p>
+                  <h3 id="energy-appliances-title">Build your load list.</h3>
+                </div>
+                <button class="energy-calculator__text-button" id="energy-calculator-reset" type="button">Clear / reset</button>
+              </div>
+              <div class="energy-calculator__appliances" id="energy-appliance-rows"></div>
+              <button class="energy-calculator__add" id="energy-appliance-add" type="button"><span aria-hidden="true">+</span> Add appliance</button>
+              <p class="energy-calculator__helper">Hours are estimated average daily use. Daily energy is quantity × watts per appliance × hours per day.</p>
+            </section>
+
+            <section class="energy-calculator__panel energy-calculator__assumptions" aria-labelledby="energy-assumptions-title">
+              <div class="energy-calculator__panel-heading">
+                <div>
+                  <p class="energy-eyebrow">02 / System assumptions</p>
+                  <h3 id="energy-assumptions-title">Adjust the estimates.</h3>
+                </div>
+              </div>
+              <div class="energy-calculator__assumption-grid">
+                <div class="energy-calculator__field">
+                  <label for="energy-month-days">Days for monthly estimate</label>
+                  <input id="energy-month-days" type="number" min="1" max="365" step="1" value="30" inputmode="numeric">
+                </div>
+                <div class="energy-calculator__field">
+                  <label for="energy-backup-hours">Backup period (hours)</label>
+                  <input id="energy-backup-hours" type="number" min="0.1" max="8760" step="0.1" value="8" inputmode="decimal">
+                </div>
+                <div class="energy-calculator__field">
+                  <label for="energy-design-margin">Inverter design margin (%)</label>
+                  <input id="energy-design-margin" type="number" min="0" max="500" step="1" value="25" inputmode="decimal">
+                </div>
+                <div class="energy-calculator__field">
+                  <label for="energy-battery-usable">Usable battery capacity (%)</label>
+                  <input id="energy-battery-usable" type="number" min="1" max="100" step="1" value="80" inputmode="decimal">
+                </div>
+                <div class="energy-calculator__field">
+                  <label for="energy-system-efficiency">Inverter / system efficiency (%)</label>
+                  <input id="energy-system-efficiency" type="number" min="1" max="100" step="1" value="90" inputmode="decimal">
+                </div>
+                <div class="energy-calculator__field">
+                  <label for="energy-peak-sun-hours">Peak-sun-hours assumption (h/day)</label>
+                  <input id="energy-peak-sun-hours" type="number" min="0.1" max="24" step="0.1" value="5" inputmode="decimal">
+                </div>
+                <div class="energy-calculator__field">
+                  <label for="energy-solar-losses">Solar system losses (%)</label>
+                  <input id="energy-solar-losses" type="number" min="0" max="99.9" step="0.1" value="20" inputmode="decimal">
+                </div>
+              </div>
+              <p class="energy-calculator__helper">Peak sun hours are an editable planning assumption, not location-specific sunlight data.</p>
+            </section>
+          </div>
+
+          <p class="energy-calculator__validation" id="energy-calculator-validation" role="status" aria-live="polite"></p>
+
+          <section class="energy-calculator__results" aria-labelledby="energy-results-title">
+            <div class="energy-calculator__results-heading">
+              <div>
+                <p class="energy-eyebrow">03 / Estimate summary</p>
+                <h3 id="energy-results-title">Consumption and preliminary sizing.</h3>
+              </div>
+              <button class="button energy-button energy-button--primary" id="energy-results-enquiry" type="button">Send My Results as an Enquiry <span aria-hidden="true">↗</span></button>
+            </div>
+            <div class="energy-calculator__metric-grid" aria-live="polite">
+              <article class="energy-calculator__metric">
+                <p>Connected load</p>
+                <output id="energy-result-load" aria-label="Connected load in watts">—</output>
+                <small>Rated watts of all listed appliances at once</small>
+              </article>
+              <article class="energy-calculator__metric">
+                <p>Daily energy</p>
+                <output id="energy-result-daily" aria-label="Estimated daily energy in watt-hours">—</output>
+                <small id="energy-result-daily-detail">—</small>
+              </article>
+              <article class="energy-calculator__metric">
+                <p>Monthly energy</p>
+                <output id="energy-result-monthly" aria-label="Estimated monthly energy in kilowatt-hours">—</output>
+                <small id="energy-result-monthly-detail">—</small>
+              </article>
+              <article class="energy-calculator__metric">
+                <p>Backup-period energy</p>
+                <output id="energy-result-backup" aria-label="Estimated backup-period energy in watt-hours">—</output>
+                <small id="energy-result-backup-detail">—</small>
+              </article>
+            </div>
+            <div class="energy-calculator__sizing-grid">
+              <article class="energy-calculator__size">
+                <p>Preliminary inverter capacity</p>
+                <output id="energy-result-inverter" aria-label="Preliminary inverter capacity">—</output>
+                <small id="energy-result-inverter-assumption">—</small>
+              </article>
+              <article class="energy-calculator__size">
+                <p>Preliminary battery nominal capacity</p>
+                <output id="energy-result-battery" aria-label="Preliminary battery nominal capacity">—</output>
+                <small id="energy-result-battery-assumption">—</small>
+              </article>
+              <article class="energy-calculator__size">
+                <p>Preliminary solar array capacity</p>
+                <output id="energy-result-solar" aria-label="Preliminary solar array capacity">—</output>
+                <small id="energy-result-solar-assumption">—</small>
+              </article>
+            </div>
+            <div class="energy-calculator__breakdown">
+              <div class="energy-calculator__breakdown-heading">
+                <h4>Appliance energy breakdown</h4>
+                <span>1 kWh = 1,000 Wh</span>
+              </div>
+              <div class="energy-calculator__table-wrap">
+                <table>
+                  <thead>
+                    <tr><th scope="col">Appliance</th><th scope="col">Quantity</th><th scope="col">Watts each</th><th scope="col">Hours/day</th><th scope="col">Daily energy</th></tr>
+                  </thead>
+                  <tbody id="energy-appliance-breakdown"></tbody>
+                </table>
+              </div>
+            </div>
+            <div class="energy-calculator__caveats">
+              <p>These are preliminary estimates, not a final engineering design. Inverter selection must account for appliance starting surges. Battery capacity depends on battery specifications and required autonomy. Solar production varies with location, shading, orientation, weather and seasonal conditions.</p>
+            </div>
+            <div class="energy-calculator__actions">
+              <a class="button energy-button energy-button--primary" href="#quote" data-quote-category="complete-systems" data-product-name="Solar solution enquiry">Request a Solar Solution <span aria-hidden="true">↗</span></a>
+              <a class="energy-text-link" href="#catalogue">Explore Energy Products <span aria-hidden="true">↗</span></a>
+            </div>
+          </section>
+        </div>
+
+        <template id="energy-appliance-template">
+          <div class="energy-calculator__appliance-row">
+            <div class="energy-calculator__field energy-calculator__appliance-type">
+              <label>Appliance</label>
+              <select data-appliance-type>
+                <option value="led-bulb" data-name="LED bulb" data-watts="9">LED bulb</option>
+                <option value="television" data-name="Television" data-watts="100">Television</option>
+                <option value="fan" data-name="Fan" data-watts="60">Fan</option>
+                <option value="refrigerator" data-name="Refrigerator" data-watts="150">Refrigerator</option>
+                <option value="air-conditioner" data-name="Air conditioner" data-watts="1200">Air conditioner</option>
+                <option value="laptop" data-name="Laptop" data-watts="65">Laptop</option>
+                <option value="desktop-computer" data-name="Desktop computer" data-watts="200">Desktop computer</option>
+                <option value="water-pump" data-name="Water pump" data-watts="750">Water pump</option>
+                <option value="microwave" data-name="Microwave" data-watts="1000">Microwave</option>
+                <option value="washing-machine" data-name="Washing machine" data-watts="500">Washing machine</option>
+                <option value="other" data-name="Other appliance" data-watts="100">Other appliance</option>
+              </select>
+            </div>
+            <div class="energy-calculator__field energy-calculator__appliance-name">
+              <label>Editable appliance name</label>
+              <input data-appliance-name type="text" maxlength="80" value="LED bulb" required>
+            </div>
+            <div class="energy-calculator__field">
+              <label>Watts each</label>
+              <input data-appliance-watts type="number" min="0" max="100000" step="any" value="9" inputmode="decimal" required>
+            </div>
+            <div class="energy-calculator__field">
+              <label>Quantity</label>
+              <input data-appliance-quantity type="number" min="1" max="10000" step="1" value="8" inputmode="numeric" required>
+            </div>
+            <div class="energy-calculator__field">
+              <label>Hours/day</label>
+              <input data-appliance-hours type="number" min="0" max="24" step="any" value="5" inputmode="decimal" required>
+            </div>
+            <button class="energy-calculator__remove" type="button" aria-label="Remove this appliance">Remove</button>
+          </div>
+        </template>
       </section>
 
       <section class="energy-process energy-section" id="process" aria-labelledby="process-title">
@@ -241,37 +461,44 @@
             <p class="energy-eyebrow">Product and project enquiries</p>
             <h2 id="quote-title">Let's discuss your energy requirements.</h2>
             <p>Tell us what you need, and prepare for a conversation about suitable products, specifications, availability and supply.</p>
-            <p class="energy-quote__notice">This form is not connected to an enquiry service. Your details are not sent or stored. A secure submission service must be configured before enquiries can be received.</p>
+            <p class="energy-quote__notice">Your enquiry is sent securely to Electrony. Product suitability, details and availability will be confirmed directly.</p>
             <p class="energy-quote__required-note"><span aria-hidden="true">*</span> Required fields</p>
           </div>
-          <form class="energy-quote__form" id="energy-quote-form" novalidate>
+          <form class="energy-quote__form" id="energy-quote-form" data-contact-form data-contact-page="energy" novalidate>
             <div class="energy-form-grid">
               <div class="energy-field">
                 <label for="energy-name">Full name <span aria-hidden="true">*</span></label>
-                <input id="energy-name" name="name" autocomplete="name" required aria-describedby="energy-name-error">
+                <input id="energy-name" name="name" autocomplete="name" maxlength="100" required aria-describedby="energy-name-error">
                 <span class="energy-field__error" id="energy-name-error"></span>
               </div>
               <div class="energy-field">
                 <label for="energy-email">Email address <span aria-hidden="true">*</span></label>
-                <input id="energy-email" name="email" type="email" autocomplete="email" required aria-describedby="energy-email-error">
+                <input id="energy-email" name="email" type="email" autocomplete="email" maxlength="254" required aria-describedby="energy-email-error">
                 <span class="energy-field__error" id="energy-email-error"></span>
               </div>
               <div class="energy-field">
-                <label for="energy-category">Solution category <span aria-hidden="true">*</span></label>
+                <label for="energy-category">Product or project category <span aria-hidden="true">*</span></label>
                 <select id="energy-category" name="category" required aria-describedby="energy-category-error">
                   <option value="">Select a solution</option>
-                  <option value="solar">Solar power systems</option>
-                  <option value="storage">Inverters and energy storage</option>
-                  <option value="distribution">Transformers and power distribution</option>
-                  <option value="meters">Meters and electrical equipment</option>
-                  <option value="cables">Cables and electrical accessories</option>
-                  <option value="projects">Energy projects and bulk supply</option>
+                  <option value="solar-panels">Solar panels</option>
+                  <option value="solar-inverters">Solar inverters</option>
+                  <option value="batteries-storage">Batteries and energy storage</option>
+                  <option value="complete-systems">Complete solar power systems</option>
+                  <option value="transformers">Transformers</option>
+                  <option value="electricity-meters">Electricity meters</option>
+                  <option value="cables-accessories">Electrical cables and accessories</option>
+                  <option value="custom-project">Custom installation or energy project</option>
                 </select>
                 <span class="energy-field__error" id="energy-category-error"></span>
               </div>
               <div class="energy-field">
-                <label for="energy-customer-type">Customer or project type <span aria-hidden="true">*</span></label>
-                <select id="energy-customer-type" name="customerType" required aria-describedby="energy-customer-type-error">
+                <label for="energy-product">Product or solution of interest <span aria-hidden="true">*</span></label>
+                <input id="energy-product" name="product" maxlength="160" required aria-describedby="energy-product-error">
+                <span class="energy-field__error" id="energy-product-error"></span>
+              </div>
+              <div class="energy-field">
+                <label for="energy-customer-type">Customer or project type <span class="energy-optional">(optional)</span></label>
+                <select id="energy-customer-type" name="customerType" data-message-label="Customer or project type">
                   <option value="">Select an enquiry type</option>
                   <option value="residential">Home / residential</option>
                   <option value="residential-development">Residential development</option>
@@ -283,37 +510,40 @@
                 <span class="energy-field__error" id="energy-customer-type-error"></span>
               </div>
               <div class="energy-field">
-                <label for="energy-location">Location <span aria-hidden="true">*</span></label>
-                <input id="energy-location" name="location" autocomplete="address-level2" required aria-describedby="energy-location-error">
-                <span class="energy-field__error" id="energy-location-error"></span>
+                <label for="energy-location">Project location <span class="energy-optional">(optional)</span></label>
+                <input id="energy-location" name="location" autocomplete="address-level2" maxlength="160" data-message-label="Project location">
               </div>
               <div class="energy-field">
                 <label for="energy-phone">Phone number <span class="energy-optional">(optional)</span></label>
-                <input id="energy-phone" name="phone" type="tel" autocomplete="tel">
+                <input id="energy-phone" name="phone" type="tel" autocomplete="tel" maxlength="50">
               </div>
               <div class="energy-field">
                 <label for="energy-company">Company or organisation <span class="energy-optional">(optional)</span></label>
-                <input id="energy-company" name="company" autocomplete="organization">
+                <input id="energy-company" name="company" autocomplete="organization" maxlength="120">
               </div>
               <div class="energy-field">
                 <label for="energy-quantity">Estimated quantity or project scale <span class="energy-optional">(optional)</span></label>
-                <input id="energy-quantity" name="quantity" autocomplete="off">
+                <input id="energy-quantity" name="quantity" autocomplete="off" maxlength="160" data-message-label="Estimated quantity or project scale">
               </div>
               <div class="energy-field energy-field--full">
                 <label for="energy-requirements">Brief description of requirements <span aria-hidden="true">*</span></label>
-                <textarea id="energy-requirements" name="requirements" rows="4" required aria-describedby="energy-requirements-error"></textarea>
+                <textarea id="energy-requirements" name="message" rows="4" maxlength="5000" required aria-describedby="energy-requirements-error"></textarea>
                 <span class="energy-field__error" id="energy-requirements-error"></span>
               </div>
               <div class="energy-field energy-field--full">
                 <label for="energy-contact-method">Preferred contact method <span class="energy-optional">(optional)</span></label>
-                <select id="energy-contact-method" name="preferredContact">
+                <select id="energy-contact-method" name="preferredContact" data-message-label="Preferred contact method">
                   <option value="">No preference</option>
                   <option value="email">Email</option>
                   <option value="phone">Phone</option>
                 </select>
               </div>
             </div>
-            <button class="button energy-button energy-button--submit" type="submit">Review quote request <span aria-hidden="true">↗</span></button>
+            <div class="contact-form-trap" aria-hidden="true">
+              <label for="energy-website">Leave this field empty</label>
+              <input id="energy-website" name="website" tabindex="-1" autocomplete="off">
+            </div>
+            <button class="button energy-button energy-button--submit" type="submit">Send enquiry <span aria-hidden="true">↗</span></button>
             <p class="energy-form-status" id="energy-form-status" role="status" aria-live="polite"></p>
           </form>
         </div>

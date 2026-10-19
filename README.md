@@ -32,12 +32,24 @@ The public Electrony Automobile page is available at `/automobile/`. It presents
 
 ## Electrony Hardware
 
-The Hardware storefront is available at `/hardware/`. Until a commerce provider is selected and connected, the catalogue shows an explicit setup state and does not display sample products, prices or availability.
+The Hardware catalogue is available at `/hardware/`. Its local catalogue entries and illustrations are enquiry prompts, not confirmed inventory; the page does not invent model numbers, prices, stock or technical specifications. Product enquiries are sent through `POST /api/contact`.
 
-A future catalogue integration can provide `window.ElectronyHardwareCatalogue` before `src/hardware.js` runs. Its `load({ signal })` method must return a promise for `{ products: [...] }`. Each product must have a stable Electrony `id`, provider-owned `providerProductId`, `name`, and a top-level `category` (`consumer-electronics`, `appliances`, `electrical-power`, `cars-mobility`, or `solar-energy`). Optional fields are `variantId`, `brand`, `model`, `sku`, `image: { url, alt }`, authoritative `price: { amount, currency }`, authoritative `availability`, `specifications: [{ name, value }]`, and `detailUrl`. Provider identifiers remain the mapping to the commerce system's source of truth; prices and availability are never inferred by this page. Do not expose secret credentials in the browser. Cart and checkout are intentionally not implemented.
-
-The quote form validates and retains the entered fields in the current page, but there is no configured enquiry submission backend. A valid submission reports that it was not sent; connect a secure server-side enquiry endpoint before accepting requests. Contact links remain unset until verified destinations are configured in `src/config.js`. The Energy page is available at `/energy/`, but its catalogue and quote submission are not connected yet.
+A future verified catalogue integration can still provide `window.ElectronyHardwareCatalogue` before `src/hardware.js` runs. Its `load({ signal })` method must return a promise for `{ products: [...] }`. Each provider product must have a stable Electrony `id`, provider-owned `providerProductId`, `name`, and a top-level `category` (`consumer-electronics`, `appliances`, `electrical-power`, `computers`, `cars-mobility`, or `solar-energy`). Optional fields are `variantId`, `brand`, `model`, `sku`, `description`, `image: { url, alt }`, authoritative `price: { amount, currency }`, authoritative `availability`, `specifications: [{ name, value }]`, and `detailUrl`. Provider identifiers remain the mapping to the commerce system's source of truth; prices and availability are never inferred by this page. Do not expose secret credentials in the browser. Cart and checkout are intentionally not implemented.
 
 ## Electrony Energy
 
-The Energy solutions page is available at `/energy/`. It introduces energy equipment categories and project enquiries without presenting unverified products, pricing or availability. The catalogue is not connected, and quote submissions remain unavailable until a verified catalogue provider and secure enquiry backend are configured. The form performs client-side validation and clearly reports that submissions are not sent.
+The Energy catalogue is available at `/energy/`. Its locally maintained categories and illustrations are enquiry prompts, not verified product listings. Customers can request an individual item, complete solar installation or customised project; specifications and availability must be confirmed.
+
+## Contact enquiry delivery
+
+Hardware and Energy forms submit to a server-side Resend integration. The same endpoint is available as a Vercel function at `/api/contact` and as a route in the combined Railway website/API service. Local API development can serve both the pages and route with `npm run dev:api` at `http://localhost:4174`; the static Python server (`npm run dev`) does not provide API routes.
+
+Configure these server-only environment variables in the deployment that will deliver enquiries:
+
+- `CONTACT_EMAIL` — the recipient mailbox; set this to the confirmed destination address.
+- `RESEND_API_KEY` — a private Resend API key.
+- `CONTACT_FROM_EMAIL` — a sender address or display-name address on a domain verified with Resend.
+
+Set them in Vercel for the Vercel serverless endpoint, and in Railway if using its `/api/contact` route. Never add these values to `src/config.js`, browser JavaScript, or public build-time variables. Missing or invalid configuration returns an explicit `503` error; the form only reports success when Resend returns an accepted message identifier. Provider acceptance is not proof of inbox delivery. The repository does not define a recipient mailbox or a production Railway service URL.
+
+The Vercel build also retains the existing requirement for `BILLS_API_BASE_URL` to identify the Railway Bills API. The contact endpoint itself is same-origin and does not rely on Railway being available when the site is deployed to Vercel. The form performs client-side validation and clearly reports that submissions are not sent.

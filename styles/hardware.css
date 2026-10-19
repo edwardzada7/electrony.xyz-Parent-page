@@ -578,6 +578,20 @@
   object-fit: cover;
 }
 
+.hardware-product-card__description {
+  margin: 0;
+  color: #454b52;
+  font-size: 0.86rem;
+  line-height: 1.65;
+}
+
+.hardware-product-card__note {
+  margin: 0.2rem 0 0;
+  color: #505761;
+  font-size: 0.76rem;
+  line-height: 1.5;
+}
+
 .hardware-product-card__fallback {
   color: #59616a;
   font-family: var(--font-label);
@@ -630,6 +644,31 @@
 
 .hardware-product-card__footer {
   padding: 0 1.25rem 1.25rem;
+}
+
+.hardware-product-card__enquire {
+  display: inline-flex;
+  min-height: 2.75rem;
+  align-items: center;
+  justify-content: center;
+  padding: 0.65rem 1rem;
+  border: 1px solid var(--hardware-ink);
+  background: var(--hardware-ink);
+  color: var(--color-white);
+  font: inherit;
+  font-size: 0.84rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.hardware-product-card__enquire:hover {
+  border-color: var(--hardware-blue-text);
+  background: var(--hardware-blue-text);
+}
+
+.hardware-product-card__enquire:focus-visible {
+  outline: var(--focus-ring);
+  outline-offset: 3px;
 }
 
 .hardware-product-card__footer a {
@@ -823,6 +862,7 @@
 }
 
 .hardware-field input,
+.hardware-field select,
 .hardware-field textarea {
   width: 100%;
   min-height: 2.9rem;
@@ -840,7 +880,19 @@
   resize: vertical;
 }
 
+.hardware-field select {
+  min-height: 2.9rem;
+}
+
+.hardware-field input:focus-visible,
+.hardware-field select:focus-visible,
+.hardware-field textarea:focus-visible {
+  outline: 2px solid var(--hardware-blue-text);
+  outline-offset: 2px;
+}
+
 .hardware-field input[aria-invalid="true"],
+.hardware-field select[aria-invalid="true"],
 .hardware-field textarea[aria-invalid="true"] {
   border-color: #b42318;
 }
@@ -854,6 +906,20 @@
 .hardware-submit-button {
   width: 100%;
   margin-top: 1.4rem;
+}
+
+.hardware-submit-button:disabled {
+  cursor: wait;
+  opacity: 0.7;
+}
+
+.contact-form-trap {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
 }
 
 .hardware-form-status {
@@ -893,6 +959,10 @@
   }
 
   .hardware-support-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .hardware-product-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
