@@ -78,6 +78,50 @@ function sanitizeDatabaseError(error) {
   return persistenceError("Bills PostgreSQL operation failed.", "database_unavailable");
 }
 
+function classifyConnectionFailure(error) {
+  const errors = [];
+  let current = error;
+  while (current && errors.length < 4 && !errors.includes(current)) {
+    errors.push(current);
+    current = current.cause;
+  }
+
+  const codes = errors.map((item) => item.code).filter((code) => typeof code === "string");
+  if (codes.some((code) => ["ENOTFOUND", "EAI_AGAIN", "EAI_NONAME"].includes(code))) {
+    return "dns_error";
+  }
+  if (codes.includes("ECONNREFUSED")) return "connection_refused";
+  if (codes.some((code) => ["ETIMEDOUT", "ESOCKETTIMEDOUT", "CONNECT_TIMEOUT"].includes(code))) {
+    return "timeout";
+  }
+  if (codes.some((code) => /^(?:ERR_SSL|ERR_TLS|CERT_|UNABLE_TO_VERIFY|SELF_SIGNED)/.test(code))) {
+    return "tls_error";
+  }
+  if (codes.some((code) => /^28[A-Z0-9]{3}$/.test(code))) return "authentication_failed";
+  if (codes.includes("3D000")) return "database_missing";
+
+  const messages = errors
+    .map((item) => typeof item.message === "string" ? item.message.toLowerCase() : "")
+    .join(" ");
+  if (/getaddrinfo (?:enotfound|eai_again|eai_noname)|name or service not known/.test(messages)) {
+    return "dns_error";
+  }
+  if (/connection refused/.test(messages)) return "connection_refused";
+  if (/timed? ?out|timeout/.test(messages)) return "timeout";
+  if (/ssl|tls|certificate/.test(messages)) return "tls_error";
+  if (/password authentication failed|authentication failed|no password supplied/.test(messages)) {
+    return "authentication_failed";
+  }
+  if (/database .* does not exist/.test(messages)) return "database_missing";
+  return "unknown";
+}
+
+function logConnectionFailure(error) {
+  console.error("Bills PostgreSQL connection failure.", {
+    category: classifyConnectionFailure(error)
+  });
+}
+
 function validateText(value, field, { optional = false, maxLength = 255 } = {}) {
   if (optional && (value === null || value === undefined || value === "")) return null;
   if (typeof value !== "string" || !value.trim() || value.length > maxLength) {
@@ -344,8 +388,8 @@ function createPostgresPersistence(connectionString, PoolConstructor) {
     application_name: "electrony-bills-api"
   });
 
-  pool.on("error", () => {
-    console.error("Bills PostgreSQL connection error; database operations are unavailable.");
+  pool.on("error", (error) => {
+    logConnectionFailure(error);
   });
 
   async function withTransaction(operation) {
@@ -457,7 +501,8 @@ function createPostgresPersistence(connectionString, PoolConstructor) {
           connectionFailure: "connection_failed"
         };
       }
-    } catch {
+    } catch (error) {
+      logConnectionFailure(error);
       return {
         status: "unavailable",
         configured: true,
@@ -1196,6 +1241,7 @@ function createPostgresPersistence(connectionString, PoolConstructor) {
 }
 
 module.exports = {
+  classifyConnectionFailure,
   createPostgresPersistence,
   normalizeConnectionString
 };

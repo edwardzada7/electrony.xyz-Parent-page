@@ -82,6 +82,12 @@ test("connection URL validation requires PostgreSQL credentials and strips insec
   ));
   assert.equal(normalized.searchParams.has("sslmode"), false);
   assert.equal(normalized.searchParams.get("application_name"), "test");
+
+  const encodedCredentials = new URL(normalizeConnectionString(
+    "postgresql://bills:p%40ss%3Aword@db.example.test:5432/electrony"
+  ));
+  assert.equal(encodedCredentials.password, "p%40ss%3Aword");
+  assert.equal(encodedCredentials.pathname, "/electrony");
 });
 
 test("unconfigured persistence reports that no connection was checked", async () => {
@@ -139,21 +145,43 @@ test("readiness runs SELECT 1 with verified TLS before checking table security c
   assert.equal(captured.closed, true);
 });
 
-test("connection failures are reported without exposing database errors", async () => {
-  const persistence = makePersistence([
-    new Error("password leaked from db.private.example.test")
-  ]);
-  const readiness = await persistence.getReadiness();
+test("connection failures are safely classified in server logs while health remains generic", async () => {
+  const failures = [
+    ["ENOTFOUND", "dns_error"],
+    ["ECONNREFUSED", "connection_refused"],
+    ["ETIMEDOUT", "timeout"],
+    ["ERR_TLS_CERT_ALTNAME_INVALID", "tls_error"],
+    ["28P01", "authentication_failed"],
+    ["3D000", "database_missing"],
+    ["OTHER", "unknown"]
+  ];
+  const logged = [];
+  const originalError = console.error;
+  console.error = (...args) => logged.push(args);
+  try {
+    for (const [code, category] of failures) {
+      const error = new Error(`private diagnostic: password secret db.private.example.test (${code})`);
+      error.code = code;
+      const readiness = await makePersistence([error]).getReadiness();
 
-  assert.deepEqual(readiness, {
-    status: "unavailable",
-    configured: true,
-    connected: false,
-    securityStatus: "not_checked",
-    securityFailure: null,
-    connectionFailure: "connection_failed"
-  });
-  assert.equal(JSON.stringify(readiness).includes("db.private.example.test"), false);
+      assert.deepEqual(readiness, {
+        status: "unavailable",
+        configured: true,
+        connected: false,
+        securityStatus: "not_checked",
+        securityFailure: null,
+        connectionFailure: "connection_failed"
+      });
+      assert.deepEqual(logged.at(-1), [
+        "Bills PostgreSQL connection failure.",
+        { category }
+      ]);
+    }
+  } finally {
+    console.error = originalError;
+  }
+  assert.equal(JSON.stringify(logged).includes("password"), false);
+  assert.equal(JSON.stringify(logged).includes("db.private.example.test"), false);
 });
 
 test("missing RLS policies keep security readiness failed after connectivity succeeds", async () => {
