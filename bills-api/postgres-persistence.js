@@ -1,5 +1,7 @@
 "use strict";
 
+const fs = require("fs");
+const tls = require("tls");
 const { PLATFORM_FEE_RULES } = require("./platform-fees");
 
 const REQUIRED_TABLES = [
@@ -13,6 +15,8 @@ const REQUIRED_TABLES = [
 
 const CONNECTION_TIMEOUT_MS = 5000;
 const QUERY_TIMEOUT_MS = 5000;
+const POSTGRES_CA_CONFIGURATION_ERROR = "Bills PostgreSQL TLS configuration is invalid. Set exactly one of BILLS_POSTGRES_CA (PEM contents) or BILLS_POSTGRES_CA_FILE (mounted PEM path) to a valid Supabase root CA certificate.";
+const POSTGRES_CA_CONFIGURATION_ERROR_CODE = "BILLS_POSTGRES_CA_CONFIGURATION";
 
 const CONNECTION_READINESS_QUERY = "SELECT 1 AS ready";
 const SERVICES = Object.freeze(Object.fromEntries(
@@ -330,7 +334,46 @@ function normalizeConnectionString(connectionString) {
   return parsed.toString();
 }
 
-function createPostgresPersistence(connectionString, PoolConstructor) {
+function loadPostgresCaCertificate(environment) {
+  const inlineCertificate = typeof environment.BILLS_POSTGRES_CA === "string"
+    ? environment.BILLS_POSTGRES_CA.trim()
+    : "";
+  const certificatePath = typeof environment.BILLS_POSTGRES_CA_FILE === "string"
+    ? environment.BILLS_POSTGRES_CA_FILE.trim()
+    : "";
+
+  function invalidConfiguration() {
+    const error = new Error(POSTGRES_CA_CONFIGURATION_ERROR);
+    error.code = POSTGRES_CA_CONFIGURATION_ERROR_CODE;
+    return error;
+  }
+
+  if (Boolean(inlineCertificate) === Boolean(certificatePath)) {
+    throw invalidConfiguration();
+  }
+
+  let certificate = inlineCertificate;
+  if (certificatePath) {
+    try {
+      certificate = fs.readFileSync(certificatePath, "utf8").trim();
+    } catch {
+      throw invalidConfiguration();
+    }
+  }
+
+  if (!/-----BEGIN CERTIFICATE-----[\s\S]+?-----END CERTIFICATE-----/.test(certificate)) {
+    throw invalidConfiguration();
+  }
+
+  try {
+    tls.createSecureContext({ ca: certificate });
+  } catch {
+    throw invalidConfiguration();
+  }
+  return certificate;
+}
+
+function createPostgresPersistence(connectionString, PoolConstructor, environment = process.env) {
   const unavailableMethods = {
     createFeeQuote: async () => { throw new Error("Bills PostgreSQL persistence is not configured."); },
     getFeeQuoteByReference: async () => { throw new Error("Bills PostgreSQL persistence is not configured."); },
@@ -373,9 +416,14 @@ function createPostgresPersistence(connectionString, PoolConstructor) {
   }
 
   let safeConnectionString;
+  let caCertificate;
   try {
     safeConnectionString = normalizeConnectionString(connectionString);
-  } catch {
+    caCertificate = loadPostgresCaCertificate(environment);
+  } catch (error) {
+    if (error?.code === POSTGRES_CA_CONFIGURATION_ERROR_CODE) {
+      console.error(error.message);
+    }
     return {
       status: "configured_unverified",
       ...unavailableMethods,
@@ -400,7 +448,7 @@ function createPostgresPersistence(connectionString, PoolConstructor) {
   const Pool = PoolConstructor || require("pg").Pool;
   const pool = new Pool({
     connectionString: safeConnectionString,
-    ssl: { rejectUnauthorized: true },
+    ssl: { ca: caCertificate, rejectUnauthorized: true },
     max: 5,
     connectionTimeoutMillis: CONNECTION_TIMEOUT_MS,
     idleTimeoutMillis: 30000,

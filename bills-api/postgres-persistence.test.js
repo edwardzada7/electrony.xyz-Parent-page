@@ -1,7 +1,11 @@
 "use strict";
 
 const assert = require("node:assert/strict");
+const fs = require("node:fs");
+const os = require("node:os");
+const path = require("node:path");
 const test = require("node:test");
+const tls = require("node:tls");
 const {
   createPostgresPersistence,
   normalizeConnectionString
@@ -30,7 +34,9 @@ function securityRows({ superuser = false, bypassesRls = false, policy = true } 
   }));
 }
 
-function makePersistence(responses, captured = {}) {
+function makePersistence(responses, captured = {}, environment = {
+  BILLS_POSTGRES_CA: tls.rootCertificates[0]
+}) {
   class MockPool {
     constructor(options) {
       captured.options = options;
@@ -68,7 +74,8 @@ function makePersistence(responses, captured = {}) {
 
   return createPostgresPersistence(
     "postgresql://bills_backend:placeholder@db.example.test:5432/electrony?sslmode=disable",
-    MockPool
+    MockPool,
+    environment
   );
 }
 
@@ -116,6 +123,73 @@ test("invalid configured URLs do not prevent safe health reporting", async () =>
   });
 });
 
+test("mounted Supabase CA PEM is loaded into the verified PostgreSQL TLS options", async () => {
+  const directory = fs.mkdtempSync(path.join(os.tmpdir(), "bills-postgres-ca-"));
+  const certificatePath = path.join(directory, "prod-ca-2021.crt");
+  const certificate = tls.rootCertificates[0];
+  fs.writeFileSync(certificatePath, certificate, { mode: 0o600 });
+
+  try {
+    const captured = {};
+    const persistence = makePersistence([
+      { rows: [{ ready: 1 }] },
+      { rows: securityRows() }
+    ], captured, { BILLS_POSTGRES_CA_FILE: certificatePath });
+
+    assert.equal((await persistence.getReadiness()).connected, true);
+    assert.equal(captured.options.ssl.ca, certificate);
+    assert.equal(captured.options.ssl.rejectUnauthorized, true);
+  } finally {
+    fs.rmSync(directory, { recursive: true, force: true });
+  }
+});
+
+test("missing or invalid Supabase CA fails closed with a sanitized configuration diagnostic", async () => {
+  const connectionString = "postgres://user:private-password@db.example.test:5432/electrony";
+  const configurations = [
+    {},
+    { BILLS_POSTGRES_CA: "not a certificate or a private value" },
+    { BILLS_POSTGRES_CA_FILE: "/missing/private/path/prod-ca-2021.crt" },
+    {
+      BILLS_POSTGRES_CA: tls.rootCertificates[0],
+      BILLS_POSTGRES_CA_FILE: "/etc/secrets/prod-ca-2021.crt"
+    }
+  ];
+  const logged = [];
+  const originalError = console.error;
+  console.error = (...args) => logged.push(args);
+
+  try {
+    for (const environment of configurations) {
+      let poolConstructed = false;
+      class UnexpectedPool {
+        constructor() {
+          poolConstructed = true;
+        }
+      }
+
+      const persistence = createPostgresPersistence(connectionString, UnexpectedPool, environment);
+      assert.equal(poolConstructed, false);
+      assert.deepEqual(await persistence.getReadiness(), {
+        status: "unavailable",
+        configured: true,
+        connected: false,
+        securityStatus: "not_checked",
+        securityFailure: null,
+        connectionFailure: "invalid_configuration"
+      });
+    }
+  } finally {
+    console.error = originalError;
+  }
+
+  assert.equal(logged.length, configurations.length);
+  assert.ok(logged.every(([message]) => message.includes("BILLS_POSTGRES_CA")));
+  assert.equal(JSON.stringify(logged).includes("private"), false);
+  assert.equal(JSON.stringify(logged).includes(connectionString), false);
+  assert.equal(JSON.stringify(logged).includes(tls.rootCertificates[0]), false);
+});
+
 test("readiness runs SELECT 1 with verified TLS before checking table security controls", async () => {
   const captured = {};
   const persistence = makePersistence([
@@ -132,6 +206,7 @@ test("readiness runs SELECT 1 with verified TLS before checking table security c
     connectionFailure: null
   });
   assert.equal(captured.options.ssl.rejectUnauthorized, true);
+  assert.equal(captured.options.ssl.ca, tls.rootCertificates[0]);
   assert.equal(captured.options.connectionTimeoutMillis, 5000);
   assert.equal(captured.options.statement_timeout, 5000);
   assert.equal(captured.queries[0].text, "SELECT 1 AS ready");
