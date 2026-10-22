@@ -117,14 +117,6 @@ function buildStaticSite(site) {
     throw new Error("Unable to locate the local Bills API setting in src/config.js.");
   }
   config = config.replace(localApiSetting, `billsApiBaseUrl: ${JSON.stringify(apiUrl)}`);
-  if (site === "bills") {
-    config = replaceRequired(
-      config,
-      'bills: Object.freeze({ landingPageUrl: "/bills/", appUrl: "/bills/app/" })',
-      'bills: Object.freeze({ landingPageUrl: "https://electrony.xyz/bills/", appUrl: "/" })',
-      "the Bills product links"
-    );
-  }
   fs.writeFileSync(configPath, config);
 }
 

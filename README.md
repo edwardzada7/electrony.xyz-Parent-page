@@ -14,7 +14,7 @@ Production Bills API routes intentionally return `503` until durable Supabase pe
 
 ## Configuration
 
-Set confirmed company and product URLs in `src/config.js`. Product content and categories are centralized in `src/products.js`.
+Set confirmed company and product URLs in `src/config.js`. Product destinations are centralized there, and product content and categories are maintained in `src/products.js`. Product cards and calls to action use the configured HTTPS destinations for ElectronyOS, Hardware, Automobile, Energy, Electrony Bills, and iStylist.
 
 Place the approved parent Electrony logo in `assets/brand/` when it is available. The current wordmark is text, not a redraw of the logo.
 
@@ -38,7 +38,7 @@ Parent, Automobile, Energy, and Hardware builds copy the existing pages and shar
 
 The `buildCommand` is intentionally project-specific and is not fixed in `vercel.json`; configure the exact command above in each Vercel project's **Build & Development Settings**. Keep the Output Directory as `dist`. See [the Bills API deployment notes](./bills-api/README.md#vercel-frontend-and-railway-api) for CORS and Railway configuration. Vercel project Root Directory, framework, build command, environment variables, and custom domains are dashboard settings and must be checked or updated there.
 
-The `COMING SOON` status and internal landing-page link are maintained in `src/products.js` and `src/config.js`.
+Product status labels are maintained in `src/products.js`; product destinations are maintained in `src/config.js`.
 
 ## Electrony Automobile
 

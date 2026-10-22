@@ -2,8 +2,8 @@ const menuToggle = document.querySelector(".menu-toggle");
 const primaryNavigation = document.querySelector(".primary-navigation");
 const header = document.querySelector(".site-header");
 const contactLinks = document.querySelectorAll(".contact-link");
-const hardwareLinks = document.querySelectorAll(".hardware-link");
 const contactUrl = window.ElectronyConfig.contactUrl;
+const productLinks = window.ElectronyConfig.productLinks;
 const backToTopButton = document.querySelector(".back-to-top");
 const primaryNavLinks = document.querySelectorAll(".navigation-list a");
 const prefersReducedMotion = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
@@ -125,8 +125,9 @@ contactLinks.forEach((link) => {
   setSafeLink(link, contactUrl);
 });
 
-hardwareLinks.forEach((link) => {
-  setSafeLink(link, window.ElectronyConfig.productLinks.hardware.landingPageUrl);
+document.querySelectorAll("[data-product-link]").forEach((link) => {
+  const product = productLinks[link.dataset.productLink];
+  setSafeLink(link, product.landingPageUrl);
 });
 
 if (window.matchMedia) {
@@ -295,7 +296,7 @@ function renderSpotlightLink() {
   const spotlightLink = document.querySelector("#electronyos-spotlight-link");
   if (!spotlightLink) return;
 
-  const electronyos = window.ElectronyConfig.productLinks.electronyos;
+  const electronyos = productLinks.electronyos;
   setSafeLink(spotlightLink, electronyos.landingPageUrl || electronyos.appUrl || null);
 }
 

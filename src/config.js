@@ -4,11 +4,11 @@ window.ElectronyConfig = Object.freeze({
   // Local static development uses the local API; the Vercel build replaces this with BILLS_API_BASE_URL.
   billsApiBaseUrl: "http://localhost:4174",
   productLinks: Object.freeze({
-    electronyos: Object.freeze({ landingPageUrl: null, appUrl: null }),
-    hardware: Object.freeze({ landingPageUrl: "/hardware/", appUrl: null }),
-    automobile: Object.freeze({ landingPageUrl: "/automobile/", appUrl: null }),
-    energy: Object.freeze({ landingPageUrl: "/energy/", appUrl: null }),
-    bills: Object.freeze({ landingPageUrl: "/bills/", appUrl: "/bills/app/" }),
-    stylist: Object.freeze({ landingPageUrl: null, appUrl: null })
+    electronyos: Object.freeze({ landingPageUrl: "https://os.electrony.xyz", appUrl: null }),
+    hardware: Object.freeze({ landingPageUrl: "https://hardware.electrony.xyz", appUrl: null }),
+    automobile: Object.freeze({ landingPageUrl: "https://auto.electrony.xyz", appUrl: null }),
+    energy: Object.freeze({ landingPageUrl: "https://energy.electrony.xyz", appUrl: null }),
+    bills: Object.freeze({ landingPageUrl: "https://bills.electrony.xyz", appUrl: "https://bills.electrony.xyz" }),
+    stylist: Object.freeze({ landingPageUrl: "https://istylist.online", appUrl: null })
   })
 });
