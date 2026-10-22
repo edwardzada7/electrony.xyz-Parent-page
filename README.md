@@ -24,7 +24,7 @@ The public Electrony Bills product page remains available at `/bills/` as the pr
 
 ## Vercel deployments
 
-The parent site and the Automobile, Energy, and Hardware pages share assets and scripts from the repository root. Set the Vercel **Root Directory** to `./` (the repository root) for each project; setting it to a nested page folder omits files those pages reference. Use the **Other** framework preset and the following project-specific build settings:
+The parent site and the Automobile, Energy, Hardware, and Bills projects use this repository root. Set the Vercel **Root Directory** to `./` (the repository root) for each project; setting it to a nested page folder omits files those pages reference. Use the **Other** framework preset and the following project-specific build settings:
 
 | Vercel project | Build Command | Output Directory |
 | --- | --- | --- |
@@ -32,8 +32,9 @@ The parent site and the Automobile, Energy, and Hardware pages share assets and 
 | Automobile | `npm run build:vercel -- --site automobile` | `dist` |
 | Energy | `npm run build:vercel -- --site energy` | `dist` |
 | Hardware | `npm run build:vercel -- --site hardware` | `dist` |
+| Bills purchasing app | `npm run build:vercel -- --site bills` | `dist` |
 
-Each build copies the existing pages and shared assets into `dist`, and selects the requested page as the deployment's `/` entry point. Other existing routes remain available; the Bills marketing page stays at `/bills/` and its frontend at `/bills/app/`. The Bills frontend requires `BILLS_API_BASE_URL` in each Vercel project's build environment so the generated `dist/src/config.js` points to the deployed Railway API. The Bills API remains a separate Railway service; do not deploy `bills-api/` as a static site.
+Parent, Automobile, Energy, and Hardware builds copy the existing pages and shared assets into `dist`, and select the requested page as the deployment's `/` entry point. The Bills build instead uses `bills/app/index.html` as `/` and copies only the CSS, JavaScript, and brand images needed by that frontend. The parent site's Bills marketing page and app remain available at `/bills/` and `/bills/app/`. For the separate Bills Vercel project, configure `BILLS_API_BASE_URL` with the actual Railway API's HTTPS origin (no path, credentials, query, or fragment). The build injects it into `dist/src/config.js`; the Bills API remains a separate Railway service, and `bills-api/` must not be deployed as a static site.
 
 The `buildCommand` is intentionally project-specific and is not fixed in `vercel.json`; configure the exact command above in each Vercel project's **Build & Development Settings**. Keep the Output Directory as `dist`. See [the Bills API deployment notes](./bills-api/README.md#vercel-frontend-and-railway-api) for CORS and Railway configuration. Vercel project Root Directory, framework, build command, environment variables, and custom domains are dashboard settings and must be checked or updated there.
 
