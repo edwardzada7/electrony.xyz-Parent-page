@@ -225,8 +225,24 @@ function validateVerification(verification, { reference, amountMinor, currency, 
 const READINESS_QUERY = `
   SELECT
     current_user AS role_name,
+    session_user AS session_role_name,
+    EXISTS (
+      SELECT 1 FROM pg_roles runtime_role
+      WHERE runtime_role.rolname = 'electrony_bills_runtime'
+    ) AS runtime_role_exists,
+    roles.rolname = 'electrony_bills_runtime' AS is_runtime_role,
     roles.rolsuper AS is_superuser,
     roles.rolbypassrls AS bypasses_rls,
+    roles.rolcanlogin AS can_login,
+    roles.rolinherit AS inherits_roles,
+    roles.rolcreaterole AS can_create_roles,
+    roles.rolcreatedb AS can_create_databases,
+    roles.rolreplication AS can_replicate,
+    EXISTS (
+      SELECT 1
+      FROM pg_auth_members membership
+      WHERE membership.member = roles.oid
+    ) AS has_role_memberships,
     relation.relname AS table_name,
     relation.relrowsecurity AS rls_enabled,
     pg_get_userbyid(relation.relowner) = current_user AS owns_table,
@@ -268,9 +284,65 @@ const READINESS_QUERY = `
       WHERE column_info.attrelid = relation.oid
         AND column_info.attnum > 0
         AND NOT column_info.attisdropped
+        AND relation.relname IN (
+          'bill_fee_quotes',
+          'bill_orders',
+          'bill_payment_attempts',
+          'bill_payment_webhook_events'
+        )
         AND sequence_info.sequence_name IS NOT NULL
         AND NOT has_sequence_privilege(current_user, sequence_info.sequence_name, 'USAGE')
     ) AS has_required_privileges,
+    EXISTS (
+      SELECT 1
+      FROM pg_namespace schema_info
+      WHERE schema_info.nspname !~ '^pg_'
+        AND schema_info.nspname <> 'information_schema'
+        AND has_schema_privilege(current_user, schema_info.oid, 'CREATE')
+    ) AS has_schema_create,
+    EXISTS (
+      SELECT 1
+      FROM pg_attribute column_info
+      CROSS JOIN LATERAL (
+        SELECT CASE WHEN relation.oid IS NOT NULL THEN
+          pg_get_serial_sequence(
+            format('%I.%I', 'public', relation.relname),
+            column_info.attname
+          )
+        END AS sequence_name
+      ) sequence_info
+      WHERE column_info.attrelid = relation.oid
+        AND column_info.attnum > 0
+        AND NOT column_info.attisdropped
+        AND relation.relname = ANY($1::text[])
+        AND sequence_info.sequence_name IS NOT NULL
+        AND has_sequence_privilege(current_user, sequence_info.sequence_name, 'UPDATE')
+    ) AS has_excessive_sequence_privileges,
+    (
+      has_table_privilege(current_user, relation.oid, 'DELETE')
+      OR has_table_privilege(current_user, relation.oid, 'TRUNCATE')
+      OR has_table_privilege(current_user, relation.oid, 'MAINTAIN')
+      OR has_table_privilege(current_user, relation.oid, 'TRIGGER')
+      OR has_table_privilege(current_user, relation.oid, 'REFERENCES')
+    ) AS has_excessive_table_privileges,
+    ARRAY(
+      SELECT privilege.privilege_type
+      FROM aclexplode(
+        COALESCE(relation.relacl, acldefault('r', relation.relowner))
+      ) privilege
+      WHERE privilege.grantee = (SELECT oid FROM pg_roles WHERE rolname = 'anon')
+        AND privilege.privilege_type IN ('MAINTAIN', 'REFERENCES', 'TRIGGER', 'TRUNCATE')
+      ORDER BY privilege.privilege_type
+    ) AS anon_unexpected_privileges,
+    ARRAY(
+      SELECT privilege.privilege_type
+      FROM aclexplode(
+        COALESCE(relation.relacl, acldefault('r', relation.relowner))
+      ) privilege
+      WHERE privilege.grantee = (SELECT oid FROM pg_roles WHERE rolname = 'authenticated')
+        AND privilege.privilege_type IN ('MAINTAIN', 'REFERENCES', 'TRIGGER', 'TRUNCATE')
+      ORDER BY privilege.privilege_type
+    ) AS authenticated_unexpected_privileges,
     EXISTS (
       SELECT 1
       FROM pg_policies pol
@@ -506,52 +578,140 @@ function createPostgresPersistence(connectionString, PoolConstructor, environmen
     }
 
     const role = result.rows[0];
-    if (!role || role.is_superuser || role.bypasses_rls) {
-      const error = new Error("Bills PostgreSQL requires a dedicated, non-privileged role.");
-      error.code = "dedicated_role_required";
-      throw error;
-    }
-
     const tables = new Map(
       result.rows
         .filter((row) => row.table_name)
         .map((row) => [row.table_name, row])
     );
-    const missing = REQUIRED_TABLES.filter((tableName) => !tables.has(tableName));
-    if (missing.length) {
-      const error = new Error("Required Electrony Bills PostgreSQL tables are unavailable.");
-      error.code = "required_tables_unavailable";
-      throw error;
-    }
-
     const tableRows = [...tables.values()];
-    if (tableRows.some((table) => !table.rls_enabled)) {
-      const error = new Error("Row Level Security must be enabled on every required table.");
-      error.code = "rls_disabled";
+    const allTablesPresent = REQUIRED_TABLES.every((tableName) => tables.has(tableName));
+    const roleExists = Boolean(role?.runtime_role_exists);
+    const connectedAsRuntimeRole = Boolean(
+      role?.is_runtime_role && role.role_name === role.session_role_name
+    );
+    const roleHasExcessiveAttributes = Boolean(
+      role?.is_superuser
+      || role?.bypasses_rls
+      || role?.can_create_roles
+      || role?.can_create_databases
+      || role?.can_replicate
+    );
+    const roleHasUnsafeSettings = Boolean(
+      !role?.can_login || role?.inherits_roles || role?.has_role_memberships
+    );
+    const requiredTablePrivilegesVerified = allTablesPresent
+      && tableRows.every((table) => table.has_required_privileges);
+    const excessiveTablePrivilegesFound = tableRows.some((table) => (
+      table.has_excessive_table_privileges || table.has_excessive_sequence_privileges
+    ));
+    const schemaCreateFound = Boolean(role?.has_schema_create);
+    const tableOwnershipFound = tableRows.some((table) => table.owns_table);
+    const allTablesHaveRls = allTablesPresent && tableRows.every((table) => table.rls_enabled);
+    const allPoliciesCoverRequiredOperations = allTablesPresent
+      && tableRows.every((table) => table.has_server_policy && table.has_required_policies);
+    const unexpectedGrants = tableRows.flatMap((table) => {
+      const anon = table.anon_unexpected_privileges || [];
+      const authenticated = table.authenticated_unexpected_privileges || [];
+      return [
+        ...(anon.length ? [{ table: table.table_name, role: "anon", privileges: anon }] : []),
+        ...(authenticated.length
+          ? [{ table: table.table_name, role: "authenticated", privileges: authenticated }]
+          : [])
+      ];
+    });
+    const roleLeastPrivilegeVerified = roleExists
+      && connectedAsRuntimeRole
+      && !roleHasExcessiveAttributes
+      && !roleHasUnsafeSettings
+      && !schemaCreateFound
+      && !tableOwnershipFound
+      && !excessiveTablePrivilegesFound;
+    const readinessChecks = {
+      runtimeRole: {
+        name: "electrony_bills_runtime",
+        exists: roleExists,
+        connectedAsExpectedRole: connectedAsRuntimeRole,
+        leastPrivilegeVerified: roleLeastPrivilegeVerified,
+        status: roleLeastPrivilegeVerified ? "verified" : "failed"
+      },
+      tablePermissions: {
+        requiredGrantsVerified: requiredTablePrivilegesVerified,
+        excessiveGrantsFound: excessiveTablePrivilegesFound,
+        status: !allTablesPresent
+          ? "not_checked"
+          : requiredTablePrivilegesVerified && !excessiveTablePrivilegesFound
+            ? "verified"
+            : "failed"
+      },
+      rlsPolicies: {
+        enabledOnAllTables: allTablesHaveRls,
+        roleScopedOperationCoverage: allPoliciesCoverRequiredOperations,
+        authorizationSemantics: "not_verified",
+        status: allTablesHaveRls && allPoliciesCoverRequiredOperations
+          ? "authorization_semantics_unverified"
+          : "failed"
+      },
+      otherRoleGrants: {
+        status: unexpectedGrants.length ? "remediation_required" : "none_detected",
+        unexpectedGrants
+      }
+    };
+    const reject = (code, message) => {
+      const error = new Error(message);
+      error.code = code;
+      error.readinessChecks = readinessChecks;
       throw error;
+    };
+
+    if (!roleExists) {
+      reject("runtime_role_missing", "The electrony_bills_runtime role does not exist.");
     }
-    if (tableRows.some((table) => table.owns_table)) {
-      const error = new Error("The Bills PostgreSQL role must not own a required table.");
-      error.code = "role_owns_table";
-      throw error;
+    if (!connectedAsRuntimeRole) {
+      reject("runtime_role_connection_mismatch", "Bills PostgreSQL must connect directly as electrony_bills_runtime.");
     }
-    if (tableRows.some((table) => !table.has_server_policy)) {
-      const error = new Error("A role-scoped RLS policy is required for each required table.");
-      error.code = "server_role_policy_missing";
-      throw error;
+    if (roleHasExcessiveAttributes) {
+      reject("runtime_role_excessive_privileges", "The Bills PostgreSQL role has prohibited role-level privileges.");
     }
-    if (tableRows.some((table) => !table.has_required_policies)) {
-      const error = new Error("RLS policies do not cover all required table operations.");
-      error.code = "table_operation_policy_missing";
-      throw error;
+    if (roleHasUnsafeSettings) {
+      reject("dedicated_role_required", "Bills PostgreSQL requires a direct, non-inheriting runtime login with no role memberships.");
     }
-    if (tableRows.some((table) => !table.has_required_privileges)) {
-      const error = new Error("The Bills PostgreSQL role lacks required table privileges.");
-      error.code = "table_privileges_missing";
-      throw error;
+    if (!allTablesPresent) {
+      reject("required_tables_unavailable", "Required Electrony Bills PostgreSQL tables are unavailable.");
+    }
+    if (!allTablesHaveRls) {
+      reject("rls_disabled", "Row Level Security must be enabled on every required table.");
+    }
+    if (tableOwnershipFound) {
+      reject("role_owns_table", "The Bills PostgreSQL role must not own a required table.");
+    }
+    if (schemaCreateFound) {
+      reject("runtime_role_schema_create", "The Bills PostgreSQL role must not have CREATE on the public schema.");
+    }
+    if (excessiveTablePrivilegesFound) {
+      reject("runtime_role_excessive_table_privileges", "The Bills PostgreSQL role has prohibited table privileges.");
+    }
+    if (!requiredTablePrivilegesVerified) {
+      reject("table_privileges_missing", "The Bills PostgreSQL role lacks required table privileges.");
+    }
+    if (unexpectedGrants.length) {
+      reject(
+        "other_role_excessive_privileges",
+        "Unexpected explicit privileges for anon or authenticated require deliberate remediation."
+      );
+    }
+    if (!allPoliciesCoverRequiredOperations) {
+      reject(
+        tableRows.some((table) => !table.has_server_policy)
+          ? "server_role_policy_missing"
+          : "table_operation_policy_missing",
+        "Role-scoped RLS policies must cover every required table operation."
+      );
     }
 
-    return { securityControlsVerified: true, requiredTablePrivilegesVerified: true };
+    reject(
+      "rls_authorization_semantics_unverified",
+      "RLS policy coverage is present, but its authorization semantics are not verified."
+    );
   }
 
   async function getReadiness() {
@@ -599,7 +759,8 @@ function createPostgresPersistence(connectionString, PoolConstructor, environmen
         connected: true,
         securityStatus: "failed",
         securityFailure: error.code || "security_check_failed",
-        connectionFailure: null
+        connectionFailure: null,
+        checks: error.readinessChecks || null
       };
     }
   }

@@ -1115,11 +1115,75 @@ async function handleRequest(request, response) {
     const vendingProvider = buildProviderAdapter();
     const production = process.env.NODE_ENV === "production";
     const databaseReadiness = await postgresPersistence.getReadiness();
+    const providerFeeQuoteAvailable = typeof vendingProvider.quotePurchase === "function";
+    const databaseSecurityChecks = databaseReadiness.checks || {};
+    const paymentBlockers = [
+      "postgres_business_persistence_not_wired_to_routes",
+      "rls_authorization_semantics_unverified",
+      "authoritative_monnify_verification_not_implemented",
+      "provider_fulfillment_contract_unverified",
+      "durable_transactional_idempotency_not_implemented"
+    ];
+    if (!providerFeeQuoteAvailable) paymentBlockers.push("provider_fee_quote_unavailable");
+    if (databaseSecurityChecks.otherRoleGrants?.status !== "none_detected") {
+      paymentBlockers.push("anon_authenticated_grants_require_review");
+    }
     sendJson(response, 200, {
       ok: true,
+      ready: false,
+      readiness: "blocked",
       service: "electrony-bills",
       mode: !hasMonnifyConfig() ? "configuration-required" : "payments-blocked",
       database: databaseReadiness,
+      checks: {
+        databaseConnectivity: {
+          status: databaseReadiness.connected ? "verified" : "unavailable",
+          connected: databaseReadiness.connected
+        },
+        runtimeRole: databaseSecurityChecks.runtimeRole || {
+          status: databaseReadiness.connected ? "not_verified" : "not_checked",
+          exists: false,
+          connectedAsExpectedRole: false,
+          leastPrivilegeVerified: false
+        },
+        tablePermissions: databaseSecurityChecks.tablePermissions || {
+          status: databaseReadiness.connected ? "not_verified" : "not_checked",
+          requiredGrantsVerified: false,
+          excessiveGrantsFound: null
+        },
+        rlsPolicies: databaseSecurityChecks.rlsPolicies || {
+          status: databaseReadiness.connected ? "not_verified" : "not_checked",
+          enabledOnAllTables: false,
+          roleScopedOperationCoverage: false,
+          authorizationSemantics: "not_verified"
+        },
+        otherRoleGrants: databaseSecurityChecks.otherRoleGrants || {
+          status: "not_checked",
+          unexpectedGrants: []
+        },
+        businessPersistence: {
+          ready: false,
+          status: "disabled",
+          reason: "postgres_repository_not_wired_to_api_routes"
+        },
+        payment: {
+          ready: false,
+          status: "disabled",
+          blockers: paymentBlockers
+        },
+        vending: {
+          ready: false,
+          status: "disabled",
+          providerConfigured: vendingProvider.isConfigured(),
+          providerFeeQuoteAvailable,
+          fulfillmentContractVerified: false,
+          blockers: [
+            "postgres_business_persistence_not_wired_to_routes",
+            "rls_authorization_semantics_unverified",
+            "provider_fulfillment_contract_unverified"
+          ]
+        }
+      },
       billsApi: production ? "blocked-until-database-schema-and-RLS-are-verified" : "available-local-development",
       payments: "blocked-until-authoritative-verification-and-vending-contracts-are-implemented",
       hasDatabase: databaseReadiness.connected,
@@ -1133,9 +1197,10 @@ async function handleRequest(request, response) {
         missingMonnify: getMissingMonnifyConfig(),
         monnifyPaymentVerification: false,
         vendingProvider: vendingProvider.isConfigured(),
-        providerFeeQuote: typeof vendingProvider.quotePurchase === "function",
+        providerFeeQuote: providerFeeQuoteAvailable,
+        providerFulfillmentContractVerified: false,
         durableTransactionalIdempotency: false,
-        postgresSecurityControlsVerified: databaseReadiness.securityStatus === "controls_verified",
+        postgresSecurityControlsVerified: false,
         postgresBusinessTablePersistence: false
       },
       virtualCards: "provider_unconfigured",

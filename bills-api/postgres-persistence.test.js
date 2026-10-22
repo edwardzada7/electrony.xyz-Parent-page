@@ -22,12 +22,26 @@ const REQUIRED_TABLES = [
 
 function securityRows({ superuser = false, bypassesRls = false, policy = true } = {}) {
   return REQUIRED_TABLES.map((tableName) => ({
-    role_name: "bills_backend",
+    role_name: "electrony_bills_runtime",
+    session_role_name: "electrony_bills_runtime",
+    runtime_role_exists: true,
+    is_runtime_role: true,
     is_superuser: superuser,
     bypasses_rls: bypassesRls,
+    can_login: true,
+    inherits_roles: false,
+    can_create_roles: false,
+    can_create_databases: false,
+    can_replicate: false,
+    has_role_memberships: false,
+    has_schema_create: false,
     table_name: tableName,
     rls_enabled: true,
     owns_table: false,
+    has_excessive_table_privileges: false,
+    has_excessive_sequence_privileges: false,
+    anon_unexpected_privileges: [],
+    authenticated_unexpected_privileges: [],
     has_server_policy: policy,
     has_required_policies: true,
     has_required_privileges: true
@@ -190,21 +204,23 @@ test("missing or invalid Supabase CA fails closed with a sanitized configuration
   assert.equal(JSON.stringify(logged).includes(tls.rootCertificates[0]), false);
 });
 
-test("readiness runs SELECT 1 with verified TLS before checking table security controls", async () => {
+test("readiness separates connection success from unverified RLS authorization semantics", async () => {
   const captured = {};
   const persistence = makePersistence([
     { rows: [{ ready: 1 }] },
     { rows: securityRows() }
   ], captured);
 
-  assert.deepEqual(await persistence.getReadiness(), {
-    status: "connection_verified",
-    configured: true,
-    connected: true,
-    securityStatus: "controls_verified",
-    securityFailure: null,
-    connectionFailure: null
-  });
+  const readiness = await persistence.getReadiness();
+  assert.equal(readiness.status, "security_failed");
+  assert.equal(readiness.connected, true);
+  assert.equal(readiness.securityFailure, "rls_authorization_semantics_unverified");
+  assert.equal(
+    readiness.checks.rlsPolicies.authorizationSemantics,
+    "not_verified"
+  );
+  assert.equal(readiness.checks.runtimeRole.leastPrivilegeVerified, true);
+  assert.equal(readiness.checks.tablePermissions.requiredGrantsVerified, true);
   assert.equal(captured.options.ssl.rejectUnauthorized, true);
   assert.equal(captured.options.ssl.ca, tls.rootCertificates[0]);
   assert.equal(captured.options.connectionTimeoutMillis, 5000);
@@ -216,6 +232,10 @@ test("readiness runs SELECT 1 with verified TLS before checking table security c
   assert.match(captured.queries[1].text, /has_schema_privilege/);
   assert.match(captured.queries[1].text, /has_sequence_privilege/);
   assert.match(captured.queries[1].text, /has_required_policies/);
+  assert.match(
+    captured.queries[1].text,
+    /relation\.relname IN \([\s\S]*'bill_payment_webhook_events'/
+  );
   await persistence.close();
   assert.equal(captured.closed, true);
 });
@@ -311,25 +331,53 @@ test("missing RLS policies keep security readiness failed after connectivity suc
     { rows: securityRows({ policy: false }) }
   ]);
 
-  assert.deepEqual(await persistence.getReadiness(), {
-    status: "security_failed",
-    configured: true,
-    connected: true,
-    securityStatus: "failed",
-    securityFailure: "server_role_policy_missing",
-    connectionFailure: null
-  });
+  const readiness = await persistence.getReadiness();
+  assert.equal(readiness.status, "security_failed");
+  assert.equal(readiness.connected, true);
+  assert.equal(readiness.securityFailure, "server_role_policy_missing");
+  assert.equal(readiness.checks.rlsPolicies.status, "failed");
 });
 
-test("privileged roles fail the security check without being reported as ready", async () => {
+test("privileged, shared, and role-switched connections fail the role security check", async (t) => {
+  const roleCases = [
+    ["superuser", { is_superuser: true }, "runtime_role_excessive_privileges"],
+    ["BYPASSRLS", { bypasses_rls: true }, "runtime_role_excessive_privileges"],
+    ["role creation", { can_create_roles: true }, "runtime_role_excessive_privileges"],
+    ["database creation", { can_create_databases: true }, "runtime_role_excessive_privileges"],
+    ["replication", { can_replicate: true }, "runtime_role_excessive_privileges"],
+    ["schema CREATE", { has_schema_create: true }, "runtime_role_schema_create"],
+    ["table TRUNCATE", { has_excessive_table_privileges: true }, "runtime_role_excessive_table_privileges"],
+    ["non-login role", { can_login: false }],
+    ["inheriting role", { inherits_roles: true }],
+    ["role with memberships", { has_role_memberships: true }],
+    ["role-switched connection", { session_role_name: "bills_login" }, "runtime_role_connection_mismatch"]
+  ];
+
+  for (const [name, overrides, expectedFailure = "dedicated_role_required"] of roleCases) {
+    await t.test(name, async () => {
+      const rows = securityRows();
+      Object.assign(rows[0], overrides);
+      const persistence = makePersistence([
+        { rows: [{ ready: 1 }] },
+        { rows }
+      ]);
+
+      const readiness = await persistence.getReadiness();
+      assert.equal(readiness.status, "security_failed");
+      assert.equal(readiness.securityFailure, expectedFailure);
+    });
+  }
+});
+
+test("missing authenticated database role fails closed after connection succeeds", async () => {
   const persistence = makePersistence([
     { rows: [{ ready: 1 }] },
-    { rows: securityRows({ bypassesRls: true }) }
+    { rows: [] }
   ]);
 
   const readiness = await persistence.getReadiness();
   assert.equal(readiness.status, "security_failed");
-  assert.equal(readiness.securityFailure, "dedicated_role_required");
+  assert.equal(readiness.securityFailure, "runtime_role_missing");
 });
 
 function databaseError(code) {
@@ -780,7 +828,7 @@ test("database permission errors are sanitized and never cause a JSON fallback",
   );
 });
 
-test("readiness requires both RLS policy presence and the required table privileges", async () => {
+test("readiness requires the required table privileges", async () => {
   const persistence = makePersistence([
     { rows: [{ ready: 1 }] },
     { rows: securityRows().map((row, index) => ({
@@ -788,14 +836,10 @@ test("readiness requires both RLS policy presence and the required table privile
       has_required_privileges: index !== 2
     })) }
   ]);
-  assert.deepEqual(await persistence.getReadiness(), {
-    status: "security_failed",
-    configured: true,
-    connected: true,
-    securityStatus: "failed",
-    securityFailure: "table_privileges_missing",
-    connectionFailure: null
-  });
+  const readiness = await persistence.getReadiness();
+  assert.equal(readiness.status, "security_failed");
+  assert.equal(readiness.securityFailure, "table_privileges_missing");
+  assert.equal(readiness.checks.tablePermissions.status, "failed");
 });
 
 test("readiness fails when role-scoped policies omit a required SQL operation", async () => {
