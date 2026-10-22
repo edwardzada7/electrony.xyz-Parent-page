@@ -3,10 +3,11 @@ const primaryNavigation = document.querySelector(".primary-navigation");
 const header = document.querySelector(".site-header");
 const contactLinks = document.querySelectorAll(".contact-link");
 const contactUrl = window.ElectronyConfig.contactUrl;
-const productLinks = window.ElectronyConfig.productLinks;
+const productConfig = window.ElectronyConfig.productLinks;
 const backToTopButton = document.querySelector(".back-to-top");
 const primaryNavLinks = document.querySelectorAll(".navigation-list a");
 const prefersReducedMotion = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+const mobileNavigationQuery = window.matchMedia && window.matchMedia("(max-width: 48rem)");
 
 function setSafeLink(link, url) {
   const isDisabled = !url;
@@ -33,6 +34,8 @@ function initHeroTypingEffect() {
   const heroTitle = document.getElementById("hero-title");
   const heroTyping = document.querySelector("[data-hero-typing]");
   if (!heroTitle || !heroTyping) return;
+  if (heroTyping.dataset.typingInitialized === "true") return;
+  heroTyping.dataset.typingInitialized = "true";
 
   const phrases = ["What's Next", "Smart Living", "Digital Commerce", "Clean Energy", "Electric Mobility", "Connected Communities", "Everyday Technology"];
   const reducedMotion = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
@@ -96,21 +99,29 @@ function activatePrimaryNav(currentId) {
 
 function closeMenu() {
   if (!menuToggle || !primaryNavigation) return;
-  menuToggle.setAttribute("aria-expanded", "false");
-  primaryNavigation.classList.remove("is-open");
-  document.body.classList.remove("menu-open");
+  setMenuOpen(false);
+}
+
+function setMenuOpen(isOpen) {
+  if (!menuToggle || !primaryNavigation) return;
+
+  menuToggle.setAttribute("aria-expanded", String(isOpen));
+  menuToggle.setAttribute("aria-label", isOpen ? "Close navigation menu" : "Open navigation menu");
+  primaryNavigation.classList.toggle("is-open", isOpen);
+  primaryNavigation.setAttribute("aria-hidden", String(!isOpen && Boolean(mobileNavigationQuery?.matches)));
+  document.body.classList.toggle("menu-open", isOpen);
 }
 
 if (menuToggle && primaryNavigation) {
+  setMenuOpen(false);
+
   menuToggle.addEventListener("click", () => {
     const isExpanded = menuToggle.getAttribute("aria-expanded") === "true";
-    menuToggle.setAttribute("aria-expanded", String(!isExpanded));
-    primaryNavigation.classList.toggle("is-open", !isExpanded);
-    document.body.classList.toggle("menu-open", !isExpanded);
+    setMenuOpen(!isExpanded);
   });
 
   primaryNavigation.addEventListener("click", (event) => {
-    if (event.target.closest("a")) closeMenu();
+    if (event.target instanceof Element && event.target.closest("a")) closeMenu();
   });
 }
 
@@ -126,14 +137,26 @@ contactLinks.forEach((link) => {
 });
 
 document.querySelectorAll("[data-product-link]").forEach((link) => {
-  const product = productLinks[link.dataset.productLink];
+  const product = productConfig[link.dataset.productLink];
+  if (!product) {
+    console.error(`Missing product link configuration for "${link.dataset.productLink}".`);
+    setSafeLink(link, null);
+    return;
+  }
   setSafeLink(link, product.landingPageUrl);
 });
 
 if (window.matchMedia) {
-  window.matchMedia("(min-width: 48.001rem)").addEventListener("change", (event) => {
-    if (event.matches) closeMenu();
-  });
+  const desktopNavigationQuery = window.matchMedia("(min-width: 48.001rem)");
+  const handleViewportChange = () => closeMenu();
+
+  if (typeof desktopNavigationQuery.addEventListener === "function") {
+    desktopNavigationQuery.addEventListener("change", handleViewportChange);
+  } else if (typeof desktopNavigationQuery.addListener === "function") {
+    desktopNavigationQuery.addListener(handleViewportChange);
+  } else {
+    window.addEventListener("resize", handleViewportChange);
+  }
 }
 
 const mainSections = ["software", "hardware", "energy", "mobility", "company"]
@@ -255,14 +278,15 @@ function renderSoftwareProducts() {
   const softwareProducts = window.ElectronyProducts.filter((product) => product.category === "Software");
 
   softwareProducts.forEach((product) => {
-    const card = document.createElement("article");
+    const card = document.createElement("a");
     card.className = "product-card";
     if (product.featured) card.classList.add("is-featured");
     card.style.setProperty("--card-accent", product.accentColor || "var(--color-product-default)");
 
     const statusText = getProductStatusText(product);
-    const actionUrl = product.appUrl || product.landingPageUrl;
+    const actionUrl = product.landingPageUrl || product.appUrl;
     const ctaText = getProductCtaText(product);
+    card.href = actionUrl || "";
 
     card.innerHTML = `
       <div class="product-card-header">
@@ -276,17 +300,11 @@ function renderSoftwareProducts() {
         <p>${product.description}</p>
       </div>
       <div class="product-card-footer">
-        <a class="text-link product-link" href="">${ctaText}</a>
+        <span class="text-link product-link">${ctaText}</span>
       </div>
     `;
 
-    const link = card.querySelector(".product-link");
-    setSafeLink(link, actionUrl);
-
-    if (!actionUrl) {
-      link.textContent = ctaText;
-      link.setAttribute("aria-disabled", "true");
-    }
+    setSafeLink(card, actionUrl);
 
     softwareList.appendChild(card);
   });
@@ -296,7 +314,7 @@ function renderSpotlightLink() {
   const spotlightLink = document.querySelector("#electronyos-spotlight-link");
   if (!spotlightLink) return;
 
-  const electronyos = productLinks.electronyos;
+  const electronyos = productConfig.electronyos;
   setSafeLink(spotlightLink, electronyos.landingPageUrl || electronyos.appUrl || null);
 }
 
