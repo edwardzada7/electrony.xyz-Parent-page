@@ -4,12 +4,21 @@ const path = require("path");
 const projectRoot = path.resolve(__dirname, "..");
 const outputDirectory = path.join(projectRoot, "dist");
 const publicDirectories = ["assets", "automobile", "bills", "energy", "hardware", "src", "styles"];
-const publicRootFiles = ["index.html"];
+const sites = new Set(["parent", "automobile", "energy", "hardware"]);
+
+function getSite() {
+  const args = process.argv.slice(2);
+  if (args.length !== 2 || args[0] !== "--site" || !sites.has(args[1])) {
+    throw new Error(`Usage: node scripts/build-vercel.js --site <${[...sites].join("|")}>.`);
+  }
+
+  return args[1];
+}
 
 function getPublicApiUrl() {
   const configuredUrl = String(process.env.BILLS_API_BASE_URL || "").trim();
   if (!configuredUrl) {
-    throw new Error("Set BILLS_API_BASE_URL in the Vercel build environment to the deployed Railway API base URL.");
+    throw new Error("Set BILLS_API_BASE_URL in the Vercel build environment to the deployed Railway API base URL before building the Bills frontend.");
   }
 
   let apiUrl;
@@ -32,7 +41,7 @@ function getPublicApiUrl() {
   return apiUrl.href.replace(/\/+$/, "");
 }
 
-function buildStaticSite() {
+function buildStaticSite(site) {
   const apiUrl = getPublicApiUrl();
   fs.rmSync(outputDirectory, { recursive: true, force: true });
   fs.mkdirSync(outputDirectory, { recursive: true });
@@ -40,9 +49,8 @@ function buildStaticSite() {
   for (const directory of publicDirectories) {
     fs.cpSync(path.join(projectRoot, directory), path.join(outputDirectory, directory), { recursive: true });
   }
-  for (const filename of publicRootFiles) {
-    fs.copyFileSync(path.join(projectRoot, filename), path.join(outputDirectory, filename));
-  }
+  const entrypoint = site === "parent" ? "index.html" : path.join(site, "index.html");
+  fs.copyFileSync(path.join(projectRoot, entrypoint), path.join(outputDirectory, "index.html"));
 
   const configPath = path.join(outputDirectory, "src", "config.js");
   const config = fs.readFileSync(configPath, "utf8");
@@ -57,7 +65,7 @@ function buildStaticSite() {
 }
 
 try {
-  buildStaticSite();
+  buildStaticSite(getSite());
 } catch (error) {
   console.error(error.message);
   process.exitCode = 1;

@@ -22,7 +22,20 @@ Place the approved parent Electrony logo in `assets/brand/` when it is available
 
 The public Electrony Bills product page remains available at `/bills/` as the product introduction. The guest purchasing experience is available at `/bills/app/` and is implemented as a separate, mobile-first checkout flow with service-specific validation and payment review.
 
-The static Vercel build requires `BILLS_API_BASE_URL` to be set to the deployed Railway API's HTTPS base URL and redeployed. See [the Bills API deployment notes](./bills-api/README.md#vercel-frontend-and-railway-api) for CORS and Railway configuration.
+## Vercel deployments
+
+The parent site and the Automobile, Energy, and Hardware pages share assets and scripts from the repository root. Set the Vercel **Root Directory** to `./` (the repository root) for each project; setting it to a nested page folder omits files those pages reference. Use the **Other** framework preset and the following project-specific build settings:
+
+| Vercel project | Build Command | Output Directory |
+| --- | --- | --- |
+| Parent Electrony.xyz site | `npm run build:vercel -- --site parent` | `dist` |
+| Automobile | `npm run build:vercel -- --site automobile` | `dist` |
+| Energy | `npm run build:vercel -- --site energy` | `dist` |
+| Hardware | `npm run build:vercel -- --site hardware` | `dist` |
+
+Each build copies the existing pages and shared assets into `dist`, and selects the requested page as the deployment's `/` entry point. Other existing routes remain available; the Bills marketing page stays at `/bills/` and its frontend at `/bills/app/`. The Bills frontend requires `BILLS_API_BASE_URL` in each Vercel project's build environment so the generated `dist/src/config.js` points to the deployed Railway API. The Bills API remains a separate Railway service; do not deploy `bills-api/` as a static site.
+
+The `buildCommand` is intentionally project-specific and is not fixed in `vercel.json`; configure the exact command above in each Vercel project's **Build & Development Settings**. Keep the Output Directory as `dist`. See [the Bills API deployment notes](./bills-api/README.md#vercel-frontend-and-railway-api) for CORS and Railway configuration. Vercel project Root Directory, framework, build command, environment variables, and custom domains are dashboard settings and must be checked or updated there.
 
 The `COMING SOON` status and internal landing-page link are maintained in `src/products.js` and `src/config.js`.
 
