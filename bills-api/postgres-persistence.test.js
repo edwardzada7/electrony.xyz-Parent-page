@@ -244,6 +244,8 @@ test("readiness separates connection success from unverified RLS authorization s
   assert.match(captured.queries[1].text, /has_sequence_privilege/);
   assert.match(captured.queries[1].text, /has_required_policies/);
   assert.match(captured.queries[1].text, /policy_evidence/);
+  assert.match(captured.queries[1].text, /server_version_num/);
+  assert.match(captured.queries[1].text, /has_table_privilege\(current_user, relation\.oid, 'MAINTAIN'\)/);
   assert.match(
     captured.queries[1].text,
     /relation\.relname IN \([\s\S]*'bill_payment_webhook_events'/
@@ -252,6 +254,8 @@ test("readiness separates connection success from unverified RLS authorization s
   assert.match(captured.queries[2].text, /excessive_sequence_privileges/);
   assert.match(captured.queries[2].text, /user_function_execute_privileges/);
   assert.match(captured.queries[2].text, /private_table_public_role_access/);
+  assert.match(captured.queries[2].text, /'scope', 'sequence'/);
+  assert.match(captured.queries[2].text, /'other_role'/);
   assert.match(captured.queries[2].text, /runtime_role_tree/);
   await persistence.close();
   assert.equal(captured.closed, true);
@@ -459,6 +463,36 @@ test("broad runtime RLS policies are reported but never verify guest authorizati
   assert.equal(readiness.checks.otherRoleGrants.unexpectedGrants[0].role, "anon");
 });
 
+test("a direct excessive DELETE grant is reported as a security failure", async () => {
+  const persistence = makePersistence([
+    { rows: [{ ready: 1 }] },
+    { rows: securityRows() },
+    { rows: [{
+      excessive_table_privileges: [{
+        category: "table",
+        object: "public.bill_orders",
+        privilege: "DELETE",
+        grantedTo: "electrony_bills_runtime",
+        grantSource: "runtime",
+        grantOption: false
+      }],
+      excessive_column_privileges: [],
+      excessive_sequence_privileges: [],
+      excessive_schema_privileges: [],
+      user_function_execute_privileges: [],
+      private_table_public_role_access: []
+    }] }
+  ]);
+
+  const readiness = await persistence.getReadiness();
+  assert.equal(readiness.securityFailure, "runtime_role_excessive_table_privileges");
+  assert.equal(readiness.checks.tablePermissions.excessiveGrantsFound, true);
+  assert.deepEqual(
+    readiness.checks.tablePermissions.excessivePrivilegeDetails.map(({ privilege }) => privilege),
+    ["DELETE"]
+  );
+});
+
 test("privileged, shared, and role-switched connections fail the role security check", async (t) => {
   const roleCases = [
     ["superuser", { is_superuser: true }, "runtime_role_excessive_privileges"],
@@ -471,6 +505,11 @@ test("privileged, shared, and role-switched connections fail the role security c
     ["non-login role", { can_login: false }],
     ["inheriting role", { inherits_roles: true }],
     ["role with memberships", { has_role_memberships: true }],
+    ["connected directly as the wrong role", {
+      role_name: "bills_login",
+      session_role_name: "bills_login",
+      is_runtime_role: false
+    }, "runtime_role_connection_mismatch"],
     ["role-switched connection", { session_role_name: "bills_login" }, "runtime_role_connection_mismatch"]
   ];
 
@@ -490,15 +529,89 @@ test("privileged, shared, and role-switched connections fail the role security c
   }
 });
 
-test("missing authenticated database role fails closed after connection succeeds", async () => {
+test("missing runtime role fails closed after connection succeeds", async () => {
   const persistence = makePersistence([
     { rows: [{ ready: 1 }] },
-    { rows: [] }
+    { rows: securityRows().map((row) => ({
+      ...row,
+      runtime_role_exists: false,
+      is_runtime_role: false
+    })) },
+    { rows: [{
+      excessive_table_privileges: [],
+      excessive_column_privileges: [],
+      excessive_sequence_privileges: [],
+      excessive_schema_privileges: [],
+      user_function_execute_privileges: [],
+      private_table_public_role_access: []
+    }] }
   ]);
 
   const readiness = await persistence.getReadiness();
   assert.equal(readiness.status, "security_failed");
   assert.equal(readiness.securityFailure, "runtime_role_missing");
+});
+
+test("diagnostic SQL failure preserves connectivity and reports its safe stage and code", async () => {
+  const persistence = makePersistence([
+    { rows: [{ ready: 1 }] },
+    { rows: securityRows() },
+    databaseError("42501")
+  ]);
+
+  const readiness = await persistence.getReadiness();
+  assert.equal(readiness.status, "security_failed");
+  assert.equal(readiness.connected, true);
+  assert.equal(readiness.securityFailure, "privilege_diagnostics_query_failed");
+  assert.deepEqual(readiness.diagnosticFailure, {
+    stage: "privilege_diagnostics",
+    code: "privilege_diagnostics_query_failed"
+  });
+  assert.equal(readiness.checks.runtimeRole.exists, true);
+  assert.equal(readiness.checks.runtimeRole.connectedAsExpectedRole, true);
+  assert.equal(readiness.checks.runtimeRole.status, "not_verified");
+  assert.equal(readiness.checks.runtimeRole.excessivePrivilegeDetails, null);
+  assert.equal(readiness.checks.tablePermissions.excessivePrivilegeDetails, null);
+  assert.equal(readiness.checks.otherRoleGrants.unexpectedGrants, null);
+  assert.equal(JSON.stringify(readiness).includes("private database detail"), false);
+});
+
+test("readiness query failure does not claim that the runtime role is missing", async () => {
+  const persistence = makePersistence([
+    { rows: [{ ready: 1 }] },
+    databaseError("42501")
+  ]);
+
+  const readiness = await persistence.getReadiness();
+  assert.equal(readiness.connected, true);
+  assert.equal(readiness.securityFailure, "role_security_query_failed");
+  assert.deepEqual(readiness.diagnosticFailure, {
+    stage: "role_security",
+    code: "role_security_query_failed"
+  });
+  assert.equal(readiness.checks.runtimeRole.exists, null);
+  assert.equal(readiness.checks.runtimeRole.connectedAsExpectedRole, null);
+  assert.equal(readiness.checks.runtimeRole.excessivePrivilegeDetails, null);
+});
+
+test("a later diagnostics failure preserves a confirmed excessive-privilege category", async () => {
+  const rows = securityRows();
+  rows[0].has_excessive_table_privileges = true;
+  const persistence = makePersistence([
+    { rows: [{ ready: 1 }] },
+    { rows },
+    databaseError("42501")
+  ]);
+
+  const readiness = await persistence.getReadiness();
+  assert.equal(readiness.connected, true);
+  assert.equal(readiness.securityFailure, "runtime_role_excessive_table_privileges");
+  assert.deepEqual(readiness.diagnosticFailure, {
+    stage: "privilege_diagnostics",
+    code: "privilege_diagnostics_query_failed"
+  });
+  assert.equal(readiness.checks.tablePermissions.excessiveGrantsFound, true);
+  assert.equal(readiness.checks.tablePermissions.excessivePrivilegeDetails, null);
 });
 
 function databaseError(code) {

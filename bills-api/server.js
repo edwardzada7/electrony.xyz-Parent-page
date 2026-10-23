@@ -1211,34 +1211,35 @@ async function handleRequest(request, response) {
         },
         runtimeRole: databaseSecurityChecks.runtimeRole || {
           status: databaseReadiness.connected ? "not_verified" : "not_checked",
-          exists: false,
-          connectedAsExpectedRole: false,
+          exists: null,
+          connectedAsExpectedRole: null,
           leastPrivilegeVerified: false,
-          excessivePrivilegeDetails: []
+          excessivePrivilegeDetails: null
         },
         tablePermissions: databaseSecurityChecks.tablePermissions || {
           status: databaseReadiness.connected ? "not_verified" : "not_checked",
-          requiredGrantsVerified: false,
+          requiredGrantsVerified: null,
           excessiveGrantsFound: null,
-          excessivePrivilegeDetails: []
+          excessivePrivilegeDetails: null
         },
         rlsPolicies: databaseSecurityChecks.rlsPolicies || {
           status: databaseReadiness.connected ? "not_verified" : "not_checked",
-          enabledOnAllTables: false,
-          roleScopedOperationCoverage: false,
+          enabledOnAllTables: null,
+          roleScopedOperationCoverage: null,
           authorizationSemantics: "not_verified",
-          publicRolePoliciesFound: false,
-          unrestrictedServerPolicies: [],
-          policyEvidence: []
+          publicRolePoliciesFound: null,
+          unrestrictedServerPolicies: null,
+          policyEvidence: null
         },
         otherRoleGrants: databaseSecurityChecks.otherRoleGrants || {
           status: "not_checked",
-          unexpectedGrants: []
+          unexpectedGrants: null
         },
+        diagnosticFailure: databaseReadiness.diagnosticFailure || null,
         privilegeDiagnostics: {
-          runtimeRole: databaseSecurityChecks.runtimeRole?.excessivePrivilegeDetails || [],
-          tables: databaseSecurityChecks.tablePermissions?.excessivePrivilegeDetails || [],
-          privateTableAccess: databaseSecurityChecks.otherRoleGrants?.unexpectedGrants || []
+          runtimeRole: databaseSecurityChecks.runtimeRole?.excessivePrivilegeDetails ?? null,
+          tables: databaseSecurityChecks.tablePermissions?.excessivePrivilegeDetails ?? null,
+          privateTableAccess: databaseSecurityChecks.otherRoleGrants?.unexpectedGrants ?? null
         },
         businessPersistence: {
           ready: false,

@@ -392,7 +392,11 @@ const READINESS_QUERY = `
     (
       has_table_privilege(current_user, relation.oid, 'DELETE')
       OR has_table_privilege(current_user, relation.oid, 'TRUNCATE')
-      OR has_table_privilege(current_user, relation.oid, 'MAINTAIN')
+      OR CASE
+        WHEN current_setting('server_version_num')::integer >= 170000
+          THEN has_table_privilege(current_user, relation.oid, 'MAINTAIN')
+        ELSE FALSE
+      END
       OR has_table_privilege(current_user, relation.oid, 'TRIGGER')
       OR has_table_privilege(current_user, relation.oid, 'REFERENCES')
     ) AS has_excessive_table_privileges,
@@ -571,6 +575,7 @@ const PRIVILEGE_DIAGNOSTICS_QUERY = `
         END,
         'grantSource', CASE
           WHEN grant_info.grantee = 0 THEN 'public'
+          WHEN grant_role.rolname IN ('anon', 'authenticated') THEN 'other_role'
           ELSE role_tree.grant_source
         END,
         'grantOption', grant_info.is_grantable
@@ -587,6 +592,11 @@ const PRIVILEGE_DIAGNOSTICS_QUERY = `
         AND relation.relkind IN ('r', 'p')
         AND (grant_info.grantee = 0 OR role_tree.role_oid IS NOT NULL)
         AND (
+          (
+            grant_info.grantee = 0
+            AND required.table_name IN (SELECT table_name FROM private_tables)
+          )
+          OR
           grant_info.privilege_type <> ALL(required.required_privileges)
           OR grant_info.is_grantable
         )
@@ -621,6 +631,11 @@ const PRIVILEGE_DIAGNOSTICS_QUERY = `
         AND NOT column_info.attisdropped
         AND (grant_info.grantee = 0 OR role_tree.role_oid IS NOT NULL)
         AND (
+          (
+            grant_info.grantee = 0
+            AND required.table_name IN (SELECT table_name FROM private_tables)
+          )
+          OR
           grant_info.privilege_type <> ALL(required.required_privileges)
           OR grant_info.is_grantable
         )
@@ -652,7 +667,8 @@ const PRIVILEGE_DIAGNOSTICS_QUERY = `
         AND schema_info.nspname <> 'information_schema'
         AND (grant_info.grantee = 0 OR role_tree.role_oid IS NOT NULL)
         AND (
-          grant_info.privilege_type <> 'USAGE'
+          grant_info.grantee = 0
+          OR grant_info.privilege_type <> 'USAGE'
           OR grant_info.is_grantable
           OR NOT EXISTS (
             SELECT 1
@@ -685,6 +701,7 @@ const PRIVILEGE_DIAGNOSTICS_QUERY = `
         END,
         'grantSource', CASE
           WHEN grant_info.grantee = 0 THEN 'public'
+          WHEN grant_role.rolname IN ('anon', 'authenticated') THEN 'other_role'
           ELSE role_tree.grant_source
         END,
         'grantOption', grant_info.is_grantable
@@ -697,7 +714,11 @@ const PRIVILEGE_DIAGNOSTICS_QUERY = `
       LEFT JOIN runtime_role_tree role_tree ON role_tree.role_oid = grant_info.grantee
       WHERE schema_info.nspname !~ '^pg_'
         AND schema_info.nspname <> 'information_schema'
-        AND (grant_info.grantee = 0 OR role_tree.role_oid IS NOT NULL)
+        AND (
+          grant_info.grantee = 0
+          OR role_tree.role_oid IS NOT NULL
+          OR grant_role.rolname IN ('anon', 'authenticated')
+        )
         AND (
           grant_info.privilege_type = 'CREATE'
           OR (schema_info.nspname <> 'public' AND grant_info.privilege_type = 'USAGE')
@@ -716,6 +737,7 @@ const PRIVILEGE_DIAGNOSTICS_QUERY = `
         END,
         'grantSource', CASE
           WHEN grant_info.grantee = 0 THEN 'public'
+          WHEN grant_role.rolname IN ('anon', 'authenticated') THEN 'other_role'
           ELSE role_tree.grant_source
         END,
         'grantOption', grant_info.is_grantable
@@ -729,7 +751,11 @@ const PRIVILEGE_DIAGNOSTICS_QUERY = `
       LEFT JOIN runtime_role_tree role_tree ON role_tree.role_oid = grant_info.grantee
       WHERE schema_info.nspname !~ '^pg_'
         AND schema_info.nspname <> 'information_schema'
-        AND (grant_info.grantee = 0 OR role_tree.role_oid IS NOT NULL)
+        AND (
+          grant_info.grantee = 0
+          OR role_tree.role_oid IS NOT NULL
+          OR grant_role.rolname IN ('anon', 'authenticated')
+        )
         AND grant_info.privilege_type = 'EXECUTE'
     ), '[]'::jsonb) AS user_function_execute_privileges,
     COALESCE((
@@ -753,7 +779,12 @@ const PRIVILEGE_DIAGNOSTICS_QUERY = `
             SELECT 1 FROM pg_roles public_role_record
             WHERE public_role_record.rolname = public_role.role_name
           )
-          AND has_table_privilege(public_role.role_name, relation.oid, privilege.privilege_type)
+          AND CASE
+            WHEN privilege.privilege_type = 'MAINTAIN'
+              AND current_setting('server_version_num')::integer < 170000
+            THEN FALSE
+            ELSE has_table_privilege(public_role.role_name, relation.oid, privilege.privilege_type)
+          END
         UNION ALL
         SELECT jsonb_build_object(
           'role', public_role.role_name,
@@ -783,6 +814,40 @@ const PRIVILEGE_DIAGNOSTICS_QUERY = `
           AND NOT has_table_privilege(
             public_role.role_name,
             relation.oid,
+            privilege.privilege_type
+          )
+        UNION ALL
+        SELECT jsonb_build_object(
+          'role', public_role.role_name,
+          'object', format('%I.%I', schema_info.nspname, sequence_info.relname),
+          'privilege', privilege.privilege_type,
+          'scope', 'sequence'
+        )
+        FROM pg_class sequence_info
+        JOIN pg_namespace schema_info ON schema_info.oid = sequence_info.relnamespace
+        CROSS JOIN (VALUES ('anon'), ('authenticated')) public_role(role_name)
+        CROSS JOIN unnest(ARRAY['USAGE', 'SELECT', 'UPDATE']::text[]) privilege(privilege_type)
+        WHERE sequence_info.relkind = 'S'
+          AND EXISTS (
+            SELECT 1 FROM pg_roles public_role_record
+            WHERE public_role_record.rolname = public_role.role_name
+          )
+          AND EXISTS (
+            SELECT 1
+            FROM pg_class target_table
+            JOIN private_tables private_table ON private_table.table_name = target_table.relname
+            JOIN pg_attribute target_column ON target_column.attrelid = target_table.oid
+            WHERE target_table.relnamespace = 'public'::regnamespace
+              AND target_column.attnum > 0
+              AND NOT target_column.attisdropped
+              AND to_regclass(pg_get_serial_sequence(
+                format('%I.%I', 'public', target_table.relname),
+                target_column.attname
+              )) = sequence_info.oid
+          )
+          AND has_sequence_privilege(
+            public_role.role_name,
+            sequence_info.oid,
             privilege.privilege_type
           )
       ) public_access
@@ -972,25 +1037,142 @@ function createPostgresPersistence(connectionString, PoolConstructor, environmen
 
   async function verifySecurityControls() {
     let result;
-    let privilegeResult;
+    let role;
+
+    function rejectUnverifiedDiagnostic(stage, failureCode, knownRole = null, knownRows = []) {
+      const error = new Error("Bills PostgreSQL security diagnostics could not be completed.");
+      error.diagnosticFailure = { stage, code: failureCode };
+      const roleExists = typeof knownRole?.runtime_role_exists === "boolean"
+        ? knownRole.runtime_role_exists
+        : null;
+      const connectedAsExpectedRole = knownRole
+        ? Boolean(knownRole.is_runtime_role && knownRole.role_name === knownRole.session_role_name)
+        : null;
+      const tables = new Map(
+        knownRows
+          .filter((row) => row.table_name)
+          .map((row) => [row.table_name, row])
+      );
+      const tableRows = [...tables.values()];
+      const allTablesPresent = REQUIRED_TABLES.every((tableName) => tables.has(tableName));
+      const excessiveTablePrivilegesFound = tableRows.some((table) => (
+        table.has_excessive_table_privileges || table.has_excessive_sequence_privileges
+      ));
+      const requiredTablePrivilegesVerified = allTablesPresent
+        && tableRows.every((table) => table.has_required_privileges);
+      const allTablesHaveRls = allTablesPresent && tableRows.every((table) => table.rls_enabled);
+      const allPoliciesCoverRequiredOperations = allTablesPresent
+        && tableRows.every((table) => table.has_server_policy && table.has_required_policies);
+      let confirmedFailureCode = null;
+      if (knownRole && !roleExists) {
+        confirmedFailureCode = "runtime_role_missing";
+      } else if (knownRole && !connectedAsExpectedRole) {
+        confirmedFailureCode = "runtime_role_connection_mismatch";
+      } else if (knownRole && (
+        knownRole.is_superuser
+        || knownRole.bypasses_rls
+        || knownRole.can_create_roles
+        || knownRole.can_create_databases
+        || knownRole.can_replicate
+      )) {
+        confirmedFailureCode = "runtime_role_excessive_privileges";
+      } else if (knownRole && (
+        !knownRole.can_login
+        || knownRole.inherits_roles
+        || knownRole.has_role_memberships
+      )) {
+        confirmedFailureCode = "dedicated_role_required";
+      } else if (!allTablesPresent && knownRows.length) {
+        confirmedFailureCode = "required_tables_unavailable";
+      } else if (tableRows.some((table) => !table.rls_enabled)) {
+        confirmedFailureCode = "rls_disabled";
+      } else if (tableRows.some((table) => table.owns_table)) {
+        confirmedFailureCode = "role_owns_table";
+      } else if (knownRole?.has_schema_create) {
+        confirmedFailureCode = "runtime_role_schema_create";
+      } else if (excessiveTablePrivilegesFound) {
+        confirmedFailureCode = "runtime_role_excessive_table_privileges";
+      } else if (allTablesPresent && !requiredTablePrivilegesVerified) {
+        confirmedFailureCode = "table_privileges_missing";
+      }
+      error.code = confirmedFailureCode || failureCode;
+      error.readinessChecks = {
+        runtimeRole: {
+          name: "electrony_bills_runtime",
+          exists: roleExists,
+          connectedAsExpectedRole,
+          leastPrivilegeVerified: false,
+          excessivePrivilegeDetails: null,
+          status: confirmedFailureCode ? "failed" : "not_verified"
+        },
+        tablePermissions: {
+          status: !allTablesPresent && knownRows.length
+            ? "not_checked"
+            : excessiveTablePrivilegesFound || (allTablesPresent && !requiredTablePrivilegesVerified)
+              ? "failed"
+              : "not_verified",
+          requiredGrantsVerified: allTablesPresent ? requiredTablePrivilegesVerified : null,
+          excessiveGrantsFound: excessiveTablePrivilegesFound ? true : null,
+          excessivePrivilegeDetails: null
+        },
+        rlsPolicies: {
+          status: allTablesPresent && (!allTablesHaveRls || !allPoliciesCoverRequiredOperations)
+            ? "failed"
+            : "not_verified",
+          enabledOnAllTables: allTablesPresent ? allTablesHaveRls : null,
+          roleScopedOperationCoverage: allTablesPresent ? allPoliciesCoverRequiredOperations : null,
+          authorizationSemantics: "not_verified",
+          publicRolePoliciesFound: tableRows.some((table) => table.has_public_policy) || null,
+          unrestrictedServerPolicies: null,
+          policyEvidence: null
+        },
+        otherRoleGrants: {
+          status: "not_verified",
+          unexpectedGrants: null
+        }
+      };
+      throw error;
+    }
+
     try {
       result = await pool.query({
         text: READINESS_QUERY,
         values: [REQUIRED_TABLES],
         query_timeout: QUERY_TIMEOUT_MS
       });
+    } catch {
+      rejectUnverifiedDiagnostic("role_security", "role_security_query_failed");
+    }
+
+    role = Array.isArray(result?.rows) ? result.rows[0] : null;
+    if (!role) {
+      rejectUnverifiedDiagnostic("role_security", "role_security_result_unavailable");
+    }
+
+    let privilegeResult;
+    try {
       privilegeResult = await pool.query({
         text: PRIVILEGE_DIAGNOSTICS_QUERY,
         query_timeout: QUERY_TIMEOUT_MS
       });
     } catch {
-      const error = new Error("Bills PostgreSQL security controls could not be verified.");
-      error.code = "security_check_failed";
-      throw error;
+      rejectUnverifiedDiagnostic(
+        "privilege_diagnostics",
+        "privilege_diagnostics_query_failed",
+        role,
+        result.rows
+      );
+    }
+    if (!Array.isArray(privilegeResult?.rows) || !privilegeResult.rows[0]) {
+      rejectUnverifiedDiagnostic(
+        "privilege_diagnostics",
+        "privilege_diagnostics_result_unavailable",
+        role,
+        result.rows
+      );
     }
 
-    const role = result.rows[0];
-    const privilegeDiagnostics = privilegeResult.rows[0] || {};
+    const privilegeDiagnostics = privilegeResult.rows[0];
     const tables = new Map(
       result.rows
         .filter((row) => row.table_name)
@@ -1223,13 +1405,17 @@ function createPostgresPersistence(connectionString, PoolConstructor, environmen
         connectionFailure: null
       };
     } catch (error) {
+      const diagnosticFailure = error.diagnosticFailure || (!error.readinessChecks
+        ? { stage: "security_evaluation", code: "security_evaluation_failed" }
+        : null);
       return {
         status: "security_failed",
         configured: true,
         connected: true,
         securityStatus: "failed",
-        securityFailure: error.code || "security_check_failed",
+        securityFailure: error.code || diagnosticFailure?.code || "security_evaluation_failed",
         connectionFailure: null,
+        diagnosticFailure,
         checks: error.readinessChecks || null
       };
     }
