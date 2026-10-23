@@ -1,6 +1,7 @@
 "use strict";
 
 const fs = require("fs");
+const crypto = require("crypto");
 const tls = require("tls");
 const { PLATFORM_FEE_RULES } = require("./platform-fees");
 
@@ -17,6 +18,8 @@ const CONNECTION_TIMEOUT_MS = 5000;
 const QUERY_TIMEOUT_MS = 5000;
 const POSTGRES_CA_CONFIGURATION_ERROR = "Bills PostgreSQL TLS configuration is invalid. Set exactly one of BILLS_POSTGRES_CA (PEM contents) or BILLS_POSTGRES_CA_FILE (mounted PEM path) to a valid Supabase root CA certificate.";
 const POSTGRES_CA_CONFIGURATION_ERROR_CODE = "BILLS_POSTGRES_CA_CONFIGURATION";
+const GUEST_ACCESS_HASH_KEY = "__guest_order_access_sha256";
+const GUEST_ORDER_SECRET_BYTES = 32;
 
 const CONNECTION_READINESS_QUERY = "SELECT 1 AS ready";
 const SERVICES = Object.freeze(Object.fromEntries(
@@ -186,6 +189,74 @@ function validateMetadata(value, field = "metadata") {
     throw persistenceError(`${field} must contain valid JSON data.`, "invalid_input");
   }
   return value;
+}
+
+function createGuestOrderSecret() {
+  return crypto.randomBytes(GUEST_ORDER_SECRET_BYTES).toString("base64url");
+}
+
+function validateGuestOrderSecret(value, { optional = false } = {}) {
+  if (optional && (value === null || value === undefined || value === "")) return null;
+  if (typeof value !== "string"
+    || !/^[A-Za-z0-9_-]{43}$/.test(value)
+    || Buffer.from(value, "base64url").length !== GUEST_ORDER_SECRET_BYTES
+    || Buffer.from(value, "base64url").toString("base64url") !== value) {
+    throw persistenceError("A valid guest-order access secret is required.", "invalid_guest_order_secret");
+  }
+  return value;
+}
+
+function hashGuestOrderSecret(secret) {
+  return crypto.createHash("sha256").update(secret).digest("hex");
+}
+
+function getOrderMetadata(order) {
+  let metadata = order?.metadata;
+  if (typeof metadata === "string") {
+    try {
+      metadata = JSON.parse(metadata);
+    } catch {
+      throw persistenceError("Stored order metadata is invalid.", "database_unavailable");
+    }
+  }
+  if (!metadata || typeof metadata !== "object" || Array.isArray(metadata)) return {};
+  return metadata;
+}
+
+function verifyGuestOrderSecret(order, secret) {
+  if (!order || order.customer_id !== null) return false;
+  let validated;
+  try {
+    validated = validateGuestOrderSecret(secret);
+  } catch {
+    return false;
+  }
+  const storedHashValue = String(getOrderMetadata(order)[GUEST_ACCESS_HASH_KEY] || "");
+  if (!/^[a-f0-9]{64}$/.test(storedHashValue)) return false;
+  const storedHash = Buffer.from(storedHashValue, "hex");
+  const suppliedHash = Buffer.from(hashGuestOrderSecret(validated), "hex");
+  return storedHash.length === suppliedHash.length
+    && crypto.timingSafeEqual(storedHash, suppliedHash);
+}
+
+function sanitizeOrder(order) {
+  if (!order) return order;
+  const metadata = { ...getOrderMetadata(order) };
+  delete metadata[GUEST_ACCESS_HASH_KEY];
+  return { ...order, metadata };
+}
+
+function authorizeOrder(order, authorization) {
+  if (!order || !authorization || typeof authorization !== "object" || Array.isArray(authorization)) {
+    return false;
+  }
+  const customerId = validateText(authorization.customerId, "customerId", { optional: true });
+  const guestOrderSecret = validateGuestOrderSecret(authorization.guestOrderSecret, { optional: true });
+  if (customerId && guestOrderSecret) {
+    throw persistenceError("Provide customer authorization or guest-order authorization, not both.", "invalid_input");
+  }
+  if (order.customer_id !== null) return Boolean(customerId && customerId === order.customer_id);
+  return Boolean(guestOrderSecret && verifyGuestOrderSecret(order, guestOrderSecret));
 }
 
 function validateCurrency(serviceType, currency) {
@@ -384,20 +455,20 @@ const READINESS_QUERY = `
 
 function normalizeConnectionString(connectionString) {
   if (typeof connectionString !== "string" || !connectionString.trim()) {
-    throw new Error("BILLS_POSTGRES_URL is not configured.");
+    throw new Error("BILLS_RUNTIME_DATABASE_URL is not configured.");
   }
 
   let parsed;
   try {
     parsed = new URL(connectionString);
   } catch {
-    throw new Error("BILLS_POSTGRES_URL must be a valid PostgreSQL connection URL.");
+    throw new Error("BILLS_RUNTIME_DATABASE_URL must be a valid PostgreSQL connection URL.");
   }
   if (!["postgres:", "postgresql:"].includes(parsed.protocol)
     || !parsed.hostname
     || !parsed.username
     || !parsed.password) {
-    throw new Error("BILLS_POSTGRES_URL must include a PostgreSQL host and server-side credentials.");
+    throw new Error("BILLS_RUNTIME_DATABASE_URL must include a PostgreSQL host and server-side credentials.");
   }
 
   for (const parameter of ["sslmode", "sslrootcert", "sslcert", "sslkey", "sslpassword"]) {
@@ -855,6 +926,13 @@ function createPostgresPersistence(connectionString, PoolConstructor, environmen
     const quoteReference = validateText(input.quoteReference, "quoteReference");
     const requestedCustomerId = validateText(input.customerId, "customerId", { optional: true });
     const metadata = validateMetadata(input.metadata);
+    if (Object.prototype.hasOwnProperty.call(metadata, GUEST_ACCESS_HASH_KEY)) {
+      throw persistenceError("Order metadata contains a reserved field.", "invalid_input");
+    }
+    const requestedGuestOrderSecret = validateGuestOrderSecret(input.guestOrderSecret, { optional: true });
+    if (requestedCustomerId && requestedGuestOrderSecret) {
+      throw persistenceError("Customer orders must not include guest-order authorization.", "invalid_input");
+    }
     return withTransaction(async (transactionQuery) => {
       const existingResult = await transactionQuery(`
         SELECT * FROM public.bill_orders
@@ -872,10 +950,14 @@ function createPostgresPersistence(connectionString, PoolConstructor, environmen
         if (!quote
           || existing.quote_id !== quote.id
           || existing.customer_id !== quote.customer_id
-          || (requestedCustomerId && requestedCustomerId !== existing.customer_id)) {
+          || requestedCustomerId !== existing.customer_id
+          || !authorizeOrder(existing, {
+            customerId: requestedCustomerId,
+            guestOrderSecret: requestedGuestOrderSecret
+          })) {
           throw persistenceError("Order reference conflicts with an existing order.", "reference_conflict");
         }
-        return existing;
+        return sanitizeOrder(existing);
       }
 
       const quoteResult = await transactionQuery(`
@@ -894,16 +976,23 @@ function createPostgresPersistence(connectionString, PoolConstructor, environmen
         const existing = concurrentOrderResult.rows[0];
         if (existing.quote_id !== quote.id
           || existing.customer_id !== quote.customer_id
-          || (requestedCustomerId && requestedCustomerId !== existing.customer_id)) {
+          || requestedCustomerId !== existing.customer_id
+          || !authorizeOrder(existing, {
+            customerId: requestedCustomerId,
+            guestOrderSecret: requestedGuestOrderSecret
+          })) {
           throw persistenceError("Order reference conflicts with an existing order.", "reference_conflict");
         }
-        return existing;
+        return sanitizeOrder(existing);
       }
       if (quote.status !== "quoted" || new Date(quote.expires_at).getTime() <= Date.now()) {
         throw persistenceError("Fee quote is expired or has already been used.", "quote_unavailable");
       }
-      if (requestedCustomerId && requestedCustomerId !== quote.customer_id) {
+      if (requestedCustomerId !== quote.customer_id) {
         throw persistenceError("Fee quote belongs to a different customer.", "quote_customer_mismatch");
+      }
+      if (quote.customer_id === null && requestedGuestOrderSecret) {
+        throw persistenceError("Guest-order secrets are generated by the server.", "invalid_guest_order_secret");
       }
       if (!Object.prototype.hasOwnProperty.call(SERVICES, quote.service_type)
         || quote.currency !== SERVICES[quote.service_type]
@@ -922,6 +1011,10 @@ function createPostgresPersistence(connectionString, PoolConstructor, environmen
       if (!Number.isSafeInteger(totalAmountMinor)) {
         throw persistenceError("Fee quote total is outside the supported range.", "quote_invalid");
       }
+      const guestOrderSecret = quote.customer_id === null ? createGuestOrderSecret() : null;
+      const orderMetadata = guestOrderSecret
+        ? { ...metadata, [GUEST_ACCESS_HASH_KEY]: hashGuestOrderSecret(guestOrderSecret) }
+        : metadata;
 
       const consumed = await transactionQuery(`
         UPDATE public.bill_fee_quotes
@@ -956,33 +1049,46 @@ function createPostgresPersistence(connectionString, PoolConstructor, environmen
         quote.provider_fee_minor,
         totalAmountMinor,
         quote.currency,
-        JSON.stringify(metadata)
+        JSON.stringify(orderMetadata)
       ]);
       if (!result.rows[0]) {
         throw persistenceError("Database did not return the created order.", "write_not_confirmed");
       }
-      return result.rows[0];
+      return {
+        ...sanitizeOrder(result.rows[0]),
+        ...(guestOrderSecret ? { guestOrderSecret } : {})
+      };
     });
   }
 
-  async function getOrderByReference(orderReference) {
+  async function getOrderByReference(orderReference, authorization) {
     const reference = validateText(orderReference, "orderReference");
     const result = await query(`
       SELECT * FROM public.bill_orders
       WHERE order_reference = $1
       LIMIT 1
     `, [reference]);
-    return result.rows[0] || null;
+    const order = result.rows[0] || null;
+    if (!order) return null;
+    if (!authorizeOrder(order, authorization)) {
+      throw persistenceError("Order was not found or access was denied.", "order_not_found");
+    }
+    return sanitizeOrder(order);
   }
 
-  async function getOrderByPaymentReference(paymentReference) {
+  async function getOrderByPaymentReference(paymentReference, authorization) {
     const reference = validateText(paymentReference, "paymentReference");
     const result = await query(`
       SELECT * FROM public.bill_orders
       WHERE payment_reference = $1
       LIMIT 1
     `, [reference]);
-    return result.rows[0] || null;
+    const order = result.rows[0] || null;
+    if (!order) return null;
+    if (!authorizeOrder(order, authorization)) {
+      throw persistenceError("Order was not found or access was denied.", "order_not_found");
+    }
+    return sanitizeOrder(order);
   }
 
   async function assertPaymentReferenceAvailable(transactionQuery, paymentReference, orderReference) {
@@ -1061,7 +1167,7 @@ function createPostgresPersistence(connectionString, PoolConstructor, environmen
         failureReason
       ]);
       if (!result.rows[0]) throw persistenceError("Order payment state changed before this update.", "state_conflict");
-      return result.rows[0];
+      return sanitizeOrder(result.rows[0]);
     });
   }
 
@@ -1120,7 +1226,7 @@ function createPostgresPersistence(connectionString, PoolConstructor, environmen
         failureReason
       ]);
       if (!result.rows[0]) throw persistenceError("Order fulfilment state changed before this update.", "state_conflict");
-      return result.rows[0];
+      return sanitizeOrder(result.rows[0]);
     });
   }
 

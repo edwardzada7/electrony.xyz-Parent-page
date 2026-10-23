@@ -19,6 +19,9 @@ const ALLOWED_SERVICES = ["electricity", "airtime", "data", "bills"];
 const AUTH_RATE_LIMITS = new Map();
 const FEE_QUOTES = new Map();
 const TOKEN_LIFETIME_SECONDS = 60 * 60;
+const GUEST_ORDER_SECRET_BYTES = 32;
+const PAYMENT_OPERATIONS_ENABLED = false;
+const BILL_FULFILLMENT_ENABLED = false;
 const scrypt = promisify(crypto.scrypt);
 
 function readUsers() {
@@ -66,6 +69,33 @@ function authenticateRequest(request) {
   } catch {
     return null;
   }
+}
+
+function createGuestOrderSecret() {
+  return crypto.randomBytes(GUEST_ORDER_SECRET_BYTES).toString("base64url");
+}
+
+function hashGuestOrderSecret(secret) {
+  return crypto.createHash("sha256").update(secret).digest("hex");
+}
+
+function canAccessTransaction(transaction, user, guestOrderSecret) {
+  if (transaction.userId !== null && transaction.userId !== undefined) {
+    return user?.id === transaction.userId;
+  }
+  if (typeof guestOrderSecret !== "string"
+    || !/^[A-Za-z0-9_-]{43}$/.test(guestOrderSecret)
+    || Buffer.from(guestOrderSecret, "base64url").length !== GUEST_ORDER_SECRET_BYTES
+    || Buffer.from(guestOrderSecret, "base64url").toString("base64url") !== guestOrderSecret) {
+    return false;
+  }
+
+  const storedHashValue = String(transaction.guestAccessHash || "");
+  if (!/^[a-f0-9]{64}$/.test(storedHashValue)) return false;
+  const storedHash = Buffer.from(storedHashValue, "hex");
+  const suppliedHash = Buffer.from(hashGuestOrderSecret(guestOrderSecret), "hex");
+  return storedHash.length === suppliedHash.length
+    && crypto.timingSafeEqual(storedHash, suppliedHash);
 }
 
 function enforceAuthRateLimit(request) {
@@ -183,7 +213,7 @@ function loadEnvFromFiles() {
 
 loadEnvFromFiles();
 
-const postgresPersistence = createPostgresPersistence(readEnv("BILLS_POSTGRES_URL"));
+const postgresPersistence = createPostgresPersistence(readEnv("BILLS_RUNTIME_DATABASE_URL"));
 const configuredStorePath = readEnv("BILLS_DATABASE_URL") || path.join(os.homedir(), ".electrony-bills", "transactions.json");
 if (/^[a-z][a-z\d+.-]*:\/\//i.test(configuredStorePath)) {
   throw new Error("BILLS_DATABASE_URL must be a local JSON file path; this backend does not support database URLs.");
@@ -799,6 +829,10 @@ async function processVendingForTransaction(transaction) {
 }
 
 async function fulfillPaidTransaction(reference) {
+  if (!BILL_FULFILLMENT_ENABLED) {
+    throw new Error("Bill fulfilment remains disabled pending verified payment, database authorization, and provider readiness.");
+  }
+
   const current = getTransaction(reference);
   if (!current || current.fulfillmentStartedAt) return current;
 
@@ -989,6 +1023,14 @@ function validateServiceRequest(payload) {
 }
 
 async function handleWebhook(request, response) {
+  if (!PAYMENT_OPERATIONS_ENABLED) {
+    sendJson(response, 503, {
+      ok: false,
+      error: "Webhook processing remains disabled until database authorization and payment verification are ready."
+    });
+    return;
+  }
+
   try {
     const rawBody = await readRawBody(request);
     const signature = request.headers["x-monnify-signature"] || request.headers["X-Monnify-Signature"] || request.headers["x-monnify-signature"] || "";
@@ -1099,7 +1141,7 @@ async function handleRequest(request, response) {
     }
     response.setHeader("Access-Control-Allow-Origin", origin);
     response.setHeader("Access-Control-Allow-Methods", "GET,POST,OPTIONS");
-    response.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization, X-Requested-With, x-monnify-signature");
+    response.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization, X-Requested-With, X-Guest-Order-Secret, x-monnify-signature");
     response.setHeader("Vary", "Origin");
   }
 
@@ -1237,10 +1279,11 @@ async function handleRequest(request, response) {
   }
 
   if (request.method === "POST"
+    && !PAYMENT_OPERATIONS_ENABLED
     && ["/api/payments/session", "/api/payments/verify", "/api/payments/webhook"].includes(url.pathname)) {
     sendJson(response, 503, {
       ok: false,
-      error: "Payment operations are disabled until authoritative Monnify verification and a verified vending-provider contract are implemented."
+      error: "Payment operations are disabled until database authorization/readiness, authoritative Monnify verification, and a verified vending-provider contract are implemented."
     });
     return;
   }
@@ -1376,10 +1419,11 @@ async function handleRequest(request, response) {
         return;
       }
       const user = authenticateRequest(request);
+      const guestOrderSecret = user ? null : createGuestOrderSecret();
 
       const existing = getTransaction(reference);
       if (existing && existing.status !== "cancelled") {
-        if ((existing.userId || null) !== (user?.id || null)) {
+        if (!canAccessTransaction(existing, user, request.headers["x-guest-order-secret"])) {
           sendJson(response, 403, { ok: false, error: "This transaction reference belongs to another customer." });
           return;
         }
@@ -1418,7 +1462,8 @@ async function handleRequest(request, response) {
         providerFeeCurrency: quote.currency,
         totalAmountMinor: quote.totalBeforeProviderFeesMinor,
         totalAmount: quote.totalBeforeProviderFeesMinor / 100,
-        userId: user?.id || null,
+        userId: user ? user.id : null,
+        ...(guestOrderSecret ? { guestAccessHash: hashGuestOrderSecret(guestOrderSecret) } : {}),
         status: "created",
         paymentStatus: "not_started",
         fulfillmentStatus: "not_started",
@@ -1466,6 +1511,7 @@ async function handleRequest(request, response) {
           ok: false,
           error: "Monnify is not configured.",
           reference,
+          ...(guestOrderSecret ? { guestOrderSecret } : {}),
           requiredConfig: missing,
           note: "Set the required MONNIFY_* credentials and BILLS_PAYMENT_REDIRECT_URL/BILLS_WEBHOOK_BASE_URL values before processing transactions."
         });
@@ -1498,6 +1544,7 @@ async function handleRequest(request, response) {
           mode: process.env.NODE_ENV === "production" ? "monnify-production" : "monnify-sandbox",
           checkoutUrl: result.checkoutUrl,
           monnifyReference: result.monnifyReference,
+          ...(guestOrderSecret ? { guestOrderSecret } : {}),
           note: "Only the payment redirect URL is exposed to the browser. Monnify credentials remain server-side only."
         });
       } catch (error) {
@@ -1513,7 +1560,8 @@ async function handleRequest(request, response) {
         sendJson(response, 502, {
           ok: false,
           error: "Unable to create a payment session with the configured provider.",
-          reference
+          reference,
+          ...(guestOrderSecret ? { guestOrderSecret } : {})
         });
       }
       return;
@@ -1540,7 +1588,7 @@ async function handleRequest(request, response) {
       }
       const transactionReference = transaction.reference;
       const user = authenticateRequest(request);
-      if (transaction.userId && transaction.userId !== user?.id) {
+      if (!canAccessTransaction(transaction, user, request.headers["x-guest-order-secret"])) {
         sendJson(response, 403, { ok: false, error: "You do not have access to this transaction." });
         return;
       }
@@ -1583,7 +1631,7 @@ async function handleRequest(request, response) {
       return;
     }
     const user = authenticateRequest(request);
-    if (transaction.userId && transaction.userId !== user?.id) {
+    if (!canAccessTransaction(transaction, user, request.headers["x-guest-order-secret"])) {
       sendJson(response, 403, { ok: false, error: "You do not have access to this transaction." });
       return;
     }

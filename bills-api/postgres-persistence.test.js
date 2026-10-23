@@ -1,6 +1,7 @@
 "use strict";
 
 const assert = require("node:assert/strict");
+const crypto = require("node:crypto");
 const fs = require("node:fs");
 const os = require("node:os");
 const path = require("node:path");
@@ -121,6 +122,10 @@ test("unconfigured persistence reports that no connection was checked", async ()
     securityFailure: null,
     connectionFailure: null
   });
+  await assert.rejects(
+    persistence.createFeeQuote({}),
+    /Bills PostgreSQL persistence is not configured/
+  );
 });
 
 test("invalid configured URLs do not prevent safe health reporting", async () => {
@@ -533,22 +538,50 @@ test("order creation consumes the quote and inserts the exact quoted totals in o
 
 test("order retries return the existing order rather than creating another", async () => {
   const captured = {};
+  const guestOrderSecret = Buffer.alloc(32).toString("base64url");
+  const guestAccessHash = crypto.createHash("sha256").update(guestOrderSecret).digest("hex");
   const persistence = configuredPersistence([
     { rows: [] },
     { rows: [{
       order_reference: "ORDER-1",
       quote_id: "quote-id",
-      customer_id: null
+      customer_id: null,
+      metadata: { __guest_order_access_sha256: guestAccessHash }
+    }] },
+    { rows: [{ id: "quote-id", customer_id: null }] }
+  ], captured);
+  const order = await persistence.createOrderFromQuote({
+    orderReference: "ORDER-1",
+    quoteReference: "QUOTE-1",
+    guestOrderSecret
+  });
+
+  assert.equal(order.order_reference, "ORDER-1");
+  assert.deepEqual(order.metadata, {});
+  assert.equal(captured.transactionQueries.some(({ text }) => text.includes("INSERT INTO public.bill_orders")), false);
+});
+
+test("order retries do not authorize guest orders by reference alone", async () => {
+  const captured = {};
+  const persistence = configuredPersistence([
+    { rows: [] },
+    { rows: [{
+      order_reference: "ORDER-1",
+      quote_id: "quote-id",
+      customer_id: null,
+      metadata: {}
     }] },
     { rows: [{ id: "quote-id", customer_id: null }] },
     { rows: [] }
   ], captured);
-  const order = await persistence.createOrderFromQuote({
-    orderReference: "ORDER-1",
-    quoteReference: "QUOTE-1"
-  });
 
-  assert.equal(order.order_reference, "ORDER-1");
+  await assert.rejects(
+    persistence.createOrderFromQuote({
+      orderReference: "ORDER-1",
+      quoteReference: "QUOTE-1"
+    }),
+    (error) => error.code === "reference_conflict"
+  );
   assert.equal(captured.transactionQueries.some(({ text }) => text.includes("INSERT INTO public.bill_orders")), false);
 });
 

@@ -1,3 +1,5 @@
+const BILL_PAYMENT_OPERATIONS_ENABLED = false;
+
 const serviceCatalog = {
   electricity: {
     id: "electricity",
@@ -176,10 +178,25 @@ const fetchBillingApi = async (path, options = {}) => {
   }
 
   if (!response.ok) {
-    throw new Error(payload.error || payload.message || `Billing API request failed with status ${response.status}.`);
+    const error = new Error(payload.error || payload.message || `Billing API request failed with status ${response.status}.`);
+    error.apiResponse = payload;
+    throw error;
   }
 
   return payload;
+};
+
+const guestOrderSecretStorageKey = (reference) => `electrony-bills-guest-order:${reference}`;
+
+const getGuestOrderHeaders = (reference) => {
+  const secret = window.sessionStorage.getItem(guestOrderSecretStorageKey(reference));
+  return secret ? { "X-Guest-Order-Secret": secret } : {};
+};
+
+const saveGuestOrderSecret = (reference, secret) => {
+  if (typeof secret === "string" && secret) {
+    window.sessionStorage.setItem(guestOrderSecretStorageKey(reference), secret);
+  }
 };
 
 const normalizePhone = (value) => String(value || "").replace(/\s+/g, "").trim();
@@ -586,7 +603,7 @@ function renderCheckoutPanel() {
   panel.classList.remove("hidden");
   const { serviceId, summary, reference, amount, status, quote } = state.order;
   const service = serviceCatalog[serviceId];
-  const paymentReady = quote.providerFeeStatus === "quoted";
+  const paymentReady = BILL_PAYMENT_OPERATIONS_ENABLED && quote.providerFeeStatus === "quoted";
 
   panel.innerHTML = `
     <div class="checkout-header">
@@ -594,7 +611,7 @@ function renderCheckoutPanel() {
         <p class="eyebrow eyebrow-soft">Order review</p>
         <h3>${service.title}</h3>
       </div>
-      <span class="status-badge ${status === "paid" ? "success" : paymentReady ? "pending" : "unavailable"}">${status === "paid" ? "Paid" : paymentReady ? "Awaiting payment" : "Provider quote required"}</span>
+      <span class="status-badge ${status === "paid" ? "success" : paymentReady ? "pending" : "unavailable"}">${status === "paid" ? "Paid" : paymentReady ? "Awaiting payment" : BILL_PAYMENT_OPERATIONS_ENABLED ? "Provider quote required" : "Payments disabled"}</span>
     </div>
     <div class="review-grid">
       ${summary.map((line) => `<div class="review-item"><span>${escapeHtml(line.label)}</span><strong>${escapeHtml(line.value)}</strong></div>`).join("")}
@@ -603,7 +620,7 @@ function renderCheckoutPanel() {
       <div class="review-item"><span>Provider fee</span><strong>${quote.providerFeeMinor === null ? "Not quoted" : formatMinorCurrency(quote.providerFeeMinor, quote.currency)}</strong></div>
       <div class="review-item review-total"><span>Total before any unquoted provider fee</span><strong>${formatMinorCurrency(quote.totalBeforeProviderFeesMinor, quote.currency)}</strong></div>
     </div>
-    ${paymentReady ? "" : '<p class="checkout-notice">Payment is unavailable until the configured service provider can disclose any applicable provider fee. No payment will be taken.</p>'}
+    ${paymentReady ? "" : `<p class="checkout-notice">${BILL_PAYMENT_OPERATIONS_ENABLED ? "Payment is unavailable until the configured service provider can disclose any applicable provider fee. No payment will be taken." : "Payment remains disabled until database authorization, payment verification, and provider readiness are verified. No payment will be taken."}</p>`}
     <div class="checkout-meta">
       <span>Reference</span>
       <strong>${escapeHtml(reference)}</strong>
@@ -622,7 +639,9 @@ function renderCheckoutPanel() {
     if (!state.order) return;
 
     try {
-      const response = await fetchBillingApi(`/api/payments/status?reference=${encodeURIComponent(state.order.reference)}`);
+      const response = await fetchBillingApi(`/api/payments/status?reference=${encodeURIComponent(state.order.reference)}`, {
+        headers: getGuestOrderHeaders(state.order.reference)
+      });
       displayPaymentOutcome(response, response.reference || state.order.reference);
     } catch (error) {
       displayTransactionResult("Status check failed.", error.message, "error");
@@ -792,11 +811,13 @@ async function handlePurchaseSubmission() {
   };
 
   renderCheckoutPanel();
-  const paymentReady = feeQuote.quote.providerFeeStatus === "quoted";
+  const paymentReady = BILL_PAYMENT_OPERATIONS_ENABLED && feeQuote.quote.providerFeeStatus === "quoted";
   renderInlineMessage(
     paymentReady
       ? "Order review ready. Confirm payment to continue."
-      : "Order review is available, but payment is blocked until the provider supplies a complete fee quote.",
+      : BILL_PAYMENT_OPERATIONS_ENABLED
+        ? "Order review is available, but payment is blocked until the provider supplies a complete fee quote."
+        : "Order review is available, but payment remains disabled until database authorization, payment verification, and provider readiness are verified.",
     paymentReady ? "success" : "error"
   );
 }
@@ -816,6 +837,10 @@ function renderInlineMessage(message, type = "info") {
 
 async function completePurchase() {
   if (!state.order) return;
+  if (!BILL_PAYMENT_OPERATIONS_ENABLED) {
+    displayTransactionResult("Payment unavailable.", "Payment remains disabled until database authorization, payment verification, and provider readiness are verified.", "error");
+    return;
+  }
   if (state.order.quote.providerFeeStatus !== "quoted") {
     displayTransactionResult("Payment unavailable.", "The vending provider has not supplied a verified fee quote. No payment was created.", "error");
     return;
@@ -830,6 +855,7 @@ async function completePurchase() {
   try {
     const response = await fetchBillingApi("/api/payments/session", {
       method: "POST",
+      headers: getGuestOrderHeaders(state.order.reference),
       body: JSON.stringify({
         service: state.order.serviceId,
         reference: state.order.reference,
@@ -839,6 +865,7 @@ async function completePurchase() {
         ...state.order.customer
       })
     });
+    saveGuestOrderSecret(state.order.reference, response?.guestOrderSecret);
 
     if (!response || response.ok === false) {
       throw new Error(response?.error || "Unable to create the payment session.");
@@ -855,6 +882,7 @@ async function completePurchase() {
 
     displayTransactionResult("Payment session created.", "Awaiting payment confirmation from the billing backend.", "pending");
   } catch (error) {
+    saveGuestOrderSecret(state.order.reference, error.apiResponse?.guestOrderSecret);
     displayTransactionResult("Payment setup failed.", error.message, "error");
   } finally {
     if (payButton) {
@@ -880,6 +908,7 @@ async function verifyReturnedPayment() {
     displayTransactionResult("Verifying payment.", `Checking reference ${reference} with the billing backend.`, "pending");
     const response = await fetchBillingApi("/api/payments/verify", {
       method: "POST",
+      headers: getGuestOrderHeaders(reference),
       body: JSON.stringify({ reference })
     });
     displayPaymentOutcome(response, response.reference || reference);
