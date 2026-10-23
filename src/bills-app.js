@@ -115,6 +115,18 @@ const state = {
   feeRequestId: 0
 };
 
+try {
+  const legacyGuestSecretPrefix = "electrony-bills-guest-order:";
+  for (let index = window.sessionStorage.length - 1; index >= 0; index -= 1) {
+    const key = window.sessionStorage.key(index);
+    if (key?.startsWith(legacyGuestSecretPrefix)) {
+      window.sessionStorage.removeItem(key);
+    }
+  }
+} catch {
+  console.error("Bills could not clear a legacy guest authorization from browser storage.");
+}
+
 const formatCurrency = (value) => new Intl.NumberFormat("en-NG", {
   style: "currency",
   currency: "NGN",
@@ -163,6 +175,7 @@ const fetchBillingApi = async (path, options = {}) => {
   const baseUrl = getBillsApiBaseUrl();
   const response = await fetch(`${baseUrl}/${String(path).replace(/^\/+/, "")}`, {
     ...options,
+    credentials: "include",
     headers: {
       "Content-Type": "application/json",
       ...(state.authToken ? { Authorization: `Bearer ${state.authToken}` } : {}),
@@ -184,19 +197,6 @@ const fetchBillingApi = async (path, options = {}) => {
   }
 
   return payload;
-};
-
-const guestOrderSecretStorageKey = (reference) => `electrony-bills-guest-order:${reference}`;
-
-const getGuestOrderHeaders = (reference) => {
-  const secret = window.sessionStorage.getItem(guestOrderSecretStorageKey(reference));
-  return secret ? { "X-Guest-Order-Secret": secret } : {};
-};
-
-const saveGuestOrderSecret = (reference, secret) => {
-  if (typeof secret === "string" && secret) {
-    window.sessionStorage.setItem(guestOrderSecretStorageKey(reference), secret);
-  }
 };
 
 const normalizePhone = (value) => String(value || "").replace(/\s+/g, "").trim();
@@ -639,9 +639,7 @@ function renderCheckoutPanel() {
     if (!state.order) return;
 
     try {
-      const response = await fetchBillingApi(`/api/payments/status?reference=${encodeURIComponent(state.order.reference)}`, {
-        headers: getGuestOrderHeaders(state.order.reference)
-      });
+      const response = await fetchBillingApi(`/api/payments/status?reference=${encodeURIComponent(state.order.reference)}`);
       displayPaymentOutcome(response, response.reference || state.order.reference);
     } catch (error) {
       displayTransactionResult("Status check failed.", error.message, "error");
@@ -855,7 +853,6 @@ async function completePurchase() {
   try {
     const response = await fetchBillingApi("/api/payments/session", {
       method: "POST",
-      headers: getGuestOrderHeaders(state.order.reference),
       body: JSON.stringify({
         service: state.order.serviceId,
         reference: state.order.reference,
@@ -865,8 +862,6 @@ async function completePurchase() {
         ...state.order.customer
       })
     });
-    saveGuestOrderSecret(state.order.reference, response?.guestOrderSecret);
-
     if (!response || response.ok === false) {
       throw new Error(response?.error || "Unable to create the payment session.");
     }
@@ -882,7 +877,6 @@ async function completePurchase() {
 
     displayTransactionResult("Payment session created.", "Awaiting payment confirmation from the billing backend.", "pending");
   } catch (error) {
-    saveGuestOrderSecret(state.order.reference, error.apiResponse?.guestOrderSecret);
     displayTransactionResult("Payment setup failed.", error.message, "error");
   } finally {
     if (payButton) {
@@ -908,7 +902,6 @@ async function verifyReturnedPayment() {
     displayTransactionResult("Verifying payment.", `Checking reference ${reference} with the billing backend.`, "pending");
     const response = await fetchBillingApi("/api/payments/verify", {
       method: "POST",
-      headers: getGuestOrderHeaders(reference),
       body: JSON.stringify({ reference })
     });
     displayPaymentOutcome(response, response.reference || reference);

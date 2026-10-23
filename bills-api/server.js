@@ -79,6 +79,32 @@ function hashGuestOrderSecret(secret) {
   return crypto.createHash("sha256").update(secret).digest("hex");
 }
 
+function guestOrderCookieName(reference) {
+  if (!/^ELECBILLS-\d{8}-(?:[A-Z0-9]{6}|[A-F0-9]{32})$/.test(reference)) return "";
+  return `__Secure-electrony-bills-guest-${reference}`;
+}
+
+function getGuestOrderSecretFromRequest(request, reference) {
+  const cookieName = guestOrderCookieName(reference);
+  if (!cookieName || typeof request.headers.cookie !== "string") return "";
+  for (const part of request.headers.cookie.split(";")) {
+    const separator = part.indexOf("=");
+    if (separator < 0 || part.slice(0, separator).trim() !== cookieName) continue;
+    return part.slice(separator + 1).trim();
+  }
+  return "";
+}
+
+function setGuestOrderSecretCookie(response, reference, secret) {
+  const cookieName = guestOrderCookieName(reference);
+  if (!cookieName) throw new Error("Cannot issue guest authorization for an invalid transaction reference.");
+  response.setHeader("Cache-Control", "no-store");
+  response.setHeader(
+    "Set-Cookie",
+    `${cookieName}=${secret}; Path=/api/payments/; HttpOnly; Secure; SameSite=None; Max-Age=604800`
+  );
+}
+
 function canAccessTransaction(transaction, user, guestOrderSecret) {
   if (transaction.userId !== null && transaction.userId !== undefined) {
     return user?.id === transaction.userId;
@@ -1141,7 +1167,8 @@ async function handleRequest(request, response) {
     }
     response.setHeader("Access-Control-Allow-Origin", origin);
     response.setHeader("Access-Control-Allow-Methods", "GET,POST,OPTIONS");
-    response.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization, X-Requested-With, X-Guest-Order-Secret, x-monnify-signature");
+    response.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization, X-Requested-With, x-monnify-signature");
+    response.setHeader("Access-Control-Allow-Credentials", "true");
     response.setHeader("Vary", "Origin");
   }
 
@@ -1186,22 +1213,32 @@ async function handleRequest(request, response) {
           status: databaseReadiness.connected ? "not_verified" : "not_checked",
           exists: false,
           connectedAsExpectedRole: false,
-          leastPrivilegeVerified: false
+          leastPrivilegeVerified: false,
+          excessivePrivilegeDetails: []
         },
         tablePermissions: databaseSecurityChecks.tablePermissions || {
           status: databaseReadiness.connected ? "not_verified" : "not_checked",
           requiredGrantsVerified: false,
-          excessiveGrantsFound: null
+          excessiveGrantsFound: null,
+          excessivePrivilegeDetails: []
         },
         rlsPolicies: databaseSecurityChecks.rlsPolicies || {
           status: databaseReadiness.connected ? "not_verified" : "not_checked",
           enabledOnAllTables: false,
           roleScopedOperationCoverage: false,
-          authorizationSemantics: "not_verified"
+          authorizationSemantics: "not_verified",
+          publicRolePoliciesFound: false,
+          unrestrictedServerPolicies: [],
+          policyEvidence: []
         },
         otherRoleGrants: databaseSecurityChecks.otherRoleGrants || {
           status: "not_checked",
           unexpectedGrants: []
+        },
+        privilegeDiagnostics: {
+          runtimeRole: databaseSecurityChecks.runtimeRole?.excessivePrivilegeDetails || [],
+          tables: databaseSecurityChecks.tablePermissions?.excessivePrivilegeDetails || [],
+          privateTableAccess: databaseSecurityChecks.otherRoleGrants?.unexpectedGrants || []
         },
         businessPersistence: {
           ready: false,
@@ -1423,7 +1460,11 @@ async function handleRequest(request, response) {
 
       const existing = getTransaction(reference);
       if (existing && existing.status !== "cancelled") {
-        if (!canAccessTransaction(existing, user, request.headers["x-guest-order-secret"])) {
+        if (!canAccessTransaction(
+          existing,
+          user,
+          getGuestOrderSecretFromRequest(request, reference)
+        )) {
           sendJson(response, 403, { ok: false, error: "This transaction reference belongs to another customer." });
           return;
         }
@@ -1506,12 +1547,12 @@ async function handleRequest(request, response) {
           requiredConfig: missing
         };
         saveTransaction(reference, updated);
+        if (guestOrderSecret) setGuestOrderSecretCookie(response, reference, guestOrderSecret);
 
         sendJson(response, 503, {
           ok: false,
           error: "Monnify is not configured.",
           reference,
-          ...(guestOrderSecret ? { guestOrderSecret } : {}),
           requiredConfig: missing,
           note: "Set the required MONNIFY_* credentials and BILLS_PAYMENT_REDIRECT_URL/BILLS_WEBHOOK_BASE_URL values before processing transactions."
         });
@@ -1531,6 +1572,7 @@ async function handleRequest(request, response) {
         };
 
         saveTransaction(reference, updated);
+        if (guestOrderSecret) setGuestOrderSecretCookie(response, reference, guestOrderSecret);
 
         sendJson(response, 200, {
           ok: true,
@@ -1544,7 +1586,6 @@ async function handleRequest(request, response) {
           mode: process.env.NODE_ENV === "production" ? "monnify-production" : "monnify-sandbox",
           checkoutUrl: result.checkoutUrl,
           monnifyReference: result.monnifyReference,
-          ...(guestOrderSecret ? { guestOrderSecret } : {}),
           note: "Only the payment redirect URL is exposed to the browser. Monnify credentials remain server-side only."
         });
       } catch (error) {
@@ -1556,12 +1597,12 @@ async function handleRequest(request, response) {
           note: error.message || "Unable to create Monnify reservation."
         };
         saveTransaction(reference, updated);
+        if (guestOrderSecret) setGuestOrderSecretCookie(response, reference, guestOrderSecret);
 
         sendJson(response, 502, {
           ok: false,
           error: "Unable to create a payment session with the configured provider.",
-          reference,
-          ...(guestOrderSecret ? { guestOrderSecret } : {})
+          reference
         });
       }
       return;
@@ -1588,7 +1629,11 @@ async function handleRequest(request, response) {
       }
       const transactionReference = transaction.reference;
       const user = authenticateRequest(request);
-      if (!canAccessTransaction(transaction, user, request.headers["x-guest-order-secret"])) {
+      if (!canAccessTransaction(
+        transaction,
+        user,
+        getGuestOrderSecretFromRequest(request, transactionReference)
+      )) {
         sendJson(response, 403, { ok: false, error: "You do not have access to this transaction." });
         return;
       }
@@ -1631,7 +1676,11 @@ async function handleRequest(request, response) {
       return;
     }
     const user = authenticateRequest(request);
-    if (!canAccessTransaction(transaction, user, request.headers["x-guest-order-secret"])) {
+    if (!canAccessTransaction(
+      transaction,
+      user,
+      getGuestOrderSecretFromRequest(request, transaction.reference)
+    )) {
       sendJson(response, 403, { ok: false, error: "You do not have access to this transaction." });
       return;
     }

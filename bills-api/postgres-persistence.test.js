@@ -43,6 +43,9 @@ function securityRows({ superuser = false, bypassesRls = false, policy = true } 
     has_excessive_sequence_privileges: false,
     anon_unexpected_privileges: [],
     authenticated_unexpected_privileges: [],
+    has_public_policy: false,
+    has_unrestricted_server_policy: false,
+    policy_evidence: [],
     has_server_policy: policy,
     has_required_policies: true,
     has_required_privileges: true
@@ -64,6 +67,9 @@ function makePersistence(responses, captured = {}, environment = {
       captured.queries.push(query);
       const response = responses.shift();
       if (response instanceof Error) throw response;
+      if (!response && String(query.text || query).includes("private_table_public_role_access")) {
+        return { rows: [{}] };
+      }
       return response;
     }
 
@@ -237,10 +243,16 @@ test("readiness separates connection success from unverified RLS authorization s
   assert.match(captured.queries[1].text, /has_schema_privilege/);
   assert.match(captured.queries[1].text, /has_sequence_privilege/);
   assert.match(captured.queries[1].text, /has_required_policies/);
+  assert.match(captured.queries[1].text, /policy_evidence/);
   assert.match(
     captured.queries[1].text,
     /relation\.relname IN \([\s\S]*'bill_payment_webhook_events'/
   );
+  assert.match(captured.queries[2].text, /excessive_column_privileges/);
+  assert.match(captured.queries[2].text, /excessive_sequence_privileges/);
+  assert.match(captured.queries[2].text, /user_function_execute_privileges/);
+  assert.match(captured.queries[2].text, /private_table_public_role_access/);
+  assert.match(captured.queries[2].text, /runtime_role_tree/);
   await persistence.close();
   assert.equal(captured.closed, true);
 });
@@ -341,6 +353,110 @@ test("missing RLS policies keep security readiness failed after connectivity suc
   assert.equal(readiness.connected, true);
   assert.equal(readiness.securityFailure, "server_role_policy_missing");
   assert.equal(readiness.checks.rlsPolicies.status, "failed");
+});
+
+test("readiness reports exact excessive table, column, sequence, schema, and function privileges", async () => {
+  const findings = {
+    excessive_table_privileges: [{
+      category: "table",
+      object: "public.bill_orders",
+      privilege: "DELETE",
+      grantedTo: "electrony_bills_runtime",
+      grantSource: "runtime",
+      grantOption: false
+    }],
+    excessive_column_privileges: [{
+      category: "column",
+      object: "public.electrony_products.price",
+      privilege: "UPDATE",
+      grantedTo: "PUBLIC",
+      grantSource: "public",
+      grantOption: false
+    }],
+    excessive_sequence_privileges: [{
+      category: "sequence",
+      object: "public.bill_orders_id_seq",
+      privilege: "UPDATE",
+      grantedTo: "bills_writer",
+      grantSource: "inherited",
+      grantOption: false
+    }],
+    excessive_schema_privileges: [{
+      category: "schema",
+      object: "app_private",
+      privilege: "USAGE",
+      grantedTo: "electrony_bills_runtime",
+      grantSource: "runtime",
+      grantOption: false
+    }],
+    user_function_execute_privileges: [{
+      category: "function",
+      object: "public.legacy_helper(integer)",
+      privilege: "EXECUTE",
+      grantedTo: "PUBLIC",
+      grantSource: "public",
+      grantOption: false
+    }],
+    private_table_public_role_access: []
+  };
+  const persistence = makePersistence([
+    { rows: [{ ready: 1 }] },
+    { rows: securityRows() },
+    { rows: [findings] }
+  ]);
+
+  const readiness = await persistence.getReadiness();
+  assert.equal(readiness.securityFailure, "runtime_role_excessive_schema_privileges");
+  assert.equal(readiness.checks.runtimeRole.leastPrivilegeVerified, false);
+  assert.deepEqual(
+    readiness.checks.tablePermissions.excessivePrivilegeDetails.map((finding) => finding.category),
+    ["table", "column", "sequence"]
+  );
+  assert.deepEqual(
+    readiness.checks.runtimeRole.excessivePrivilegeDetails.map((finding) => finding.category),
+    ["table", "column", "sequence", "schema", "function"]
+  );
+  assert.equal(
+    JSON.stringify(readiness.checks.runtimeRole.excessivePrivilegeDetails).includes("password"),
+    false
+  );
+});
+
+test("broad runtime RLS policies are reported but never verify guest authorization", async () => {
+  const rows = securityRows();
+  rows[0].has_unrestricted_server_policy = true;
+  rows[0].policy_evidence = [{
+    table: "electrony_products",
+    command: "ALL",
+    roles: ["electrony_bills_runtime"],
+    permissive: "PERMISSIVE",
+    usingRestricted: false,
+    checkRestricted: false
+  }];
+  const persistence = makePersistence([
+    { rows: [{ ready: 1 }] },
+    { rows },
+    { rows: [{
+      excessive_table_privileges: [],
+      excessive_column_privileges: [],
+      excessive_sequence_privileges: [],
+      excessive_schema_privileges: [],
+      user_function_execute_privileges: [],
+      private_table_public_role_access: [{
+        role: "anon",
+        object: "public.bill_orders",
+        privilege: "SELECT",
+        scope: "table"
+      }]
+    }] }
+  ]);
+
+  const readiness = await persistence.getReadiness();
+  assert.equal(readiness.securityFailure, "other_role_excessive_privileges");
+  assert.equal(readiness.checks.rlsPolicies.authorizationSemantics, "not_verified");
+  assert.deepEqual(readiness.checks.rlsPolicies.unrestrictedServerPolicies, ["electrony_products"]);
+  assert.equal(readiness.checks.rlsPolicies.policyEvidence[0].usingRestricted, false);
+  assert.equal(readiness.checks.otherRoleGrants.unexpectedGrants[0].role, "anon");
 });
 
 test("privileged, shared, and role-switched connections fail the role security check", async (t) => {
