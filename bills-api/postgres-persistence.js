@@ -620,15 +620,14 @@ const PRIVILEGE_DIAGNOSTICS_QUERY = `
       JOIN pg_class relation ON relation.oid = column_info.attrelid
       JOIN pg_namespace schema_info ON schema_info.oid = relation.relnamespace
       JOIN required_tables required ON required.table_name = relation.relname
-      CROSS JOIN LATERAL aclexplode(
-        COALESCE(column_info.attacl, ARRAY[]::aclitem[])
-      ) grant_info
+      CROSS JOIN LATERAL aclexplode(column_info.attacl) grant_info
       LEFT JOIN pg_roles grant_role ON grant_role.oid = grant_info.grantee
       LEFT JOIN runtime_role_tree role_tree ON role_tree.role_oid = grant_info.grantee
       WHERE schema_info.nspname = 'public'
         AND relation.relkind IN ('r', 'p')
         AND column_info.attnum > 0
         AND NOT column_info.attisdropped
+        AND column_info.attacl IS NOT NULL
         AND (grant_info.grantee = 0 OR role_tree.role_oid IS NOT NULL)
         AND (
           (
@@ -773,17 +772,14 @@ const PRIVILEGE_DIAGNOSTICS_QUERY = `
         CROSS JOIN unnest(
           ARRAY['SELECT', 'INSERT', 'UPDATE', 'DELETE', 'TRUNCATE', 'REFERENCES', 'TRIGGER', 'MAINTAIN']::text[]
         ) privilege(privilege_type)
+        JOIN pg_roles public_role_record ON public_role_record.rolname = public_role.role_name
         WHERE relation.relnamespace = 'public'::regnamespace
           AND relation.relkind IN ('r', 'p')
-          AND EXISTS (
-            SELECT 1 FROM pg_roles public_role_record
-            WHERE public_role_record.rolname = public_role.role_name
-          )
           AND CASE
             WHEN privilege.privilege_type = 'MAINTAIN'
               AND current_setting('server_version_num')::integer < 170000
             THEN FALSE
-            ELSE has_table_privilege(public_role.role_name, relation.oid, privilege.privilege_type)
+            ELSE has_table_privilege(public_role_record.oid, relation.oid, privilege.privilege_type)
           END
         UNION ALL
         SELECT jsonb_build_object(
@@ -797,22 +793,19 @@ const PRIVILEGE_DIAGNOSTICS_QUERY = `
         JOIN private_tables private_table ON private_table.table_name = relation.relname
         CROSS JOIN (VALUES ('anon'), ('authenticated')) public_role(role_name)
         CROSS JOIN unnest(ARRAY['SELECT', 'INSERT', 'UPDATE', 'REFERENCES']::text[]) privilege(privilege_type)
+        JOIN pg_roles public_role_record ON public_role_record.rolname = public_role.role_name
         WHERE relation.relnamespace = 'public'::regnamespace
           AND relation.relkind IN ('r', 'p')
           AND column_info.attnum > 0
           AND NOT column_info.attisdropped
-          AND EXISTS (
-            SELECT 1 FROM pg_roles public_role_record
-            WHERE public_role_record.rolname = public_role.role_name
-          )
           AND has_column_privilege(
-            public_role.role_name,
+            public_role_record.oid,
             relation.oid,
             column_info.attnum,
             privilege.privilege_type
           )
           AND NOT has_table_privilege(
-            public_role.role_name,
+            public_role_record.oid,
             relation.oid,
             privilege.privilege_type
           )
@@ -827,11 +820,8 @@ const PRIVILEGE_DIAGNOSTICS_QUERY = `
         JOIN pg_namespace schema_info ON schema_info.oid = sequence_info.relnamespace
         CROSS JOIN (VALUES ('anon'), ('authenticated')) public_role(role_name)
         CROSS JOIN unnest(ARRAY['USAGE', 'SELECT', 'UPDATE']::text[]) privilege(privilege_type)
+        JOIN pg_roles public_role_record ON public_role_record.rolname = public_role.role_name
         WHERE sequence_info.relkind = 'S'
-          AND EXISTS (
-            SELECT 1 FROM pg_roles public_role_record
-            WHERE public_role_record.rolname = public_role.role_name
-          )
           AND EXISTS (
             SELECT 1
             FROM pg_class target_table
@@ -846,7 +836,7 @@ const PRIVILEGE_DIAGNOSTICS_QUERY = `
               )) = sequence_info.oid
           )
           AND has_sequence_privilege(
-            public_role.role_name,
+            public_role_record.oid,
             sequence_info.oid,
             privilege.privilege_type
           )
@@ -1055,6 +1045,16 @@ function createPostgresPersistence(connectionString, PoolConstructor, environmen
       );
       const tableRows = [...tables.values()];
       const allTablesPresent = REQUIRED_TABLES.every((tableName) => tables.has(tableName));
+      const knownOtherRoleGrants = tableRows.flatMap((table) => {
+        const anon = table.anon_unexpected_privileges || [];
+        const authenticated = table.authenticated_unexpected_privileges || [];
+        return [
+          ...(anon.length ? [{ table: table.table_name, role: "anon", privileges: anon }] : []),
+          ...(authenticated.length
+            ? [{ table: table.table_name, role: "authenticated", privileges: authenticated }]
+            : [])
+        ];
+      });
       const excessiveTablePrivilegesFound = tableRows.some((table) => (
         table.has_excessive_table_privileges || table.has_excessive_sequence_privileges
       ));
@@ -1127,8 +1127,8 @@ function createPostgresPersistence(connectionString, PoolConstructor, environmen
           policyEvidence: null
         },
         otherRoleGrants: {
-          status: "not_verified",
-          unexpectedGrants: null
+          status: knownOtherRoleGrants.length ? "remediation_required" : "not_verified",
+          unexpectedGrants: knownOtherRoleGrants.length ? knownOtherRoleGrants : null
         }
       };
       throw error;
