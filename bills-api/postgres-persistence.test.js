@@ -21,6 +21,18 @@ const REQUIRED_TABLES = [
   "bill_platform_settings"
 ];
 
+function emptyPrivilegeDiagnostics(overrides = {}) {
+  return {
+    excessive_table_privileges: [],
+    excessive_column_privileges: [],
+    excessive_sequence_privileges: [],
+    unexpected_schema_create_grants: [],
+    sensitive_function_exposure: [],
+    private_table_public_role_access: [],
+    ...overrides
+  };
+}
+
 function securityRows({ superuser = false, bypassesRls = false, policy = true } = {}) {
   return REQUIRED_TABLES.map((tableName) => ({
     role_name: "electrony_bills_runtime",
@@ -35,6 +47,7 @@ function securityRows({ superuser = false, bypassesRls = false, policy = true } 
     can_create_databases: false,
     can_replicate: false,
     has_role_memberships: false,
+    has_public_schema_usage: true,
     has_schema_create: false,
     table_name: tableName,
     rls_enabled: true,
@@ -68,7 +81,7 @@ function makePersistence(responses, captured = {}, environment = {
       const response = responses.shift();
       if (response instanceof Error) throw response;
       if (!response && String(query.text || query).includes("private_table_public_role_access")) {
-        return { rows: [{}] };
+        return { rows: [emptyPrivilegeDiagnostics()] };
       }
       return response;
     }
@@ -255,10 +268,15 @@ test("readiness separates connection success from unverified RLS authorization s
   assert.match(captured.queries[2].text, /column_info\.attacl IS NOT NULL/);
   assert.doesNotMatch(captured.queries[2].text, /COALESCE\(column_info\.attacl, ARRAY\[\]::aclitem\[\]\)/);
   assert.match(captured.queries[2].text, /excessive_sequence_privileges/);
-  assert.match(captured.queries[2].text, /user_function_execute_privileges/);
+  assert.match(captured.queries[2].text, /sensitive_function_exposure/);
+  assert.match(captured.queries[2].text, /routine_info\.prosecdef/);
+  assert.match(captured.queries[2].text, /routine_info\.prosrc/);
   assert.match(captured.queries[2].text, /private_table_public_role_access/);
   assert.match(captured.queries[2].text, /'scope', 'sequence'/);
   assert.match(captured.queries[2].text, /'other_role'/);
+  assert.match(captured.queries[2].text, /unexpected_schema_create_grants/);
+  assert.match(captured.queries[2].text, /schema_info\.nspname = 'public'/);
+  assert.doesNotMatch(captured.queries[2].text, /schema_info\.nspname <> 'public'.*USAGE/);
   assert.match(captured.queries[2].text, /runtime_role_tree/);
   assert.equal(
     (captured.queries[2].text.match(/JOIN pg_roles public_role_record ON/g) || []).length,
@@ -397,21 +415,23 @@ test("readiness reports exact excessive table, column, sequence, schema, and fun
       grantSource: "inherited",
       grantOption: false
     }],
-    excessive_schema_privileges: [{
+    unexpected_schema_create_grants: [{
       category: "schema",
-      object: "app_private",
-      privilege: "USAGE",
-      grantedTo: "electrony_bills_runtime",
-      grantSource: "runtime",
+      object: "public",
+      privilege: "CREATE",
+      grantedTo: "anon",
+      grantSource: "other_role",
       grantOption: false
     }],
-    user_function_execute_privileges: [{
+    sensitive_function_exposure: [{
       category: "function",
-      object: "public.legacy_helper(integer)",
+      object: "public.bill_helper(integer)",
       privilege: "EXECUTE",
       grantedTo: "PUBLIC",
       grantSource: "public",
-      grantOption: false
+      grantOption: false,
+      owner: "postgres",
+      securityDefiner: true
     }],
     private_table_public_role_access: []
   };
@@ -422,11 +442,11 @@ test("readiness reports exact excessive table, column, sequence, schema, and fun
   ]);
 
   const readiness = await persistence.getReadiness();
-  assert.equal(readiness.securityFailure, "runtime_role_excessive_schema_privileges");
+  assert.equal(readiness.securityFailure, "unexpected_schema_create_grant");
   assert.equal(readiness.checks.runtimeRole.leastPrivilegeVerified, false);
   assert.deepEqual(
     readiness.checks.tablePermissions.excessivePrivilegeDetails.map((finding) => finding.category),
-    ["table", "column", "sequence"]
+    ["table", "column"]
   );
   assert.equal(
     readiness.checks.tablePermissions.excessivePrivilegeDetails.some(
@@ -438,6 +458,10 @@ test("readiness reports exact excessive table, column, sequence, schema, and fun
     readiness.checks.runtimeRole.excessivePrivilegeDetails.map((finding) => finding.category),
     ["table", "column", "sequence", "schema", "function"]
   );
+  assert.equal(readiness.checks.privilegeDiagnostics.diagnosticsUnverified, false);
+  assert.equal(readiness.checks.privilegeDiagnostics.requiredGrantsVerified, true);
+  assert.equal(readiness.checks.privilegeDiagnostics.unexpectedSchemaCreateGrants.length, 1);
+  assert.equal(readiness.checks.privilegeDiagnostics.sensitiveFunctionExposure.length, 1);
   assert.equal(
     JSON.stringify(readiness.checks.runtimeRole.excessivePrivilegeDetails).includes("password"),
     false
@@ -462,8 +486,8 @@ test("broad runtime RLS policies are reported but never verify guest authorizati
       excessive_table_privileges: [],
       excessive_column_privileges: [],
       excessive_sequence_privileges: [],
-      excessive_schema_privileges: [],
-      user_function_execute_privileges: [],
+      unexpected_schema_create_grants: [],
+      sensitive_function_exposure: [],
       private_table_public_role_access: [{
         role: "anon",
         object: "public.bill_orders",
@@ -491,7 +515,7 @@ test("a direct excessive DELETE grant is reported as a security failure", async 
   const persistence = makePersistence([
     { rows: [{ ready: 1 }] },
     { rows: securityRows() },
-    { rows: [{
+    { rows: [emptyPrivilegeDiagnostics({
       excessive_table_privileges: [{
         category: "table",
         object: "public.bill_orders",
@@ -501,11 +525,8 @@ test("a direct excessive DELETE grant is reported as a security failure", async 
         grantOption: false
       }],
       excessive_column_privileges: [],
-      excessive_sequence_privileges: [],
-      excessive_schema_privileges: [],
-      user_function_execute_privileges: [],
-      private_table_public_role_access: []
-    }] }
+      excessive_sequence_privileges: []
+    })] }
   ]);
 
   const readiness = await persistence.getReadiness();
@@ -515,6 +536,219 @@ test("a direct excessive DELETE grant is reported as a security failure", async 
     readiness.checks.tablePermissions.excessivePrivilegeDetails.map(({ privilege }) => privilege),
     ["DELETE"]
   );
+});
+
+test("INSERT and UPDATE grants on read-only Bills tables are excessive", async (t) => {
+  for (const privilege of ["INSERT", "UPDATE"]) {
+    await t.test(privilege, async () => {
+      const persistence = makePersistence([
+        { rows: [{ ready: 1 }] },
+        { rows: securityRows() },
+        { rows: [emptyPrivilegeDiagnostics({
+          excessive_table_privileges: [{
+            category: "table",
+            object: "public.electrony_products",
+            privilege,
+            grantedTo: "electrony_bills_runtime",
+            grantSource: "runtime",
+            grantOption: false
+          }]
+        })] }
+      ]);
+
+      const readiness = await persistence.getReadiness();
+      assert.equal(readiness.securityFailure, "runtime_role_excessive_table_privileges");
+      assert.deepEqual(
+        readiness.checks.privilegeDiagnostics.excessiveBillsTableGrants.map((grant) => grant.privilege),
+        [privilege]
+      );
+    });
+  }
+});
+
+test("documented transaction table grants and their required sequences are accepted", async () => {
+  const captured = {};
+  const persistence = makePersistence([
+    { rows: [{ ready: 1 }] },
+    { rows: securityRows() },
+    { rows: [emptyPrivilegeDiagnostics()] }
+  ], captured);
+
+  const readiness = await persistence.getReadiness();
+  assert.equal(readiness.securityFailure, "rls_authorization_semantics_unverified");
+  assert.equal(readiness.checks.privilegeDiagnostics.requiredGrantsVerified, true);
+  assert.deepEqual(readiness.checks.privilegeDiagnostics.unexpectedSequenceAccess, []);
+  assert.match(captured.queries[2].text, /bill_payment_webhook_events/);
+  assert.match(captured.queries[2].text, /grant_info\.privilege_type <> 'USAGE'/);
+});
+
+test("unexpected runtime sequence privileges are distinct from required INSERT USAGE", async () => {
+  const persistence = makePersistence([
+    { rows: [{ ready: 1 }] },
+    { rows: securityRows() },
+    { rows: [emptyPrivilegeDiagnostics({
+      excessive_sequence_privileges: [{
+        category: "sequence",
+        object: "public.bill_orders_id_seq",
+        privilege: "UPDATE",
+        grantedTo: "electrony_bills_runtime",
+        grantSource: "runtime",
+        grantOption: false
+      }]
+    })] }
+  ]);
+
+  const readiness = await persistence.getReadiness();
+  assert.equal(readiness.securityFailure, "runtime_role_excessive_sequence_privileges");
+  assert.equal(readiness.checks.privilegeDiagnostics.requiredGrantsVerified, true);
+  assert.equal(readiness.checks.privilegeDiagnostics.unexpectedSequenceAccess.length, 1);
+  assert.equal(readiness.checks.tablePermissions.excessiveGrantsFound, false);
+});
+
+test("Supabase platform-schema USAGE and ordinary extension EXECUTE are not Bills findings", async () => {
+  const captured = {};
+  const persistence = makePersistence([
+    { rows: [{ ready: 1 }] },
+    { rows: securityRows() },
+    { rows: [emptyPrivilegeDiagnostics()] }
+  ], captured);
+
+  const readiness = await persistence.getReadiness();
+  assert.equal(readiness.securityFailure, "rls_authorization_semantics_unverified");
+  assert.deepEqual(readiness.checks.privilegeDiagnostics.unexpectedSchemaCreateGrants, []);
+  assert.deepEqual(readiness.checks.privilegeDiagnostics.sensitiveFunctionExposure, []);
+  assert.match(captured.queries[2].text, /schema_info\.nspname = 'public'/);
+  assert.match(captured.queries[2].text, /routine_info\.prosecdef/);
+});
+
+test("PUBLIC, anon, and authenticated access to private Bills tables remains visible", async (t) => {
+  for (const role of ["PUBLIC", "anon", "authenticated"]) {
+    await t.test(role, async () => {
+      const persistence = makePersistence([
+        { rows: [{ ready: 1 }] },
+        { rows: securityRows() },
+        { rows: [emptyPrivilegeDiagnostics({
+          private_table_public_role_access: [{
+            role,
+            object: "public.bill_orders",
+            privilege: "SELECT",
+            scope: "table"
+          }]
+        })] }
+      ]);
+
+      const readiness = await persistence.getReadiness();
+      assert.equal(readiness.securityFailure, "other_role_excessive_privileges");
+      assert.equal(
+        readiness.checks.privilegeDiagnostics.privateTablePublicAccess[0].role,
+        role
+      );
+    });
+  }
+});
+
+test("PUBLIC, anon, and authenticated access to private transaction sequences remains visible", async (t) => {
+  for (const role of ["PUBLIC", "anon", "authenticated"]) {
+    await t.test(role, async () => {
+      const persistence = makePersistence([
+        { rows: [{ ready: 1 }] },
+        { rows: securityRows() },
+        { rows: [emptyPrivilegeDiagnostics({
+          private_table_public_role_access: [{
+            role,
+            object: "public.bill_orders_id_seq",
+            privilege: "USAGE",
+            scope: "sequence"
+          }]
+        })] }
+      ]);
+
+      const readiness = await persistence.getReadiness();
+      assert.equal(readiness.securityFailure, "other_role_excessive_privileges");
+      assert.equal(
+        readiness.checks.privilegeDiagnostics.privateTablePublicAccess[0].scope,
+        "sequence"
+      );
+    });
+  }
+});
+
+test("only exposed SECURITY DEFINER functions referencing private Bills tables are findings", async () => {
+  const ordinaryExtension = await makePersistence([
+    { rows: [{ ready: 1 }] },
+    { rows: securityRows() },
+    { rows: [emptyPrivilegeDiagnostics()] }
+  ]).getReadiness();
+  assert.equal(ordinaryExtension.securityFailure, "rls_authorization_semantics_unverified");
+
+  const risky = await makePersistence([
+    { rows: [{ ready: 1 }] },
+    { rows: securityRows() },
+    { rows: [emptyPrivilegeDiagnostics({
+      sensitive_function_exposure: [{
+        category: "function",
+        object: "public.expose_orders()",
+        privilege: "EXECUTE",
+        grantedTo: "PUBLIC",
+        grantSource: "public",
+        grantOption: false,
+        owner: "postgres",
+        securityDefiner: true
+      }]
+    })] }
+  ]).getReadiness();
+  assert.equal(risky.securityFailure, "sensitive_function_exposure");
+  assert.equal(risky.checks.privilegeDiagnostics.sensitiveFunctionExposure[0].securityDefiner, true);
+});
+
+test("unexpected CREATE on the public Bills schema fails readiness", async () => {
+  const rows = securityRows();
+  rows[0].has_schema_create = true;
+  const persistence = makePersistence([
+    { rows: [{ ready: 1 }] },
+    { rows },
+    { rows: [emptyPrivilegeDiagnostics({
+      unexpected_schema_create_grants: [{
+        category: "schema",
+        object: "public",
+        privilege: "CREATE",
+        grantedTo: "electrony_bills_runtime",
+        grantSource: "runtime",
+        grantOption: false
+      }]
+    })] }
+  ]);
+
+  const readiness = await persistence.getReadiness();
+  assert.equal(readiness.securityFailure, "runtime_role_schema_create");
+  assert.equal(readiness.checks.privilegeDiagnostics.unexpectedSchemaCreateGrants.length, 1);
+});
+
+test("missing or ambiguous required table names block readiness as unverified", async (t) => {
+  const cases = [
+    ["the current production-only electrony_platform_settings name", securityRows().map((row) => (
+      row.table_name === "bill_platform_settings"
+        ? { ...row, table_name: "electrony_platform_settings" }
+        : row
+    ))],
+    ["duplicate required table rows", [...securityRows(), securityRows()[0]]]
+  ];
+
+  for (const [name, rows] of cases) {
+    await t.test(name, async () => {
+      const captured = {};
+      const persistence = makePersistence([
+        { rows: [{ ready: 1 }] },
+        { rows }
+      ], captured);
+
+      const readiness = await persistence.getReadiness();
+      assert.equal(readiness.securityFailure, "required_tables_unavailable");
+      assert.equal(readiness.checks.privilegeDiagnostics.diagnosticsUnverified, true);
+      assert.equal(readiness.checks.privilegeDiagnostics.requiredGrantsVerified, null);
+      assert.equal(captured.queries.length, 3);
+    });
+  }
 });
 
 test("privileged, shared, and role-switched connections fail the role security check", async (t) => {
@@ -561,14 +795,7 @@ test("missing runtime role fails closed after connection succeeds", async () => 
       runtime_role_exists: false,
       is_runtime_role: false
     })) },
-    { rows: [{
-      excessive_table_privileges: [],
-      excessive_column_privileges: [],
-      excessive_sequence_privileges: [],
-      excessive_schema_privileges: [],
-      user_function_execute_privileges: [],
-      private_table_public_role_access: []
-    }] }
+    { rows: [emptyPrivilegeDiagnostics()] }
   ]);
 
   const readiness = await persistence.getReadiness();

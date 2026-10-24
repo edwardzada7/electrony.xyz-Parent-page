@@ -314,6 +314,7 @@ const READINESS_QUERY = `
       FROM pg_auth_members membership
       WHERE membership.member = roles.oid
     ) AS has_role_memberships,
+    has_schema_privilege(current_user, 'public', 'USAGE') AS has_public_schema_usage,
     relation.relname AS table_name,
     relation.relrowsecurity AS rls_enabled,
     pg_get_userbyid(relation.relowner) = current_user AS owns_table,
@@ -364,13 +365,7 @@ const READINESS_QUERY = `
         AND sequence_info.sequence_name IS NOT NULL
         AND NOT has_sequence_privilege(current_user, sequence_info.sequence_name, 'USAGE')
     ) AS has_required_privileges,
-    EXISTS (
-      SELECT 1
-      FROM pg_namespace schema_info
-      WHERE schema_info.nspname !~ '^pg_'
-        AND schema_info.nspname <> 'information_schema'
-        AND has_schema_privilege(current_user, schema_info.oid, 'CREATE')
-    ) AS has_schema_create,
+    has_schema_privilege(current_user, 'public', 'CREATE') AS has_schema_create,
     EXISTS (
       SELECT 1
       FROM pg_attribute column_info
@@ -575,8 +570,8 @@ const PRIVILEGE_DIAGNOSTICS_QUERY = `
         END,
         'grantSource', CASE
           WHEN grant_info.grantee = 0 THEN 'public'
-          WHEN grant_role.rolname IN ('anon', 'authenticated') THEN 'other_role'
-          ELSE role_tree.grant_source
+          WHEN role_tree.grant_source IS NOT NULL THEN role_tree.grant_source
+          ELSE 'other_role'
         END,
         'grantOption', grant_info.is_grantable
       ))
@@ -612,7 +607,8 @@ const PRIVILEGE_DIAGNOSTICS_QUERY = `
         END,
         'grantSource', CASE
           WHEN grant_info.grantee = 0 THEN 'public'
-          ELSE role_tree.grant_source
+          WHEN role_tree.grant_source IS NOT NULL THEN role_tree.grant_source
+          ELSE 'other_role'
         END,
         'grantOption', grant_info.is_grantable
       ))
@@ -628,7 +624,11 @@ const PRIVILEGE_DIAGNOSTICS_QUERY = `
         AND column_info.attnum > 0
         AND NOT column_info.attisdropped
         AND column_info.attacl IS NOT NULL
-        AND (grant_info.grantee = 0 OR role_tree.role_oid IS NOT NULL)
+        AND (
+          grant_info.grantee = 0
+          OR role_tree.role_oid IS NOT NULL
+          OR grant_role.rolname IN ('anon', 'authenticated')
+        )
         AND (
           (
             grant_info.grantee = 0
@@ -650,7 +650,8 @@ const PRIVILEGE_DIAGNOSTICS_QUERY = `
         END,
         'grantSource', CASE
           WHEN grant_info.grantee = 0 THEN 'public'
-          ELSE role_tree.grant_source
+          WHEN role_tree.grant_source IS NOT NULL THEN role_tree.grant_source
+          ELSE 'other_role'
         END,
         'grantOption', grant_info.is_grantable
       ))
@@ -662,31 +663,44 @@ const PRIVILEGE_DIAGNOSTICS_QUERY = `
       LEFT JOIN pg_roles grant_role ON grant_role.oid = grant_info.grantee
       LEFT JOIN runtime_role_tree role_tree ON role_tree.role_oid = grant_info.grantee
       WHERE sequence_info.relkind = 'S'
-        AND schema_info.nspname !~ '^pg_'
-        AND schema_info.nspname <> 'information_schema'
-        AND (grant_info.grantee = 0 OR role_tree.role_oid IS NOT NULL)
-        AND (
-          grant_info.grantee = 0
-          OR grant_info.privilege_type <> 'USAGE'
-          OR grant_info.is_grantable
-          OR NOT EXISTS (
-            SELECT 1
-            FROM pg_class target_table
-            JOIN pg_attribute target_column ON target_column.attrelid = target_table.oid
-            WHERE target_table.relnamespace = 'public'::regnamespace
-              AND target_table.relname IN (
-                'bill_fee_quotes',
-                'bill_orders',
-                'bill_payment_attempts',
-                'bill_payment_webhook_events'
+        AND EXISTS (
+          SELECT 1
+          FROM pg_class target_table
+          JOIN pg_attribute target_column ON target_column.attrelid = target_table.oid
+          WHERE target_table.relnamespace = 'public'::regnamespace
+            AND target_table.relname IN (
+              'electrony_products',
+              'bill_fee_quotes',
+              'bill_orders',
+              'bill_payment_attempts',
+              'bill_payment_webhook_events',
+              'bill_platform_settings'
+            )
+            AND target_column.attnum > 0
+            AND NOT target_column.attisdropped
+            AND to_regclass(pg_get_serial_sequence(
+              format('%I.%I', 'public', target_table.relname),
+              target_column.attname
+            )) = sequence_info.oid
+            AND (
+              (
+                (grant_info.grantee = 0 OR grant_role.rolname IN ('anon', 'authenticated'))
+                AND target_table.relname IN (SELECT table_name FROM private_tables)
               )
-              AND target_column.attnum > 0
-              AND NOT target_column.attisdropped
-              AND to_regclass(pg_get_serial_sequence(
-                format('%I.%I', 'public', target_table.relname),
-                target_column.attname
-              )) = sequence_info.oid
-          )
+              OR (
+                role_tree.role_oid IS NOT NULL
+                AND (
+                  target_table.relname NOT IN (
+                    'bill_fee_quotes',
+                    'bill_orders',
+                    'bill_payment_attempts',
+                    'bill_payment_webhook_events'
+                  )
+                  OR grant_info.privilege_type <> 'USAGE'
+                  OR grant_info.is_grantable
+                )
+              )
+            )
         )
     ), '[]'::jsonb) AS excessive_sequence_privileges,
     COALESCE((
@@ -700,8 +714,8 @@ const PRIVILEGE_DIAGNOSTICS_QUERY = `
         END,
         'grantSource', CASE
           WHEN grant_info.grantee = 0 THEN 'public'
-          WHEN grant_role.rolname IN ('anon', 'authenticated') THEN 'other_role'
-          ELSE role_tree.grant_source
+          WHEN role_tree.grant_source IS NOT NULL THEN role_tree.grant_source
+          ELSE 'other_role'
         END,
         'grantOption', grant_info.is_grantable
       ))
@@ -711,19 +725,10 @@ const PRIVILEGE_DIAGNOSTICS_QUERY = `
       ) grant_info
       LEFT JOIN pg_roles grant_role ON grant_role.oid = grant_info.grantee
       LEFT JOIN runtime_role_tree role_tree ON role_tree.role_oid = grant_info.grantee
-      WHERE schema_info.nspname !~ '^pg_'
-        AND schema_info.nspname <> 'information_schema'
-        AND (
-          grant_info.grantee = 0
-          OR role_tree.role_oid IS NOT NULL
-          OR grant_role.rolname IN ('anon', 'authenticated')
-        )
-        AND (
-          grant_info.privilege_type = 'CREATE'
-          OR (schema_info.nspname <> 'public' AND grant_info.privilege_type = 'USAGE')
-          OR grant_info.is_grantable
-        )
-    ), '[]'::jsonb) AS excessive_schema_privileges,
+      WHERE schema_info.nspname = 'public'
+        AND grant_info.privilege_type = 'CREATE'
+        AND grant_info.grantee <> schema_info.nspowner
+    ), '[]'::jsonb) AS unexpected_schema_create_grants,
     COALESCE((
       SELECT jsonb_agg(jsonb_build_object(
         'category', 'function',
@@ -736,10 +741,13 @@ const PRIVILEGE_DIAGNOSTICS_QUERY = `
         END,
         'grantSource', CASE
           WHEN grant_info.grantee = 0 THEN 'public'
-          WHEN grant_role.rolname IN ('anon', 'authenticated') THEN 'other_role'
-          ELSE role_tree.grant_source
+          WHEN role_tree.grant_source IS NOT NULL THEN role_tree.grant_source
+          ELSE 'other_role'
         END,
-        'grantOption', grant_info.is_grantable
+        'grantOption', grant_info.is_grantable,
+        'schema', schema_info.nspname,
+        'owner', pg_get_userbyid(routine_info.proowner),
+        'securityDefiner', routine_info.prosecdef
       ))
       FROM pg_proc routine_info
       JOIN pg_namespace schema_info ON schema_info.oid = routine_info.pronamespace
@@ -748,15 +756,15 @@ const PRIVILEGE_DIAGNOSTICS_QUERY = `
       ) grant_info
       LEFT JOIN pg_roles grant_role ON grant_role.oid = grant_info.grantee
       LEFT JOIN runtime_role_tree role_tree ON role_tree.role_oid = grant_info.grantee
-      WHERE schema_info.nspname !~ '^pg_'
-        AND schema_info.nspname <> 'information_schema'
-        AND (
-          grant_info.grantee = 0
-          OR role_tree.role_oid IS NOT NULL
-          OR grant_role.rolname IN ('anon', 'authenticated')
-        )
+      WHERE routine_info.prosecdef
+        AND grant_info.grantee <> routine_info.proowner
         AND grant_info.privilege_type = 'EXECUTE'
-    ), '[]'::jsonb) AS user_function_execute_privileges,
+        AND routine_info.prosrc ~* (
+          '(^|[^[:alnum:]_])('
+          || 'bill_fee_quotes|bill_orders|bill_payment_attempts|bill_payment_webhook_events'
+          || ')([^[:alnum:]_]|$)'
+        )
+    ), '[]'::jsonb) AS sensitive_function_exposure,
     COALESCE((
       SELECT jsonb_agg(access_finding)
       FROM (
@@ -840,6 +848,64 @@ const PRIVILEGE_DIAGNOSTICS_QUERY = `
             sequence_info.oid,
             privilege.privilege_type
           )
+          UNION ALL
+          SELECT jsonb_build_object(
+            'role', 'PUBLIC',
+            'object', format('%I.%I', 'public', relation.relname),
+            'privilege', grant_info.privilege_type,
+            'scope', 'table'
+          )
+          FROM pg_class relation
+          JOIN private_tables private_table ON private_table.table_name = relation.relname
+          CROSS JOIN LATERAL aclexplode(
+            COALESCE(relation.relacl, acldefault('r', relation.relowner))
+          ) grant_info
+          WHERE relation.relnamespace = 'public'::regnamespace
+            AND relation.relkind IN ('r', 'p')
+            AND grant_info.grantee = 0
+          UNION ALL
+          SELECT jsonb_build_object(
+            'role', 'PUBLIC',
+            'object', format('%I.%I.%I', 'public', relation.relname, column_info.attname),
+            'privilege', grant_info.privilege_type,
+            'scope', 'column'
+          )
+          FROM pg_attribute column_info
+          JOIN pg_class relation ON relation.oid = column_info.attrelid
+          JOIN private_tables private_table ON private_table.table_name = relation.relname
+          CROSS JOIN LATERAL aclexplode(column_info.attacl) grant_info
+          WHERE relation.relnamespace = 'public'::regnamespace
+            AND relation.relkind IN ('r', 'p')
+            AND column_info.attnum > 0
+            AND NOT column_info.attisdropped
+            AND grant_info.grantee = 0
+          UNION ALL
+          SELECT jsonb_build_object(
+            'role', 'PUBLIC',
+            'object', format('%I.%I', schema_info.nspname, sequence_info.relname),
+            'privilege', grant_info.privilege_type,
+            'scope', 'sequence'
+          )
+          FROM pg_class sequence_info
+          JOIN pg_namespace schema_info ON schema_info.oid = sequence_info.relnamespace
+          CROSS JOIN LATERAL aclexplode(
+            COALESCE(sequence_info.relacl, acldefault('S', sequence_info.relowner))
+          ) grant_info
+          WHERE sequence_info.relkind = 'S'
+            AND grant_info.grantee = 0
+            AND EXISTS (
+              SELECT 1
+              FROM pg_class target_table
+              JOIN private_tables private_table ON private_table.table_name = target_table.relname
+              JOIN pg_attribute target_column ON target_column.attrelid = target_table.oid
+              WHERE target_table.relnamespace = 'public'::regnamespace
+                AND target_column.attnum > 0
+                AND NOT target_column.attisdropped
+                AND to_regclass(pg_get_serial_sequence(
+                  format('%I.%I', 'public', target_table.relname),
+                  target_column.attname
+                )) = sequence_info.oid
+            )
       ) public_access
     ), '[]'::jsonb) AS private_table_public_role_access
 `;
@@ -1044,7 +1110,12 @@ function createPostgresPersistence(connectionString, PoolConstructor, environmen
           .map((row) => [row.table_name, row])
       );
       const tableRows = [...tables.values()];
-      const allTablesPresent = REQUIRED_TABLES.every((tableName) => tables.has(tableName));
+      const tableNames = knownRows.map((row) => row.table_name).filter(Boolean);
+      const allTablesPresent = knownRows.length === REQUIRED_TABLES.length
+        && tableNames.length === REQUIRED_TABLES.length
+        && new Set(tableNames).size === tableNames.length
+        && tableNames.every((tableName) => REQUIRED_TABLES.includes(tableName))
+        && REQUIRED_TABLES.every((tableName) => tables.has(tableName));
       const knownOtherRoleGrants = tableRows.flatMap((table) => {
         const anon = table.anon_unexpected_privileges || [];
         const authenticated = table.authenticated_unexpected_privileges || [];
@@ -1115,6 +1186,18 @@ function createPostgresPersistence(connectionString, PoolConstructor, environmen
           excessiveGrantsFound: excessiveTablePrivilegesFound ? true : null,
           excessivePrivilegeDetails: null
         },
+        privilegeDiagnostics: {
+          requiredGrantsVerified: allTablesPresent ? requiredTablePrivilegesVerified : null,
+          publicSchemaUsageVerified: typeof knownRole?.has_public_schema_usage === "boolean"
+            ? knownRole.has_public_schema_usage
+            : null,
+          excessiveBillsTableGrants: null,
+          unexpectedSchemaCreateGrants: null,
+          privateTablePublicAccess: null,
+          unexpectedSequenceAccess: null,
+          sensitiveFunctionExposure: null,
+          diagnosticsUnverified: true
+        },
         rlsPolicies: {
           status: allTablesPresent && (!allTablesHaveRls || !allPoliciesCoverRequiredOperations)
             ? "failed"
@@ -1148,6 +1231,11 @@ function createPostgresPersistence(connectionString, PoolConstructor, environmen
     if (!role) {
       rejectUnverifiedDiagnostic("role_security", "role_security_result_unavailable");
     }
+    const initialTableNames = result.rows.map((row) => row.table_name).filter(Boolean);
+    const requiredTableRowsUnambiguous = result.rows.length === REQUIRED_TABLES.length
+      && initialTableNames.length === REQUIRED_TABLES.length
+      && new Set(initialTableNames).size === initialTableNames.length
+      && REQUIRED_TABLES.every((tableName) => initialTableNames.includes(tableName));
 
     let privilegeResult;
     try {
@@ -1173,13 +1261,30 @@ function createPostgresPersistence(connectionString, PoolConstructor, environmen
     }
 
     const privilegeDiagnostics = privilegeResult.rows[0];
+    const diagnosticFields = [
+      "excessive_table_privileges",
+      "excessive_column_privileges",
+      "excessive_sequence_privileges",
+      "unexpected_schema_create_grants",
+      "sensitive_function_exposure",
+      "private_table_public_role_access"
+    ];
+    if (diagnosticFields.some((field) => !Array.isArray(privilegeDiagnostics[field]))) {
+      rejectUnverifiedDiagnostic(
+        "privilege_diagnostics",
+        "privilege_diagnostics_result_unavailable",
+        role,
+        result.rows
+      );
+    }
     const tables = new Map(
       result.rows
         .filter((row) => row.table_name)
         .map((row) => [row.table_name, row])
     );
     const tableRows = [...tables.values()];
-    const allTablesPresent = REQUIRED_TABLES.every((tableName) => tables.has(tableName));
+    const allTablesPresent = requiredTableRowsUnambiguous
+      && REQUIRED_TABLES.every((tableName) => tables.has(tableName));
     const roleExists = Boolean(role?.runtime_role_exists);
     const connectedAsRuntimeRole = Boolean(
       role?.is_runtime_role && role.role_name === role.session_role_name
@@ -1195,30 +1300,28 @@ function createPostgresPersistence(connectionString, PoolConstructor, environmen
       !role?.can_login || role?.inherits_roles || role?.has_role_memberships
     );
     const requiredTablePrivilegesVerified = allTablesPresent
-      && tableRows.every((table) => table.has_required_privileges);
+      ? tableRows.every((table) => table.has_required_privileges)
+      : null;
     const excessivePrivilegeDetails = [
       ...(privilegeDiagnostics.excessive_table_privileges || []),
       ...(privilegeDiagnostics.excessive_column_privileges || []),
       ...(privilegeDiagnostics.excessive_sequence_privileges || []),
-      ...(privilegeDiagnostics.excessive_schema_privileges || []),
-      ...(privilegeDiagnostics.user_function_execute_privileges || [])
+      ...(privilegeDiagnostics.unexpected_schema_create_grants || []),
+      ...(privilegeDiagnostics.sensitive_function_exposure || [])
     ];
     const tablePrivilegeDetails = [
       ...(privilegeDiagnostics.excessive_table_privileges || []),
-      ...(privilegeDiagnostics.excessive_column_privileges || []),
-      ...(privilegeDiagnostics.excessive_sequence_privileges || [])
+      ...(privilegeDiagnostics.excessive_column_privileges || [])
     ];
+    const unexpectedSequenceAccess = privilegeDiagnostics.excessive_sequence_privileges || [];
+    const unexpectedSchemaCreateGrants = privilegeDiagnostics.unexpected_schema_create_grants || [];
+    const sensitiveFunctionExposure = privilegeDiagnostics.sensitive_function_exposure || [];
     const excessiveTablePrivilegesFound = tableRows.some((table) => (
-      table.has_excessive_table_privileges || table.has_excessive_sequence_privileges
+      table.has_excessive_table_privileges
     )) || tablePrivilegeDetails.length > 0;
-    const schemaCreateFound = Boolean(role?.has_schema_create)
-      || (privilegeDiagnostics.excessive_schema_privileges || []).some(
-        (finding) => finding.privilege === "CREATE"
-      );
-    const excessiveSchemaPrivilegesFound =
-      (privilegeDiagnostics.excessive_schema_privileges || []).length > 0;
-    const excessiveFunctionPrivilegesFound =
-      (privilegeDiagnostics.user_function_execute_privileges || []).length > 0;
+    const runtimeSchemaCreateFound = Boolean(role?.has_schema_create);
+    const schemaCreateFound = runtimeSchemaCreateFound || unexpectedSchemaCreateGrants.length > 0;
+    const excessiveFunctionPrivilegesFound = sensitiveFunctionExposure.length > 0;
     const tableOwnershipFound = tableRows.some((table) => table.owns_table);
     const allTablesHaveRls = allTablesPresent && tableRows.every((table) => table.rls_enabled);
     const allPoliciesCoverRequiredOperations = allTablesPresent
@@ -1243,13 +1346,15 @@ function createPostgresPersistence(connectionString, PoolConstructor, environmen
     ];
     const roleLeastPrivilegeVerified = roleExists
       && connectedAsRuntimeRole
+      && allTablesPresent
       && !roleHasExcessiveAttributes
       && !roleHasUnsafeSettings
       && !schemaCreateFound
       && !tableOwnershipFound
       && !excessiveTablePrivilegesFound
+      && unexpectedSequenceAccess.length === 0
       && !excessiveFunctionPrivilegesFound
-      && (privilegeDiagnostics.excessive_schema_privileges || []).length === 0;
+      && unexpectedSchemaCreateGrants.length === 0;
     const readinessChecks = {
       runtimeRole: {
         name: "electrony_bills_runtime",
@@ -1268,6 +1373,16 @@ function createPostgresPersistence(connectionString, PoolConstructor, environmen
           : requiredTablePrivilegesVerified && !excessiveTablePrivilegesFound
             ? "verified"
             : "failed"
+      },
+      privilegeDiagnostics: {
+        requiredGrantsVerified: requiredTablePrivilegesVerified,
+        publicSchemaUsageVerified: Boolean(role?.has_public_schema_usage),
+        excessiveBillsTableGrants: tablePrivilegeDetails,
+        unexpectedSchemaCreateGrants,
+        privateTablePublicAccess: publicRoleAccess,
+        unexpectedSequenceAccess,
+        sensitiveFunctionExposure,
+        diagnosticsUnverified: !allTablesPresent
       },
       rlsPolicies: {
         enabledOnAllTables: allTablesHaveRls,
@@ -1316,12 +1431,9 @@ function createPostgresPersistence(connectionString, PoolConstructor, environmen
       reject("role_owns_table", "The Bills PostgreSQL role must not own a required table.");
     }
     if (schemaCreateFound) {
-      reject("runtime_role_schema_create", "The Bills PostgreSQL role must not have CREATE on the public schema.");
-    }
-    if (excessiveSchemaPrivilegesFound) {
       reject(
-        "runtime_role_excessive_schema_privileges",
-        "The Bills PostgreSQL role has unreviewed privileges on application schemas."
+        runtimeSchemaCreateFound ? "runtime_role_schema_create" : "unexpected_schema_create_grant",
+        "Unexpected CREATE access to the public Bills schema requires deliberate review."
       );
     }
     if (excessiveTablePrivilegesFound) {
@@ -1330,13 +1442,21 @@ function createPostgresPersistence(connectionString, PoolConstructor, environmen
         "The Bills PostgreSQL role has prohibited table, column, or sequence privileges."
       );
     }
+    if (unexpectedSequenceAccess.some((finding) => (
+      finding.grantSource === "runtime" || finding.grantSource === "inherited"
+    ))) {
+      reject(
+        "runtime_role_excessive_sequence_privileges",
+        "The Bills PostgreSQL role has unexpected access to Bills transaction sequences."
+      );
+    }
     if (!requiredTablePrivilegesVerified) {
       reject("table_privileges_missing", "The Bills PostgreSQL role lacks required table privileges.");
     }
     if (unexpectedGrants.length) {
       reject(
         "other_role_excessive_privileges",
-        "Unexpected explicit privileges for anon or authenticated require deliberate remediation."
+        "Public or non-runtime access to private Bills tables or sequences requires deliberate review."
       );
     }
     if (publicPoliciesFound) {
@@ -1347,8 +1467,8 @@ function createPostgresPersistence(connectionString, PoolConstructor, environmen
     }
     if (excessiveFunctionPrivilegesFound) {
       reject(
-        "runtime_role_excessive_function_privileges",
-        "The Bills PostgreSQL role can execute unreviewed functions outside system schemas."
+        "sensitive_function_exposure",
+        "An exposed SECURITY DEFINER function references private Bills transaction data."
       );
     }
     if (!allPoliciesCoverRequiredOperations) {

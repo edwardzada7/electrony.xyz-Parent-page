@@ -1237,6 +1237,25 @@ async function handleRequest(request, response) {
         },
         diagnosticFailure: databaseReadiness.diagnosticFailure || null,
         privilegeDiagnostics: {
+          requiredGrantsVerified:
+            databaseSecurityChecks.privilegeDiagnostics?.requiredGrantsVerified
+            ?? databaseSecurityChecks.tablePermissions?.requiredGrantsVerified
+            ?? null,
+          publicSchemaUsageVerified:
+            databaseSecurityChecks.privilegeDiagnostics?.publicSchemaUsageVerified ?? null,
+          excessiveBillsTableGrants:
+            databaseSecurityChecks.privilegeDiagnostics?.excessiveBillsTableGrants ?? null,
+          unexpectedSchemaCreateGrants:
+            databaseSecurityChecks.privilegeDiagnostics?.unexpectedSchemaCreateGrants ?? null,
+          privateTablePublicAccess:
+            databaseSecurityChecks.privilegeDiagnostics?.privateTablePublicAccess ?? null,
+          unexpectedSequenceAccess:
+            databaseSecurityChecks.privilegeDiagnostics?.unexpectedSequenceAccess ?? null,
+          sensitiveFunctionExposure:
+            databaseSecurityChecks.privilegeDiagnostics?.sensitiveFunctionExposure ?? null,
+          diagnosticsUnverified:
+            databaseSecurityChecks.privilegeDiagnostics?.diagnosticsUnverified
+            ?? (databaseReadiness.connected ? true : null),
           runtimeRole: databaseSecurityChecks.runtimeRole?.excessivePrivilegeDetails ?? null,
           tables: databaseSecurityChecks.tablePermissions?.excessivePrivilegeDetails ?? null,
           privateTableAccess: databaseSecurityChecks.otherRoleGrants?.unexpectedGrants ?? null
