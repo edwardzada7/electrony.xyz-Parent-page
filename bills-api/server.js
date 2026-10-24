@@ -6,6 +6,7 @@ const os = require("os");
 const http = require("http");
 const { URL } = require("url");
 const { buildProviderAdapter, readEnv } = require("./provider-adapter");
+const { createMonnifyBillsAdapter } = require("./monnify-bills-adapter");
 const { createPostgresPersistence } = require("./postgres-persistence");
 const { PLATFORM_FEE_RULES, createPlatformFeeQuote, parseMoneyToMinor } = require("./platform-fees");
 const {
@@ -20,11 +21,14 @@ const AUTH_RATE_LIMITS = new Map();
 const FEE_QUOTES = new Map();
 const TOKEN_LIFETIME_SECONDS = 60 * 60;
 const GUEST_ORDER_SECRET_BYTES = 32;
+const MONNIFY_PAYMENT_CONTRACT_VERIFIED = false;
 const BILL_FULFILLMENT_ENABLED = false;
+const monnifyBillsAdapter = createMonnifyBillsAdapter();
 const scrypt = promisify(crypto.scrypt);
 
 function paymentsBlocked() {
-  return readEnv("PAYMENTS_BLOCKED", "true").toLowerCase() !== "false";
+  return !MONNIFY_PAYMENT_CONTRACT_VERIFIED
+    || readEnv("PAYMENTS_BLOCKED", "true").toLowerCase() !== "false";
 }
 
 function readUsers() {
@@ -455,6 +459,30 @@ function hasMonnifyConfig() {
   return getMissingMonnifyConfig().length === 0;
 }
 
+async function getMonnifyCatalogueStatus() {
+  const result = await monnifyBillsAdapter.listCategories();
+  const status = result.status;
+  const message = result.message;
+
+  return {
+    ok: true,
+    available: false,
+    status,
+    categories: ["electricity", "airtime", "data", "bills"].reduce((categories, service) => {
+      categories[service] = {
+        available: false,
+        status,
+        billers: [],
+        products: [],
+        message
+      };
+      return categories;
+    }, {}),
+    monnifyCategories: [],
+    message
+  };
+}
+
 function getMissingHealthConfiguration() {
   const missing = getMissingMonnifyConfig().filter((name) => (
     !name.startsWith("BILLS_PAYMENT_REDIRECT_URL")
@@ -709,9 +737,8 @@ async function authenticateMonnify() {
   const endpoint = `${config.baseUrl.replace(/\/$/, "")}/api/v1/auth/login`;
   const payload = await requestJson(endpoint, {
     method: "POST",
-    body: {
-      apiKey: config.apiKey,
-      secretKey: config.secretKey
+    headers: {
+      Authorization: `Basic ${Buffer.from(`${config.apiKey}:${config.secretKey}`).toString("base64")}`
     }
   });
 
@@ -804,13 +831,13 @@ async function createMonnifyReservation(transaction) {
   const endpoint = `${config.baseUrl.replace(/\/$/, "")}/api/v1/transactions/init-transaction`;
   const payload = {
     amount: Number(transaction.totalAmount),
-    currency: "NGN",
+    currencyCode: "NGN",
     paymentReference: transaction.reference,
     contractCode: config.contractCode,
     redirectUrl: config.redirectUrl,
     customerName: transaction.customer?.name || "Electrony Bills Customer",
     customerEmail: transaction.customer?.email || "guest@electrony.com",
-    customerMobileNumber: transaction.customer?.phone || "08000000000",
+    customerMobileNumber: transaction.customer?.phone || "",
     paymentMethods: ["CARD", "ACCOUNT_TRANSFER", "USSD", "BANK_TRANSFER"],
     narration: `Electrony Bills ${transaction.service} purchase`,
     metadata: {
@@ -890,7 +917,7 @@ async function processVendingForTransaction(transaction) {
     const validation = await provider.validateMeter({
       distributor: transaction.customer?.disco || transaction.customer?.company || "",
       meterNumber: transaction.customer?.meterNumber || "",
-      meterType: transaction.customer?.meterType || "prepaid"
+      meterType: transaction.customer?.meterType || ""
     });
 
     if (validation?.ok !== true) {
@@ -905,7 +932,7 @@ async function processVendingForTransaction(transaction) {
       ...payload,
       meterNumber: transaction.customer?.meterNumber || "",
       distributor: transaction.customer?.disco || transaction.customer?.company || "",
-      meterType: transaction.customer?.meterType || "prepaid",
+      meterType: transaction.customer?.meterType || "",
       amount: transaction.amount
     });
 
@@ -1012,30 +1039,6 @@ function getExpectedAmount(service, customer = {}) {
     return Number.isFinite(amount) ? amount : 0;
   }
 
-  if (service === "data") {
-    const network = String(customer.network || "").toLowerCase();
-    const dataPlans = {
-      mtn: { "mtn-1gb": 130, "mtn-5gb": 650, "mtn-20gb": 2800 },
-      airtel: { "airtel-1gb": 150, "airtel-10gb": 1650 },
-      glo: { "glo-1gb": 110, "glo-10gb": 1450 },
-      "9mobile": { "9m-2gb": 630, "9m-15gb": 2200 }
-    };
-    const planValue = String(customer.plan || "");
-    const planPrice = dataPlans[network]?.[planValue];
-    return Number.isFinite(planPrice) ? planPrice : 0;
-  }
-
-  if (service === "bills") {
-    const billPlans = {
-      compact: 9000,
-      "compact-plus": 15000,
-      premium: 19000
-    };
-    const planValue = String(customer.plan || "");
-    const planPrice = billPlans[planValue];
-    return Number.isFinite(planPrice) ? planPrice : 0;
-  }
-
   return 0;
 }
 
@@ -1078,7 +1081,7 @@ function validateServiceRequest(payload) {
     email: String(payload.customerEmail || payload.email || "guest@electrony.com").trim(),
     phone: normalizePhoneNumber(payload.customerPhone || payload.phone || payload.recipient || ""),
     meterNumber: String(payload.meterNumber || "").trim(),
-    meterType: String(payload.meterType || "prepaid").trim() || "prepaid",
+    meterType: String(payload.meterType || "").trim(),
     disco: String(payload.disco || "").trim(),
     network: String(payload.network || "").trim(),
     recipient: normalizePhoneNumber(payload.recipient || payload.customerPhone || payload.phone || ""),
@@ -1305,13 +1308,17 @@ async function handleRequest(request, response) {
     const production = process.env.NODE_ENV === "production";
     const databaseReadiness = await postgresPersistence.getReadiness();
     const missingHealthConfiguration = getMissingHealthConfiguration();
-    const healthReady = missingHealthConfiguration.length === 0;
+    const databaseSecurityReady = databaseReadiness.securityStatus === "controls_verified";
+    const catalogueStatus = await getMonnifyCatalogueStatus();
+    const catalogueReady = catalogueStatus.available === true;
     const providerFeeQuoteAvailable = typeof vendingProvider.quotePurchase === "function";
     const databaseSecurityChecks = databaseReadiness.checks || {};
     const paymentBlockers = [
-      "authoritative_monnify_verification_not_implemented",
-      "provider_fulfillment_contract_unverified",
+      "monnify_payment_contract_not_verified",
+      "payment_operations_disabled_pending_contract_review"
     ];
+    if (!databaseSecurityReady) paymentBlockers.push("database_security_controls_not_verified");
+    if (missingHealthConfiguration.length) paymentBlockers.push(...missingHealthConfiguration);
     if (databaseReadiness.securityFailure) {
       paymentBlockers.push(databaseReadiness.securityFailure);
     }
@@ -1319,12 +1326,44 @@ async function handleRequest(request, response) {
     if (databaseSecurityChecks.otherRoleGrants?.status !== "none_detected") {
       paymentBlockers.push("anon_authenticated_grants_require_review");
     }
+    const billsReadiness = monnifyBillsAdapter.getReadiness();
+    const readinessChecks = {
+      billsApiActivation: billsReadiness.billsApiActivation,
+      verifiedApiContract: billsReadiness.verifiedApiContract,
+      catalogueAccess: billsReadiness.catalogueAccess,
+      authoritativeCollectionPaymentVerification: {
+        ready: false,
+        status: "unverified",
+        blocker: "authoritative_collection_payment_verification_unverified"
+      },
+      durableIdempotency: {
+        ready: false,
+        status: "unverified",
+        blocker: "durable_idempotency_unverified"
+      },
+      databaseBackedOrderPersistence: {
+        ready: false,
+        status: databaseReadiness.status === "connection_verified" ? "not_end_to_end_verified" : "unavailable",
+        blocker: "database_backed_order_persistence_unverified"
+      },
+      vendingAndReconciliation: billsReadiness.vendingAndReconciliation
+    };
+    const readinessBlockers = Object.values(readinessChecks)
+      .filter((check) => !check.ready)
+      .map((check) => check.blocker);
+    const healthReady = databaseSecurityReady
+      && catalogueReady
+      && !paymentsBlocked()
+      && BILL_FULFILLMENT_ENABLED
+      && readinessBlockers.length === 0;
     sendJson(response, 200, {
       ok: true,
       ready: healthReady,
-      readiness: healthReady ? "ready" : "configuration-required",
+      readiness: healthReady ? "ready" : "not-ready",
+      readinessChecks,
+      readinessBlockers,
       service: "electrony-bills",
-      mode: healthReady ? "payments-blocked" : "configuration-required",
+      mode: healthReady ? "ready" : "fail-closed",
       database: databaseReadiness,
       checks: {
         databaseConnectivity: {
@@ -1383,11 +1422,28 @@ async function handleRequest(request, response) {
           privateTableAccess: databaseSecurityChecks.otherRoleGrants?.unexpectedGrants ?? null
         },
         businessPersistence: {
-          ready: databaseReadiness.status === "connection_verified",
-          status: databaseReadiness.status === "connection_verified" ? "wired" : "unavailable",
+          ready: readinessChecks.databaseBackedOrderPersistence.ready,
+          status: readinessChecks.databaseBackedOrderPersistence.status,
           reason: databaseReadiness.status === "connection_verified"
-            ? "PostgreSQL route persistence is wired; payment authorization remains separately blocked."
-            : "PostgreSQL route persistence requires a verified database connection."
+            ? "PostgreSQL connectivity is verified, but Bills order persistence has not been verified end to end; payment routes remain blocked."
+            : "Bills order persistence is unavailable until PostgreSQL connectivity and end-to-end route persistence are verified."
+        },
+        databaseSecurity: {
+          ready: databaseSecurityReady,
+          status: databaseReadiness.securityStatus || "not_checked",
+          reason: databaseSecurityReady
+            ? "PostgreSQL security controls have been verified."
+            : databaseReadiness.securityFailure || "Runtime role, table privileges, RLS policies, and related grants are not verified."
+        },
+        catalogue: {
+          ready: catalogueReady,
+          status: catalogueStatus.status,
+          reason: catalogueStatus.message,
+          blockers: [
+            readinessChecks.billsApiActivation.blocker,
+            readinessChecks.verifiedApiContract.blocker,
+            readinessChecks.catalogueAccess.blocker
+          ]
         },
         payment: {
           ready: false,
@@ -1401,7 +1457,8 @@ async function handleRequest(request, response) {
           providerFeeQuoteAvailable,
           fulfillmentContractVerified: false,
           blockers: [
-            "provider_fulfillment_contract_unverified"
+            "monnify_bills_vending_contract_unverified",
+            "provider_fee_and_reconciliation_contract_unverified"
           ]
         }
       },
@@ -1420,11 +1477,12 @@ async function handleRequest(request, response) {
         paymentsBlocked: paymentsBlocked(),
         paymentsBlockedConfigured: !missingHealthConfiguration.includes("PAYMENTS_BLOCKED"),
         monnifyPaymentVerification: false,
+        monnifyPaymentContractVerified: MONNIFY_PAYMENT_CONTRACT_VERIFIED,
         vendingProvider: vendingProvider.isConfigured(),
         providerFeeQuote: providerFeeQuoteAvailable,
         providerFulfillmentContractVerified: false,
         durableTransactionalIdempotency: false,
-        postgresSecurityControlsVerified: databaseReadiness.securityStatus === "controls_verified",
+        postgresSecurityControlsVerified: databaseSecurityReady,
         postgresBusinessTablePersistence: false
       },
       virtualCards: "provider_unconfigured",
@@ -1465,13 +1523,14 @@ async function handleRequest(request, response) {
     && ["/api/payments/session", "/api/payments/verify", "/api/payments/webhook"].includes(url.pathname)) {
     sendJson(response, 503, {
       ok: false,
-      error: "Payment operations are blocked. Set PAYMENTS_BLOCKED=false only after payment and database safety requirements are met."
+      error: "Payment operations are blocked until the Monnify contract, persistence, idempotency, and fulfillment safety requirements are verified."
     });
     return;
   }
 
   if (process.env.NODE_ENV === "production"
     && !(request.method === "GET" && url.pathname === "/api/fees/quote")
+    && !(request.method === "GET" && url.pathname === "/api/services/catalog")
     && (url.pathname === "/api" || url.pathname.startsWith("/api/"))) {
     sendJson(response, 503, {
       ok: false,
@@ -1523,6 +1582,11 @@ async function handleRequest(request, response) {
     return;
   }
 
+  if (request.method === "GET" && url.pathname === "/api/services/catalog") {
+    sendJson(response, 200, await getMonnifyCatalogueStatus());
+    return;
+  }
+
   if (request.method === "GET" && url.pathname === "/api/services/gift-cards/catalog") {
     sendJson(response, 200, {
       ok: true,
@@ -1563,58 +1627,11 @@ async function handleRequest(request, response) {
   }
 
   if (request.method === "GET" && url.pathname === "/api/fees/quote") {
-    try {
-      const service = url.searchParams.get("service") || "";
-      const quote = makeBillFeeQuote(
-        service,
-        url.searchParams.get("amount"),
-        url.searchParams.get("network") || "",
-        url.searchParams.get("plan") || ""
-      );
-      const readiness = await postgresPersistence.getReadiness();
-      if (readiness.status !== "connection_verified") {
-        sendJson(response, 503, {
-          ok: false,
-          error: "Fee quotes are unavailable until PostgreSQL persistence is verified."
-        });
-        return;
-      }
-      const quoteReference = `FEE-${crypto.randomUUID()}`;
-      const expiresAt = new Date(Date.now() + 5 * 60 * 1000).toISOString();
-      await postgresPersistence.createFeeQuote({
-        quoteReference,
-        customerId: authenticateRequest(request)?.id || null,
-        serviceType: quote.service,
-        providerCode: url.searchParams.get("network") || "",
-        productCode: url.searchParams.get("plan") || "",
-        amountMinor: quote.serviceAmountMinor,
-        platformFeeMinor: quote.platformFeeMinor,
-        providerFeeMinor: quote.providerFeeMinor,
-        currency: quote.currency,
-        expiresAt,
-        metadata: { source: "web" }
-      });
-      const storedQuote = await postgresPersistence.getFeeQuoteByReference(quoteReference);
-      if (!storedQuote || storedQuote.is_valid !== true) {
-        sendJson(response, 503, {
-          ok: false,
-          error: "The fee quote could not be confirmed in PostgreSQL."
-        });
-        return;
-      }
-      sendJson(response, 200, {
-        ok: true,
-        quote,
-        quoteToken: createQuoteToken(quote, quoteReference)
-      });
-    } catch (error) {
-      if (error?.code === "invalid_input") {
-        sendJson(response, 400, { ok: false, error: error.message });
-      } else {
-        console.error("Bills PostgreSQL fee quote persistence failed.", error?.code || "unknown");
-        sendJson(response, 503, { ok: false, error: "Unable to create a fee quote right now." });
-      }
-    }
+    sendJson(response, 503, {
+      ok: false,
+      error: "Bill fee quotes are unavailable until the Monnify catalogue and its service products are verified.",
+      status: (await getMonnifyCatalogueStatus()).status
+    });
     return;
   }
 
