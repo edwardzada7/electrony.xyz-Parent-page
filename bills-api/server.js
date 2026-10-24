@@ -1594,8 +1594,6 @@ async function handleRequest(request, response) {
       available: false,
       status: "provider_unconfigured",
       products: [],
-      platformFeeMinor: 0,
-      currency: "NGN",
       message: "Gift-card products cannot be displayed or purchased until a gift-card provider and its product catalogue are configured."
     });
     return;

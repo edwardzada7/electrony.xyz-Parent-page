@@ -2,9 +2,7 @@ const PLATFORM_FEE_RULES = Object.freeze({
   electricity: Object.freeze({ currency: "NGN", fixedFeeMinor: 10000 }),
   airtime: Object.freeze({ currency: "NGN", fixedFeeMinor: 10000 }),
   data: Object.freeze({ currency: "NGN", fixedFeeMinor: 10000 }),
-  bills: Object.freeze({ currency: "NGN", fixedFeeMinor: 10000 }),
-  "virtual-cards": Object.freeze({ currency: "USD", fixedFeeMinor: 0 }),
-  "gift-cards": Object.freeze({ currency: "NGN", fixedFeeMinor: 0 })
+  bills: Object.freeze({ currency: "NGN", fixedFeeMinor: 10000 })
 });
 
 function parseMoneyToMinor(value) {

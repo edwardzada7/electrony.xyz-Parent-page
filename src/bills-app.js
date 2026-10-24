@@ -6,6 +6,7 @@ const serviceCatalog = {
     label: "Electricity",
     icon: "↯",
     title: "Electricity purchase",
+    guestCheckout: true,
     helper: "Electricity products will appear when the Monnify Bills catalogue is verified."
   },
   airtime: {
@@ -13,6 +14,7 @@ const serviceCatalog = {
     label: "Airtime",
     icon: "∿",
     title: "Airtime top-up",
+    guestCheckout: true,
     helper: "Airtime networks will appear when the Monnify Bills catalogue is verified."
   },
   data: {
@@ -20,6 +22,7 @@ const serviceCatalog = {
     label: "Data",
     icon: "⌁",
     title: "Data purchase",
+    guestCheckout: true,
     helper: "Data providers and plans will appear when the Monnify Bills catalogue is verified."
   },
   bills: {
@@ -27,7 +30,24 @@ const serviceCatalog = {
     label: "Pay Bills",
     icon: "▤",
     title: "TV and utility bills",
+    guestCheckout: true,
     helper: "Supported billers and products will appear when the Monnify Bills catalogue is verified."
+  },
+  "virtual-cards": {
+    id: "virtual-cards",
+    label: "Virtual Cards",
+    icon: "▰",
+    title: "Virtual Cards",
+    guestCheckout: false,
+    helper: "An account and the card provider's soft-KYC process will be required. Integration is pending."
+  },
+  "gift-cards": {
+    id: "gift-cards",
+    label: "Gift Cards",
+    icon: "◇",
+    title: "Gift Cards",
+    guestCheckout: false,
+    helper: "An account and the gift-card provider's soft-KYC process will be required. Integration is pending."
   }
 };
 
@@ -147,22 +167,42 @@ function validateMeter(value) {
 
 function renderServiceList() {
   const list = document.querySelector("#service-list");
-  if (!list) return;
+  const grid = document.querySelector("#service-grid");
 
-  list.innerHTML = "";
+  if (list) {
+    list.innerHTML = "";
+    Object.values(serviceCatalog).forEach((service) => {
+      const item = document.createElement("li");
+      item.innerHTML = `
+        <button type="button" class="service-button ${state.activeService === service.id ? "is-active" : ""}" data-service="${service.id}" aria-pressed="${state.activeService === service.id}">
+          <span class="service-icon" aria-hidden="true">${service.icon}</span>
+          <span class="service-label">${service.label}</span>
+          ${service.guestCheckout ? "" : '<span class="service-access-tag">Account required</span>'}
+        </button>
+      `;
+      list.appendChild(item);
+    });
+  }
 
-  Object.values(serviceCatalog).forEach((service) => {
-    const item = document.createElement("li");
-    item.innerHTML = `
-      <button type="button" class="service-button ${state.activeService === service.id ? "is-active" : ""}" data-service="${service.id}">
-        <span class="service-icon" aria-hidden="true">${service.icon}</span>
-        <span class="service-label">${service.label}</span>
-      </button>
+  if (grid) {
+    grid.innerHTML = `
+      <p class="eyebrow eyebrow-soft service-grid-heading">All services</p>
+      <div class="service-grid-items">
+        ${Object.values(serviceCatalog).map((service) => `
+          <button type="button" class="service-tile ${state.activeService === service.id ? "is-active" : ""}" data-service="${service.id}" aria-pressed="${state.activeService === service.id}">
+            <span class="service-tile-top">
+              <span class="service-icon" aria-hidden="true">${service.icon}</span>
+              <span class="service-tile-access">${service.guestCheckout ? "Guest checkout" : "Account required"}</span>
+            </span>
+            <strong>${escapeHtml(service.label)}</strong>
+            <span class="service-tile-description">${escapeHtml(service.guestCheckout ? "Explore this Bills service" : "Provider integration pending")}</span>
+          </button>
+        `).join("")}
+      </div>
     `;
-    list.appendChild(item);
-  });
+  }
 
-  list.querySelectorAll(".service-button").forEach((button) => {
+  document.querySelectorAll("[data-service]").forEach((button) => {
     button.addEventListener("click", () => {
       state.activeService = button.dataset.service;
       state.order = null;
@@ -172,6 +212,12 @@ function renderServiceList() {
       renderServiceList();
       renderServicePanel();
       renderCheckoutPanel();
+      if (serviceCatalog[state.activeService].guestCheckout
+        && !state.catalogue
+        && !state.catalogueLoading
+        && !state.catalogueError) {
+        void loadServiceCatalogue();
+      }
     });
   });
 }
@@ -181,6 +227,25 @@ function renderServicePanel() {
   if (!panel) return;
 
   const service = serviceCatalog[state.activeService];
+  if (!service.guestCheckout) {
+    panel.innerHTML = `
+      <div class="service-panel-header">
+        <div>
+          <p class="eyebrow eyebrow-soft">Account-required service</p>
+          <h3>${escapeHtml(service.title)}</h3>
+        </div>
+        <span class="service-tag">Integration pending</span>
+      </div>
+      <p class="service-helper">${escapeHtml(service.helper)}</p>
+      <div class="integration-pending" role="status" aria-live="polite">
+        <strong>Not available yet</strong>
+        <p>A Bills account API exists, but customer sign-in is not connected to this page. Registration, login and provider soft-KYC are not available here.</p>
+        <p>No products, pricing, payment, issuance or delivery are available until this service's provider integration is implemented and verified.</p>
+      </div>
+    `;
+    return;
+  }
+
   const category = state.catalogue?.categories?.[service.id];
   const billers = Array.isArray(category?.billers) ? category.billers : [];
   const available = category?.available === true && billers.length > 0;
@@ -229,6 +294,8 @@ function renderServicePanel() {
 }
 
 async function loadServiceCatalogue() {
+  if (!serviceCatalog[state.activeService]?.guestCheckout) return;
+
   state.catalogueLoading = true;
   state.catalogueError = "";
   state.catalogue = null;
@@ -241,7 +308,7 @@ async function loadServiceCatalogue() {
     if (!result || typeof result.categories !== "object" || result.categories === null) {
       throw new Error("Billing API returned an invalid catalogue.");
     }
-    Object.values(serviceCatalog).forEach((service) => {
+    Object.values(serviceCatalog).filter((service) => service.guestCheckout).forEach((service) => {
       const category = result.categories[service.id];
       if (!category
         || !Array.isArray(category.billers)
@@ -315,6 +382,10 @@ function escapeHtml(value) {
     }
 
     async function requestFeeQuote(serviceId, amount, values) {
+      if (!serviceCatalog[serviceId]?.guestCheckout) {
+        throw new Error("Account-required services do not support guest fee quotes.");
+      }
+
       const requestKey = feeQuoteRequestKey(serviceId, amount, values);
       const quoteIsFresh = state.feeQuote?.requestKey === requestKey
         && Date.now() - state.feeQuote.fetchedAt < 4 * 60 * 1000;
@@ -391,6 +462,13 @@ function renderCheckoutPanel() {
   if (!panel) return;
 
   if (!state.order) {
+    panel.classList.add("hidden");
+    panel.innerHTML = "";
+    return;
+  }
+
+  if (!serviceCatalog[state.order.serviceId]?.guestCheckout) {
+    state.order = null;
     panel.classList.add("hidden");
     panel.innerHTML = "";
     return;
@@ -484,6 +562,11 @@ function createSummaryFromForm(serviceId, values) {
 
 async function handlePurchaseSubmission() {
   const service = serviceCatalog[state.activeService];
+  if (!service?.guestCheckout) {
+    renderServicePanel();
+    return;
+  }
+
   const form = document.querySelector("#purchase-form");
   if (!form) return;
 
@@ -604,6 +687,13 @@ function renderInlineMessage(message, type = "info") {
 
 async function completePurchase() {
   if (!state.order) return;
+  if (!serviceCatalog[state.order.serviceId]?.guestCheckout) {
+    state.order = null;
+    renderCheckoutPanel();
+    renderServicePanel();
+    return;
+  }
+
   if (!BILL_PAYMENT_OPERATIONS_ENABLED) {
     displayTransactionResult("Payment unavailable.", "Payment remains disabled until database authorization, payment verification, and provider readiness are verified.", "error");
     return;
@@ -656,6 +746,8 @@ async function completePurchase() {
 }
 
 async function verifyReturnedPayment() {
+  if (!serviceCatalog[state.activeService]?.guestCheckout) return;
+
   const params = new URLSearchParams(window.location.search);
   const paymentState = params.get("payment");
   const reference = params.get("reference") || params.get("transactionReference") || params.get("paymentReference") || params.get("monnifyReference");
@@ -735,7 +827,9 @@ function displayTransactionResult(message, details, status) {
 
 document.addEventListener("DOMContentLoaded", () => {
   renderServiceList();
-  void loadServiceCatalogue();
+  if (serviceCatalog[state.activeService].guestCheckout) {
+    void loadServiceCatalogue();
+  }
   renderCheckoutPanel();
   verifyReturnedPayment();
 });

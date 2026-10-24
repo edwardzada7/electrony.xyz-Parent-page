@@ -96,7 +96,9 @@ The UI uses backend-returned biller codes as identifiers, not labels, and presen
 
 ## Accounts and services not yet configured
 
-The Bills interface now presents only Electricity, Airtime, Data, and Pay Bills. The separate virtual-card and gift-card API placeholders remain unconfigured and are not shown as Monnify Bill Payment capabilities.
+The Bills app presents six distinct services: Electricity, Airtime, Data, Pay Bills, Virtual Cards, and Gift Cards. The first four retain the existing guest-service architecture. Virtual Cards and Gift Cards are marked account-required and remain unavailable while their separate provider integrations are pending. The app does not show provider products or pricing, start payments, issue cards, or deliver gift cards.
+
+The backend exposes standalone Bills account registration and login routes (`POST /api/auth/register` and `POST /api/auth/login`) that issue short-lived signed tokens when `BILLS_JWT_SECRET` is configured. This is not a shared site authentication session, and the Bills frontend does not currently connect to these routes; it must not be treated as an account sign-in flow for the card services. The card-service catalogue responses remain unavailable, eligibility does not report a result without a provider, and authenticated purchase requests fail closed without creating a payment or contacting a provider. No card-specific provider adapter or request configuration is implemented. Credentials for any future card provider must be kept server-side.
 
 Local development continues to use JSON files beside the configured `BILLS_DATABASE_URL` file. By default, they are stored under `~/.electrony-bills/`; the previous `bills-api/data/` files remain legacy migration sources. `BILLS_DATABASE_URL` is a file path, not a database URL, and its local JSON and legacy migration behavior are unchanged.
 
