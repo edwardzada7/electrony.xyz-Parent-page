@@ -134,9 +134,10 @@ function enforceAuthRateLimit(request) {
   return true;
 }
 
-function createQuoteToken(quote) {
+function createQuoteToken(quote, quoteReference) {
   const token = crypto.randomBytes(32).toString("hex");
   FEE_QUOTES.set(token, {
+    quoteReference,
     service: quote.service,
     amountMinor: quote.serviceAmountMinor,
     platformFeeMinor: quote.platformFeeMinor,
@@ -150,11 +151,13 @@ function createQuoteToken(quote) {
 
 function verifyQuoteToken(token, quote) {
   const claims = FEE_QUOTES.get(token);
-  return Boolean(claims
+  return claims
     && claims.expiresAt > Date.now()
     && claims.service === quote.service
     && claims.amountMinor === quote.serviceAmountMinor
-    && claims.platformFeeMinor === quote.platformFeeMinor);
+    && claims.platformFeeMinor === quote.platformFeeMinor
+    ? claims
+    : null;
 }
 
 async function hashPassword(password, salt) {
@@ -1187,11 +1190,9 @@ async function handleRequest(request, response) {
     const providerFeeQuoteAvailable = typeof vendingProvider.quotePurchase === "function";
     const databaseSecurityChecks = databaseReadiness.checks || {};
     const paymentBlockers = [
-      "postgres_business_persistence_not_wired_to_routes",
       "rls_authorization_semantics_unverified",
       "authoritative_monnify_verification_not_implemented",
       "provider_fulfillment_contract_unverified",
-      "durable_transactional_idempotency_not_implemented"
     ];
     if (!providerFeeQuoteAvailable) paymentBlockers.push("provider_fee_quote_unavailable");
     if (databaseSecurityChecks.otherRoleGrants?.status !== "none_detected") {
@@ -1261,9 +1262,11 @@ async function handleRequest(request, response) {
           privateTableAccess: databaseSecurityChecks.otherRoleGrants?.unexpectedGrants ?? null
         },
         businessPersistence: {
-          ready: false,
-          status: "disabled",
-          reason: "postgres_repository_not_wired_to_api_routes"
+          ready: databaseReadiness.status === "connection_verified",
+          status: databaseReadiness.status === "connection_verified" ? "wired" : "unavailable",
+          reason: databaseReadiness.status === "connection_verified"
+            ? "PostgreSQL route persistence is wired; payment authorization remains separately blocked."
+            : "PostgreSQL route persistence requires a verified database connection."
         },
         payment: {
           ready: false,
@@ -1277,7 +1280,6 @@ async function handleRequest(request, response) {
           providerFeeQuoteAvailable,
           fulfillmentContractVerified: false,
           blockers: [
-            "postgres_business_persistence_not_wired_to_routes",
             "rls_authorization_semantics_unverified",
             "provider_fulfillment_contract_unverified"
           ]
@@ -1346,6 +1348,7 @@ async function handleRequest(request, response) {
   }
 
   if (process.env.NODE_ENV === "production"
+    && !(request.method === "GET" && url.pathname === "/api/fees/quote")
     && (url.pathname === "/api" || url.pathname.startsWith("/api/"))) {
     sendJson(response, 503, {
       ok: false,
@@ -1445,24 +1448,84 @@ async function handleRequest(request, response) {
         url.searchParams.get("network") || "",
         url.searchParams.get("plan") || ""
       );
+      const readiness = await postgresPersistence.getReadiness();
+      if (readiness.status !== "connection_verified") {
+        sendJson(response, 503, {
+          ok: false,
+          error: "Fee quotes are unavailable until PostgreSQL persistence is verified."
+        });
+        return;
+      }
+      const quoteReference = `FEE-${crypto.randomUUID()}`;
+      const expiresAt = new Date(Date.now() + 5 * 60 * 1000).toISOString();
+      await postgresPersistence.createFeeQuote({
+        quoteReference,
+        customerId: authenticateRequest(request)?.id || null,
+        serviceType: quote.service,
+        providerCode: url.searchParams.get("network") || "",
+        productCode: url.searchParams.get("plan") || "",
+        amountMinor: quote.serviceAmountMinor,
+        platformFeeMinor: quote.platformFeeMinor,
+        providerFeeMinor: quote.providerFeeMinor,
+        currency: quote.currency,
+        expiresAt,
+        metadata: { source: "web" }
+      });
+      const storedQuote = await postgresPersistence.getFeeQuoteByReference(quoteReference);
+      if (!storedQuote || storedQuote.is_valid !== true) {
+        sendJson(response, 503, {
+          ok: false,
+          error: "The fee quote could not be confirmed in PostgreSQL."
+        });
+        return;
+      }
       sendJson(response, 200, {
         ok: true,
         quote,
-        quoteToken: createQuoteToken(quote)
+        quoteToken: createQuoteToken(quote, quoteReference)
       });
     } catch (error) {
-      sendJson(response, 400, { ok: false, error: error.message });
+      if (error?.code === "invalid_input") {
+        sendJson(response, 400, { ok: false, error: error.message });
+      } else {
+        console.error("Bills PostgreSQL fee quote persistence failed.", error?.code || "unknown");
+        sendJson(response, 503, { ok: false, error: "Unable to create a fee quote right now." });
+      }
     }
     return;
   }
 
   if (request.method === "POST" && url.pathname === "/api/payments/session") {
     try {
+      const readiness = await postgresPersistence.getReadiness();
+      if (readiness.status !== "connection_verified") {
+        sendJson(response, 503, {
+          ok: false,
+          error: "Payment sessions are unavailable until PostgreSQL persistence is verified."
+        });
+        return;
+      }
       const payload = await readPayload(request);
       const validation = validateServiceRequest(payload);
       const quote = createPlatformFeeQuote(validation.service, validation.amountMinor);
-      if (!verifyQuoteToken(payload.quoteToken, quote)) {
+      const quoteClaims = verifyQuoteToken(payload.quoteToken, quote);
+      if (!quoteClaims) {
         sendJson(response, 409, { ok: false, error: "Your fee quote is missing or has expired. Refresh the breakdown before confirming payment." });
+        return;
+      }
+      const storedQuote = await postgresPersistence.getFeeQuoteByReference(quoteClaims.quoteReference);
+      if (!storedQuote
+        || storedQuote.service_type !== validation.service
+        || Number(storedQuote.amount_minor) !== validation.amountMinor
+        || Number(storedQuote.platform_fee_minor) !== quote.platformFeeMinor
+        || (storedQuote.provider_fee_minor === null ? null : Number(storedQuote.provider_fee_minor)) !== quote.providerFeeMinor
+        || storedQuote.currency !== quote.currency) {
+        sendJson(response, 409, { ok: false, error: "Your fee quote is missing or has changed. Refresh the breakdown before confirming payment." });
+        return;
+      }
+      if ((storedQuote.provider_code || "") !== validation.customer.network
+        || (storedQuote.product_code || "") !== validation.customer.plan) {
+        sendJson(response, 409, { ok: false, error: "Your fee quote does not match the selected service options." });
         return;
       }
       if (payload.totalAmount !== undefined
@@ -1476,68 +1539,42 @@ async function handleRequest(request, response) {
         return;
       }
       const user = authenticateRequest(request);
-      const guestOrderSecret = user ? null : createGuestOrderSecret();
-
-      const existing = getTransaction(reference);
-      if (existing && existing.status !== "cancelled") {
-        if (!canAccessTransaction(
-          existing,
-          user,
-          getGuestOrderSecretFromRequest(request, reference)
-        )) {
-          sendJson(response, 403, { ok: false, error: "This transaction reference belongs to another customer." });
-          return;
-        }
-        if (existing.service !== validation.service
-          || existing.amountMinor !== validation.amountMinor
-          || existing.totalAmountMinor !== quote.totalBeforeProviderFeesMinor
-          || JSON.stringify(existing.customer) !== JSON.stringify(validation.customer)) {
+      const existingOrder = await postgresPersistence.getOrderByReference(reference, user
+        ? { customerId: user.id }
+        : { guestOrderSecret: getGuestOrderSecretFromRequest(request, reference) });
+      let existingAttempt = null;
+      if (existingOrder) {
+        if (existingOrder.service_type !== validation.service
+          || existingOrder.quote_id !== storedQuote.id
+          || Number(existingOrder.amount_minor) !== validation.amountMinor
+          || Number(existingOrder.total_amount_minor) !== quote.totalBeforeProviderFeesMinor
+          || JSON.stringify(existingOrder.metadata?.customer) !== JSON.stringify(validation.customer)) {
           sendJson(response, 409, { ok: false, error: "The quote has changed. Refresh the breakdown and confirm again." });
           return;
         }
-        sendJson(response, 200, {
-          ok: true,
-          reference: existing.reference,
-          amount: existing.amount,
-          amountMinor: existing.amountMinor,
-          platformFeeMinor: existing.platformFeeMinor,
-          providerFeeMinor: existing.providerFeeMinor,
-          totalAmountMinor: existing.totalAmountMinor,
-          status: existing.status,
-          mode: process.env.NODE_ENV === "production" ? "monnify-production" : "monnify-sandbox",
-          checkoutUrl: existing.checkoutUrl || "",
-          idempotent: true
-        });
-        return;
+        existingAttempt = await postgresPersistence.getPaymentAttemptByMerchantReference(reference, reference);
+        if (existingAttempt || existingOrder.payment_status !== "pending") {
+          sendJson(response, 200, {
+            ok: true,
+            reference,
+            amount: validation.amount,
+            amountMinor: Number(existingOrder.amount_minor),
+            platformFeeMinor: Number(existingOrder.platform_fee_minor),
+            providerFeeMinor: existingOrder.provider_fee_minor === null ? null : Number(existingOrder.provider_fee_minor),
+            totalAmountMinor: Number(existingOrder.total_amount_minor),
+            status: existingOrder.payment_status === "pending" ? "created" : existingOrder.payment_status,
+            mode: process.env.NODE_ENV === "production" ? "monnify-production" : "monnify-sandbox",
+            checkoutUrl: existingAttempt?.checkout_url || "",
+            idempotent: true
+          });
+          return;
+        }
       }
 
-      const transaction = {
-        reference,
-        service: validation.service,
-        amount: validation.amount,
-        amountMinor: validation.amountMinor,
-        currency: quote.currency,
-        platformFeeMinor: quote.platformFeeMinor,
-        platformFeeCurrency: quote.currency,
-        providerFeeMinor: null,
-        providerFeeCurrency: quote.currency,
-        totalAmountMinor: quote.totalBeforeProviderFeesMinor,
-        totalAmount: quote.totalBeforeProviderFeesMinor / 100,
-        userId: user ? user.id : null,
-        ...(guestOrderSecret ? { guestAccessHash: hashGuestOrderSecret(guestOrderSecret) } : {}),
-        status: "created",
-        paymentStatus: "not_started",
-        fulfillmentStatus: "not_started",
-        createdAt: nowIso(),
-        updatedAt: nowIso(),
-        customer: validation.customer,
-        metadata: payload.metadata || {},
-        providerReference: "",
-        monnifyReference: "",
-        checkoutUrl: "",
-        note: "Transaction stored before external payment authorization."
-      };
-
+      if (!existingOrder && storedQuote.is_valid !== true) {
+        sendJson(response, 409, { ok: false, error: "Your fee quote has expired or has already been used." });
+        return;
+      }
       const vendingProvider = buildProviderAdapter();
       if (!vendingProvider.isConfigured()) {
         sendJson(response, 503, {
@@ -1554,20 +1591,42 @@ async function handleRequest(request, response) {
         });
         return;
       }
-
-      saveTransaction(reference, transaction);
+      const order = existingOrder || await postgresPersistence.createOrderFromQuote({
+        orderReference: reference,
+        quoteReference: quoteClaims.quoteReference,
+        customerId: user?.id || null,
+        metadata: { channel: "web", customer: validation.customer }
+      });
+      const guestOrderSecret = order.guestOrderSecret || null;
+      const transaction = {
+        reference,
+        service: validation.service,
+        amount: Number(order.amount_minor) / 100,
+        amountMinor: Number(order.amount_minor),
+        currency: order.currency,
+        platformFeeMinor: Number(order.platform_fee_minor),
+        platformFeeCurrency: order.currency,
+        providerFeeMinor: order.provider_fee_minor === null ? null : Number(order.provider_fee_minor),
+        providerFeeCurrency: order.currency,
+        totalAmountMinor: Number(order.total_amount_minor),
+        totalAmount: Number(order.total_amount_minor) / 100,
+        userId: user?.id || null,
+        status: order.payment_status === "pending" ? "created" : order.payment_status,
+        paymentStatus: "not_started",
+        fulfillmentStatus: "not_started",
+        createdAt: order.created_at || nowIso(),
+        updatedAt: order.updated_at || nowIso(),
+        customer: validation.customer,
+        metadata: payload.metadata || {},
+        providerReference: "",
+        monnifyReference: "",
+        checkoutUrl: "",
+        note: "Transaction stored before external payment authorization."
+      };
 
       if (!hasMonnifyConfig()) {
-        const missing = getMissingMonnifyConfig();
-        const updated = {
-          ...transaction,
-          status: "awaiting_payment",
-          paymentStatus: "configuration_required",
-          note: "Monnify is not configured. Set required environment values before launching a checkout.",
-          requiredConfig: missing
-        };
-        saveTransaction(reference, updated);
         if (guestOrderSecret) setGuestOrderSecretCookie(response, reference, guestOrderSecret);
+        const missing = getMissingMonnifyConfig();
 
         sendJson(response, 503, {
           ok: false,
@@ -1579,55 +1638,79 @@ async function handleRequest(request, response) {
         return;
       }
 
+      let result;
       try {
-        const result = await createMonnifyReservation(transaction);
-        const updated = {
-          ...transaction,
-          status: "awaiting_payment",
-          paymentStatus: "payment_pending",
-          monnifyReference: result.monnifyReference,
-          checkoutUrl: result.checkoutUrl,
-          updatedAt: nowIso(),
-          note: "Monnify sandbox session created. Payment remains pending until customer authorization."
-        };
-
-        saveTransaction(reference, updated);
-        if (guestOrderSecret) setGuestOrderSecretCookie(response, reference, guestOrderSecret);
-
-        sendJson(response, 200, {
-          ok: true,
-          reference,
-          amount: transaction.amount,
-          amountMinor: transaction.amountMinor,
-          platformFeeMinor: transaction.platformFeeMinor,
-          providerFeeMinor: transaction.providerFeeMinor,
-          totalAmountMinor: transaction.totalAmountMinor,
-          status: "awaiting_payment",
-          mode: process.env.NODE_ENV === "production" ? "monnify-production" : "monnify-sandbox",
-          checkoutUrl: result.checkoutUrl,
-          monnifyReference: result.monnifyReference,
-          note: "Only the payment redirect URL is exposed to the browser. Monnify credentials remain server-side only."
-        });
+        result = await createMonnifyReservation(transaction);
       } catch (error) {
-        const updated = {
-          ...transaction,
-          status: "payment_failed",
-          paymentStatus: "configuration_error",
-          updatedAt: nowIso(),
-          note: error.message || "Unable to create Monnify reservation."
-        };
-        saveTransaction(reference, updated);
+        await postgresPersistence.updateOrderPaymentState({
+          orderReference: reference,
+          expectedStatus: "pending",
+          paymentStatus: "failed",
+          failureReason: "Unable to create a payment session with the configured provider."
+        });
         if (guestOrderSecret) setGuestOrderSecretCookie(response, reference, guestOrderSecret);
-
         sendJson(response, 502, {
           ok: false,
           error: "Unable to create a payment session with the configured provider.",
           reference
         });
+        return;
       }
+
+      try {
+        await postgresPersistence.createPaymentAttempt({
+          orderReference: reference,
+          provider: "monnify",
+          merchantReference: reference,
+          amountMinor: transaction.totalAmountMinor,
+          currency: transaction.currency,
+          checkoutUrl: result.checkoutUrl,
+          metadata: { providerReference: result.monnifyReference }
+        });
+      } catch (error) {
+        await postgresPersistence.updateOrderPaymentState({
+          orderReference: reference,
+          expectedStatus: "pending",
+          paymentStatus: "review_required",
+          failureReason: "Payment reservation exists but its attempt could not be persisted."
+        });
+        if (guestOrderSecret) setGuestOrderSecretCookie(response, reference, guestOrderSecret);
+        console.error("Bills PostgreSQL payment-attempt persistence failed.", error?.code || "unknown");
+        sendJson(response, 503, {
+          ok: false,
+          error: "Payment reservation was created but its attempt could not be persisted. The order requires review.",
+          reference
+        });
+        return;
+      }
+      if (guestOrderSecret) setGuestOrderSecretCookie(response, reference, guestOrderSecret);
+
+      sendJson(response, 200, {
+        ok: true,
+        reference,
+        amount: transaction.amount,
+        amountMinor: transaction.amountMinor,
+        platformFeeMinor: transaction.platformFeeMinor,
+        providerFeeMinor: transaction.providerFeeMinor,
+        totalAmountMinor: transaction.totalAmountMinor,
+        status: "awaiting_payment",
+        mode: process.env.NODE_ENV === "production" ? "monnify-production" : "monnify-sandbox",
+        checkoutUrl: result.checkoutUrl,
+        monnifyReference: result.monnifyReference,
+        note: "Only the payment redirect URL is exposed to the browser. Monnify credentials remain server-side only."
+      });
       return;
     } catch (error) {
-      sendJson(response, 400, { ok: false, error: error.message || "Unable to create checkout session." });
+      if (error?.code === "order_not_found") {
+        sendJson(response, 403, { ok: false, error: "This transaction reference belongs to another customer." });
+      } else if (error?.code === "quote_unavailable" || error?.code === "reference_conflict") {
+        sendJson(response, 409, { ok: false, error: error.message });
+      } else if (error?.safePersistenceError || postgresPersistence.status !== "configured_unverified") {
+        console.error("Bills PostgreSQL payment-session persistence failed.", error?.code || "unknown");
+        sendJson(response, 503, { ok: false, error: "Unable to create checkout session right now." });
+      } else {
+        sendJson(response, 400, { ok: false, error: error.message || "Unable to create checkout session." });
+      }
       return;
     }
   }
@@ -1690,28 +1773,37 @@ async function handleRequest(request, response) {
       return;
     }
 
-    const transaction = getTransaction(reference);
-    if (!transaction) {
-      sendJson(response, 404, { ok: false, error: "Transaction reference not found." });
+    const user = authenticateRequest(request);
+    let order;
+    try {
+      order = await postgresPersistence.getOrderByReference(reference, user
+        ? { customerId: user.id }
+        : { guestOrderSecret: getGuestOrderSecretFromRequest(request, reference) });
+    } catch (error) {
+      if (error?.code === "order_not_found") {
+        sendJson(response, 403, { ok: false, error: "You do not have access to this transaction." });
+      } else {
+        console.error("Bills PostgreSQL order lookup failed.", error?.code || "unknown");
+        sendJson(response, 503, { ok: false, error: "Transaction status is unavailable right now." });
+      }
       return;
     }
-    const user = authenticateRequest(request);
-    if (!canAccessTransaction(
-      transaction,
-      user,
-      getGuestOrderSecretFromRequest(request, transaction.reference)
-    )) {
-      sendJson(response, 403, { ok: false, error: "You do not have access to this transaction." });
+    if (!order) {
+      sendJson(response, 404, { ok: false, error: "Transaction reference not found." });
       return;
     }
 
     sendJson(response, 200, {
       ok: true,
-      reference: transaction.reference,
-      status: transaction.status,
-      paymentStatus: transaction.paymentStatus,
-      fulfillmentStatus: transaction.fulfillmentStatus,
-      providerReference: transaction.providerReference || "",
+      reference: order.order_reference,
+      status: order.payment_status === "pending"
+        ? "created"
+        : (order.payment_status === "initiated" ? "awaiting_payment" : order.payment_status),
+      paymentStatus: order.payment_status === "pending"
+        ? "not_started"
+        : (order.payment_status === "initiated" ? "payment_pending" : order.payment_status),
+      fulfillmentStatus: order.fulfilment_status,
+      providerReference: order.provider_transaction_reference || "",
       note: "Status checks are intentionally server-side to avoid exposing payment credentials or provider details."
     });
     return;
