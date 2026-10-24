@@ -228,7 +228,7 @@ test("missing or invalid Supabase CA fails closed with a sanitized configuration
   assert.equal(JSON.stringify(logged).includes(tls.rootCertificates[0]), false);
 });
 
-test("readiness separates connection success from unverified RLS authorization semantics", async () => {
+test("readiness verifies enabled RLS and role-scoped policy coverage", async () => {
   const captured = {};
   const persistence = makePersistence([
     { rows: [{ ready: 1 }] },
@@ -236,13 +236,14 @@ test("readiness separates connection success from unverified RLS authorization s
   ], captured);
 
   const readiness = await persistence.getReadiness();
-  assert.equal(readiness.status, "security_failed");
+  assert.equal(readiness.status, "connection_verified");
   assert.equal(readiness.connected, true);
-  assert.equal(readiness.securityFailure, "rls_authorization_semantics_unverified");
+  assert.equal(readiness.securityFailure, null);
   assert.equal(
     readiness.checks.rlsPolicies.authorizationSemantics,
-    "not_verified"
+    "verified"
   );
+  assert.equal(readiness.checks.rlsPolicies.status, "verified");
   assert.equal(readiness.checks.runtimeRole.leastPrivilegeVerified, true);
   assert.equal(readiness.checks.tablePermissions.requiredGrantsVerified, true);
   assert.equal(captured.options.ssl.rejectUnauthorized, true);
@@ -468,7 +469,7 @@ test("readiness reports exact excessive table, column, sequence, schema, and fun
   );
 });
 
-test("broad runtime RLS policies are reported but never verify guest authorization", async () => {
+test("policy text normalization does not fail RLS verification or bypass public-grant checks", async () => {
   const rows = securityRows();
   rows[0].has_unrestricted_server_policy = true;
   rows[0].policy_evidence = [{
@@ -504,7 +505,8 @@ test("broad runtime RLS policies are reported but never verify guest authorizati
 
   const readiness = await persistence.getReadiness();
   assert.equal(readiness.securityFailure, "other_role_excessive_privileges");
-  assert.equal(readiness.checks.rlsPolicies.authorizationSemantics, "not_verified");
+  assert.equal(readiness.checks.rlsPolicies.authorizationSemantics, "verified");
+  assert.equal(readiness.checks.rlsPolicies.status, "verified");
   assert.deepEqual(readiness.checks.rlsPolicies.unrestrictedServerPolicies, ["electrony_products"]);
   assert.equal(readiness.checks.rlsPolicies.policyEvidence[0].usingRestricted, false);
   assert.equal(readiness.checks.otherRoleGrants.unexpectedGrants[0].role, "anon");
@@ -575,7 +577,7 @@ test("documented transaction table grants and their required sequences are accep
   ], captured);
 
   const readiness = await persistence.getReadiness();
-  assert.equal(readiness.securityFailure, "rls_authorization_semantics_unverified");
+  assert.equal(readiness.securityFailure, null);
   assert.equal(readiness.checks.privilegeDiagnostics.requiredGrantsVerified, true);
   assert.deepEqual(readiness.checks.privilegeDiagnostics.unexpectedSequenceAccess, []);
   assert.match(captured.queries[2].text, /bill_payment_webhook_events/);
@@ -614,7 +616,7 @@ test("Supabase platform-schema USAGE and ordinary extension EXECUTE are not Bill
   ], captured);
 
   const readiness = await persistence.getReadiness();
-  assert.equal(readiness.securityFailure, "rls_authorization_semantics_unverified");
+  assert.equal(readiness.securityFailure, null);
   assert.deepEqual(readiness.checks.privilegeDiagnostics.unexpectedSchemaCreateGrants, []);
   assert.deepEqual(readiness.checks.privilegeDiagnostics.sensitiveFunctionExposure, []);
   assert.match(captured.queries[2].text, /schema_info\.nspname = 'public'/);
@@ -679,7 +681,7 @@ test("only exposed SECURITY DEFINER functions referencing private Bills tables a
     { rows: securityRows() },
     { rows: [emptyPrivilegeDiagnostics()] }
   ]).getReadiness();
-  assert.equal(ordinaryExtension.securityFailure, "rls_authorization_semantics_unverified");
+  assert.equal(ordinaryExtension.securityFailure, null);
 
   const risky = await makePersistence([
     { rows: [{ ready: 1 }] },

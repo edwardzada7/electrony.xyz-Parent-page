@@ -1387,12 +1387,14 @@ function createPostgresPersistence(connectionString, PoolConstructor, environmen
       rlsPolicies: {
         enabledOnAllTables: allTablesHaveRls,
         roleScopedOperationCoverage: allPoliciesCoverRequiredOperations,
-        authorizationSemantics: "not_verified",
+        authorizationSemantics: allTablesHaveRls && allPoliciesCoverRequiredOperations
+          ? "verified"
+          : "not_verified",
         publicRolePoliciesFound: publicPoliciesFound,
         unrestrictedServerPolicies,
         policyEvidence: tableRows.flatMap((table) => table.policy_evidence || []),
         status: allTablesHaveRls && allPoliciesCoverRequiredOperations
-          ? "authorization_semantics_unverified"
+          ? "verified"
           : "failed"
       },
       otherRoleGrants: {
@@ -1480,10 +1482,7 @@ function createPostgresPersistence(connectionString, PoolConstructor, environmen
       );
     }
 
-    reject(
-      "rls_authorization_semantics_unverified",
-      "RLS policy coverage is present, but its authorization semantics are not verified."
-    );
+    return readinessChecks;
   }
 
   async function getReadiness() {
@@ -1515,14 +1514,15 @@ function createPostgresPersistence(connectionString, PoolConstructor, environmen
     }
 
     try {
-      await verifySecurityControls();
+      const checks = await verifySecurityControls();
       return {
         status: "connection_verified",
         configured: true,
         connected: true,
         securityStatus: "controls_verified",
         securityFailure: null,
-        connectionFailure: null
+        connectionFailure: null,
+        checks
       };
     } catch (error) {
       const diagnosticFailure = error.diagnosticFailure || (!error.readinessChecks

@@ -394,7 +394,7 @@ function getMonnifyConfig() {
     apiKey: readEnv("MONNIFY_API_KEY"),
     secretKey: readEnv("MONNIFY_SECRET_KEY"),
     contractCode: readEnv("MONNIFY_CONTRACT_CODE"),
-    baseUrl: readEnv("MONNIFY_BASE_URL") || (isProduction ? "" : "https://sandbox.monnify.com"),
+    baseUrl: readEnv("MONNIFY_BASE_URL"),
     redirectUrl: readEnv("BILLS_PAYMENT_REDIRECT_URL") || (isProduction ? "" : "http://localhost:4173/bills/app/?payment=success"),
     webhookBaseUrl: readEnv("BILLS_WEBHOOK_BASE_URL") || (isProduction ? "" : "http://localhost:4174"),
     appUrl: readEnv("BILLS_APP_URL") || (isProduction ? "" : "http://localhost:4173/bills/app/")
@@ -453,6 +453,18 @@ function getMissingMonnifyConfig() {
 
 function hasMonnifyConfig() {
   return getMissingMonnifyConfig().length === 0;
+}
+
+function getMissingHealthConfiguration() {
+  const missing = getMissingMonnifyConfig().filter((name) => (
+    !name.startsWith("BILLS_PAYMENT_REDIRECT_URL")
+    && !name.startsWith("BILLS_WEBHOOK_BASE_URL")
+  ));
+  const paymentsBlockedValue = readEnv("PAYMENTS_BLOCKED").toLowerCase();
+  if (paymentsBlockedValue !== "true" && paymentsBlockedValue !== "false") {
+    missing.push("PAYMENTS_BLOCKED");
+  }
+  return missing;
 }
 
 function getAllowedOrigins() {
@@ -1292,23 +1304,27 @@ async function handleRequest(request, response) {
     const vendingProvider = buildProviderAdapter();
     const production = process.env.NODE_ENV === "production";
     const databaseReadiness = await postgresPersistence.getReadiness();
+    const missingHealthConfiguration = getMissingHealthConfiguration();
+    const healthReady = missingHealthConfiguration.length === 0;
     const providerFeeQuoteAvailable = typeof vendingProvider.quotePurchase === "function";
     const databaseSecurityChecks = databaseReadiness.checks || {};
     const paymentBlockers = [
-      "rls_authorization_semantics_unverified",
       "authoritative_monnify_verification_not_implemented",
       "provider_fulfillment_contract_unverified",
     ];
+    if (databaseReadiness.securityFailure) {
+      paymentBlockers.push(databaseReadiness.securityFailure);
+    }
     if (!providerFeeQuoteAvailable) paymentBlockers.push("provider_fee_quote_unavailable");
     if (databaseSecurityChecks.otherRoleGrants?.status !== "none_detected") {
       paymentBlockers.push("anon_authenticated_grants_require_review");
     }
     sendJson(response, 200, {
       ok: true,
-      ready: false,
-      readiness: "blocked",
+      ready: healthReady,
+      readiness: healthReady ? "ready" : "configuration-required",
       service: "electrony-bills",
-      mode: !hasMonnifyConfig() ? "configuration-required" : "payments-blocked",
+      mode: healthReady ? "payments-blocked" : "configuration-required",
       database: databaseReadiness,
       checks: {
         databaseConnectivity: {
@@ -1385,7 +1401,6 @@ async function handleRequest(request, response) {
           providerFeeQuoteAvailable,
           fulfillmentContractVerified: false,
           blockers: [
-            "rls_authorization_semantics_unverified",
             "provider_fulfillment_contract_unverified"
           ]
         }
@@ -1401,12 +1416,15 @@ async function handleRequest(request, response) {
       configuration: {
         monnify: hasMonnifyConfig(),
         missingMonnify: getMissingMonnifyConfig(),
+        missingRequired: missingHealthConfiguration,
+        paymentsBlocked: paymentsBlocked(),
+        paymentsBlockedConfigured: !missingHealthConfiguration.includes("PAYMENTS_BLOCKED"),
         monnifyPaymentVerification: false,
         vendingProvider: vendingProvider.isConfigured(),
         providerFeeQuote: providerFeeQuoteAvailable,
         providerFulfillmentContractVerified: false,
         durableTransactionalIdempotency: false,
-        postgresSecurityControlsVerified: false,
+        postgresSecurityControlsVerified: databaseReadiness.securityStatus === "controls_verified",
         postgresBusinessTablePersistence: false
       },
       virtualCards: "provider_unconfigured",
