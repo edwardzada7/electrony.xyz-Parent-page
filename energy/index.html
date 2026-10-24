@@ -5,11 +5,23 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="theme-color" content="#EAF7E8">
     <meta name="description" content="Explore solar, energy storage, electrical distribution and project supply enquiries for homes, businesses and infrastructure with Electrony Energy.">
+    <link rel="canonical" href="https://energy.electrony.xyz/">
     <meta property="og:type" content="website">
     <meta property="og:title" content="Electrony Energy — Powering a More Connected Future">
-    <meta property="og:description" content="Explore energy and electrical-power solutions for homes, businesses and infrastructure through the Electrony ecosystem.">
-    <meta property="og:url" content="https://electrony.xyz/energy/">
+    <meta property="og:description" content="Explore solar, energy storage, electrical distribution and project supply enquiries with Electrony Energy.">
+    <meta property="og:url" content="https://energy.electrony.xyz/">
+    <meta property="og:image" content="https://energy.electrony.xyz/assets/brand/electrony-e-logo.png">
+    <meta property="og:image:alt" content="Electrony E logo">
+    <meta name="twitter:card" content="summary">
+    <meta name="twitter:title" content="Electrony Energy — Powering a More Connected Future">
+    <meta name="twitter:description" content="Explore solar, energy storage, electrical distribution and project supply enquiries with Electrony Energy.">
+    <meta name="twitter:image" content="https://energy.electrony.xyz/assets/brand/electrony-e-logo.png">
     <title>Electrony Energy — Powering a More Connected Future</title>
+    <link rel="icon" href="/assets/favicons/energy/favicon.ico" sizes="32x32" type="image/x-icon">
+    <link rel="icon" href="/assets/favicons/energy/favicon.svg" type="image/svg+xml">
+    <link rel="icon" href="/assets/favicons/energy/favicon-16x16.png" sizes="16x16" type="image/png">
+    <link rel="icon" href="/assets/favicons/energy/favicon-32x32.png" sizes="32x32" type="image/png">
+    <link rel="apple-touch-icon" href="/assets/favicons/energy/apple-touch-icon.png" sizes="180x180">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -30,7 +42,7 @@
     <a class="skip-link" href="#main">Skip to content</a>
     <header class="site-header" id="top">
       <div class="container header-inner">
-        <a class="wordmark wordmark-with-logo" href="/" aria-label="Electrony home">
+        <a class="wordmark wordmark-with-logo" href="https://electrony.xyz/" aria-label="Electrony home">
           <img class="brand-logo-header" data-brand-logo src="../assets/brand/electrony-xyz-logo%20.png" alt="Electrony.xyz" hidden>
           <span class="brand-logo-fallback" data-brand-fallback>Electrony<span class="wordmark-period" aria-hidden="true">.</span></span>
         </a>
@@ -40,14 +52,14 @@
         </button>
         <nav class="primary-navigation" id="primary-navigation" aria-label="Primary navigation">
           <ul class="navigation-list">
-            <li><a href="/">Electrony Home</a></li>
+            <li><a href="https://electrony.xyz/">Electrony Home</a></li>
             <li><a href="#solutions">Solutions</a></li>
             <li><a href="#catalogue">Products</a></li>
             <li><a href="#calculator">Energy Calculator</a></li>
             <li><a href="#process">How it works</a></li>
             <li><a href="#projects">Projects</a></li>
-            <li><a href="/hardware/">Hardware</a></li>
-            <li><a href="/automobile/">Automobile</a></li>
+            <li><a href="https://hardware.electrony.xyz/">Hardware</a></li>
+            <li><a href="https://auto.electrony.xyz/">Automobile</a></li>
           </ul>
           <div class="navigation-actions">
             <a class="button energy-button energy-button--nav" href="#quote">Request a Quote <span aria-hidden="true">↗</span></a>
@@ -194,10 +206,10 @@
             <p>These illustrative enquiry categories are not confirmed inventory. Technical details, suitability, availability and terms are verified for each request.</p>
           </div>
           <div class="energy-discovery">
-            <label class="visually-hidden" for="energy-search">Search products by name or category</label>
+            <label class="visually-hidden" for="energy-search">Search energy enquiry categories</label>
             <div class="energy-search">
               <span aria-hidden="true">⌕</span>
-              <input id="energy-search" type="search" autocomplete="off" placeholder="Search products or categories…" aria-describedby="energy-discovery-help">
+              <input id="energy-search" type="search" autocomplete="off" placeholder="Search enquiry categories…" aria-describedby="energy-discovery-help">
               <button class="energy-search-clear" id="energy-clear-search" type="button" disabled>Clear</button>
             </div>
             <div class="energy-filter-group" id="energy-filter-group" role="group" aria-label="Filter energy products by category">
@@ -210,16 +222,16 @@
               <button type="button" class="energy-filter" data-energy-filter="electricity-meters" aria-pressed="false">Electricity meters</button>
               <button type="button" class="energy-filter" data-energy-filter="cables-accessories" aria-pressed="false">Cables &amp; accessories</button>
             </div>
-            <p class="energy-discovery-help" id="energy-discovery-help">Browse illustrative product categories and enquire about an individual item or a customised project.</p>
+            <p class="energy-discovery-help" id="energy-discovery-help">Browse enquiry categories. Specifications, compatibility, availability and supply terms are confirmed for each request.</p>
           </div>
           <p class="energy-results-status" id="energy-catalogue-status" role="status" aria-live="polite"></p>
           <div class="energy-product-grid" id="energy-products" aria-live="polite"></div>
           <div class="energy-catalogue-empty" id="energy-catalogue-empty" hidden>
             <span class="energy-catalogue__mark" aria-hidden="true"><span></span><span></span><span></span></span>
             <div>
-              <p class="energy-eyebrow" id="energy-empty-label">No matching products</p>
-              <h3 id="energy-empty-title">No matching products.</h3>
-              <p id="energy-empty-copy">Try another search or category, or tell us about a customised energy requirement.</p>
+              <p class="energy-eyebrow" id="energy-empty-label">No matching categories</p>
+              <h3 id="energy-empty-title">No enquiry categories match.</h3>
+              <p id="energy-empty-copy">Try a different search or category. The energy categories and project enquiry options remain available above and below.</p>
               <a class="energy-text-link" href="#quote" data-quote-category="custom-project" data-product-name="Custom energy installation or project">Discuss a complete installation or project <span aria-hidden="true">↗</span></a>
             </div>
           </div>
@@ -559,10 +571,10 @@
             <p>Explore other Electrony areas alongside Energy. These destinations are separate offerings; no integrated energy-management or payment service is implied.</p>
           </div>
           <div class="energy-related-grid">
-            <a href="/hardware/"><span>01 / PHYSICAL TECHNOLOGY</span><strong>Hardware</strong><small>Explore equipment across the Electrony hardware area.</small><b aria-hidden="true">↗</b></a>
-            <a href="/automobile/"><span>02 / MOBILITY</span><strong>Automobile</strong><small>Discover the Electrony Automobile selection.</small><b aria-hidden="true">↗</b></a>
-            <a href="/bills/"><span>03 / EVERYDAY PAYMENTS</span><strong>Electrony Bills</strong><small>Visit the Electrony Bills product page.</small><b aria-hidden="true">↗</b></a>
-            <a href="/"><span>04 / ELECTRONY</span><strong>Electrony Home</strong><small>Return to the wider Electrony ecosystem.</small><b aria-hidden="true">↗</b></a>
+            <a href="https://hardware.electrony.xyz/"><span>01 / PHYSICAL TECHNOLOGY</span><strong>Hardware</strong><small>Explore equipment across the Electrony hardware area.</small><b aria-hidden="true">↗</b></a>
+            <a href="https://auto.electrony.xyz/"><span>02 / MOBILITY</span><strong>Automobile</strong><small>Discover the Electrony Automobile selection.</small><b aria-hidden="true">↗</b></a>
+            <a href="https://bills.electrony.xyz/"><span>03 / EVERYDAY PAYMENTS</span><strong>Electrony Bills</strong><small>Visit the Electrony Bills product page.</small><b aria-hidden="true">↗</b></a>
+            <a href="https://electrony.xyz/"><span>04 / ELECTRONY</span><strong>Electrony Home</strong><small>Return to the wider Electrony ecosystem.</small><b aria-hidden="true">↗</b></a>
           </div>
         </div>
       </section>
@@ -582,12 +594,12 @@
     <footer class="site-footer energy-footer">
       <div class="container footer-inner">
         <div class="footer-brand">
-          <a class="wordmark wordmark-light wordmark-with-logo" href="/" aria-label="Electrony home">
+          <a class="wordmark wordmark-light wordmark-with-logo" href="https://electrony.xyz/" aria-label="Electrony home">
             <img class="brand-logo-footer" data-brand-logo src="../assets/brand/electrony-e-logo.png" alt="Electrony E symbol" hidden>
             <span class="brand-logo-fallback" data-brand-fallback>Electrony<span class="wordmark-period" aria-hidden="true">.</span></span>
           </a>
           <p>Technology designed for the modern world — connected, capable and built for what's next.</p>
-          <a class="energy-footer__back" href="/">Back to Electrony <span aria-hidden="true">↗</span></a>
+          <a class="energy-footer__back" href="https://electrony.xyz/">Back to Electrony <span aria-hidden="true">↗</span></a>
         </div>
         <div class="footer-links">
           <div>
@@ -602,10 +614,10 @@
           <div>
             <h3>Electrony</h3>
             <ul>
-              <li><a href="/hardware/">Hardware</a></li>
-              <li><a href="/automobile/">Automobile</a></li>
-              <li><a href="/bills/">Electrony Bills</a></li>
-              <li><a href="/">Home</a></li>
+              <li><a href="https://hardware.electrony.xyz/">Hardware</a></li>
+              <li><a href="https://auto.electrony.xyz/">Automobile</a></li>
+              <li><a href="https://bills.electrony.xyz/">Electrony Bills</a></li>
+              <li><a href="https://electrony.xyz/">Home</a></li>
             </ul>
           </div>
         </div>

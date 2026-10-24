@@ -112,12 +112,16 @@ function renderEnergyCatalogue() {
 
   if (!filteredProducts.length) {
     catalogueEmpty.hidden = false;
-    catalogueStatus.textContent = "No energy products match your search and category.";
+    document.querySelector("#energy-empty-label").textContent = query ? "No search matches" : "No matching categories";
+    document.querySelector("#energy-empty-title").textContent = query
+      ? "No enquiry categories match that search."
+      : "No enquiry categories match this filter.";
+    catalogueStatus.textContent = "No enquiry categories match. Try a different search or category.";
     return;
   }
 
   filteredProducts.forEach((product) => productGrid.appendChild(createEnergyProductCard(product)));
-  catalogueStatus.textContent = `${filteredProducts.length} ${filteredProducts.length === 1 ? "product" : "products"} shown.`;
+  catalogueStatus.textContent = `${filteredProducts.length} ${filteredProducts.length === 1 ? "enquiry category" : "enquiry categories"} shown.`;
 }
 
 function selectQuoteOptions(link) {
