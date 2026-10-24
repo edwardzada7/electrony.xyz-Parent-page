@@ -1343,7 +1343,19 @@ test("webhook events are inserted idempotently and can only be claimed once", as
   assert.match(captured.transactionQueries[1].text, /ON CONFLICT \(provider, provider_event_id\) DO NOTHING/);
   assert.equal(await persistence.claimWebhookEvent("monnify", "EVENT-1"), null);
   assert.equal(captured.transactionQueries.at(-1).text, "COMMIT");
-  assert.equal(captured.transactionQueries.at(-2).text.includes("processing_status = 'received'"), true);
+  assert.match(captured.transactionQueries.at(-2).text, /processing_status IN \('received', 'failed'\)/);
+});
+
+test("failed webhook events can be reclaimed for idempotent retries", async () => {
+  const event = { provider: "monnify", provider_event_id: "EVENT-RETRY", processing_status: "processing" };
+  const captured = {};
+  const persistence = configuredPersistence([
+    { rows: [] },
+    { rows: [event] },
+    { rows: [] }
+  ], captured);
+  assert.equal(await persistence.claimWebhookEvent("monnify", "EVENT-RETRY"), event);
+  assert.match(captured.transactionQueries[1].text, /processing_status IN \('received', 'failed'\)/);
 });
 
 test("webhook completion is conditional on a single claimed processing state", async () => {

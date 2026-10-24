@@ -2165,7 +2165,8 @@ function createPostgresPersistence(connectionString, PoolConstructor, environmen
       const result = await transactionQuery(`
         UPDATE public.bill_payment_webhook_events
         SET processing_status = 'processing'
-        WHERE provider = $1 AND provider_event_id = $2 AND processing_status = 'received'
+        WHERE provider = $1 AND provider_event_id = $2
+          AND processing_status IN ('received', 'failed')
         RETURNING *
       `, [providerName, eventId]);
       return result.rows[0] || null;

@@ -20,9 +20,12 @@ const AUTH_RATE_LIMITS = new Map();
 const FEE_QUOTES = new Map();
 const TOKEN_LIFETIME_SECONDS = 60 * 60;
 const GUEST_ORDER_SECRET_BYTES = 32;
-const PAYMENT_OPERATIONS_ENABLED = false;
 const BILL_FULFILLMENT_ENABLED = false;
 const scrypt = promisify(crypto.scrypt);
+
+function paymentsBlocked() {
+  return readEnv("PAYMENTS_BLOCKED", "true").toLowerCase() !== "false";
+}
 
 function readUsers() {
   ensureDataDirectory();
@@ -392,7 +395,6 @@ function getMonnifyConfig() {
     secretKey: readEnv("MONNIFY_SECRET_KEY"),
     contractCode: readEnv("MONNIFY_CONTRACT_CODE"),
     baseUrl: readEnv("MONNIFY_BASE_URL") || (isProduction ? "" : "https://sandbox.monnify.com"),
-    webhookSecret: readEnv("MONNIFY_WEBHOOK_SECRET"),
     redirectUrl: readEnv("BILLS_PAYMENT_REDIRECT_URL") || (isProduction ? "" : "http://localhost:4173/bills/app/?payment=success"),
     webhookBaseUrl: readEnv("BILLS_WEBHOOK_BASE_URL") || (isProduction ? "" : "http://localhost:4174"),
     appUrl: readEnv("BILLS_APP_URL") || (isProduction ? "" : "http://localhost:4173/bills/app/")
@@ -407,7 +409,7 @@ function getMissingMonnifyConfig() {
   const config = getMonnifyConfig();
   const missing = [];
 
-  ["apiKey", "secretKey", "contractCode", "webhookSecret"].forEach((key) => {
+  ["apiKey", "secretKey", "contractCode"].forEach((key) => {
     if (!config[key] || /replace_with|change_me|example/i.test(config[key])) {
       missing.push(`MONNIFY_${toEnvName(key)}`);
     }
@@ -661,7 +663,9 @@ async function requestJson(url, options = {}) {
       signal: AbortSignal.timeout(20000)
     });
   } catch {
-    throw new Error("Payment provider is temporarily unavailable.");
+    const error = new Error("Payment provider is temporarily unavailable.");
+    error.code = "payment_provider_unavailable";
+    throw error;
   }
 
   const rawText = await response.text();
@@ -676,7 +680,9 @@ async function requestJson(url, options = {}) {
   }
 
   if (!response.ok) {
-    throw new Error(`Payment provider request failed with status ${response.status}.`);
+    const error = new Error(`Payment provider request failed with status ${response.status}.`);
+    error.code = "payment_provider_unavailable";
+    throw error;
   }
 
   return payload;
@@ -705,6 +711,79 @@ async function authenticateMonnify() {
   return {
     token,
     config
+  };
+}
+
+async function queryMonnifyTransaction(paymentReference) {
+  if (!paymentReference) {
+    throw new Error("A Monnify payment reference is required.");
+  }
+
+  let authenticated;
+  try {
+    authenticated = await authenticateMonnify();
+  } catch (error) {
+    error.code ||= "payment_provider_unavailable";
+    throw error;
+  }
+  const { token, config } = authenticated;
+  const endpoint = new URL("/api/v1/merchant/transactions/query", config.baseUrl);
+  endpoint.searchParams.set("paymentReference", paymentReference);
+  const payload = await requestJson(endpoint.toString(), {
+    headers: {
+      Authorization: `Bearer ${token}`
+    }
+  });
+
+  if (payload?.requestSuccessful === false
+    || (payload?.responseCode && payload.responseCode !== "0")) {
+    const error = new Error("Monnify could not verify the payment reference.");
+    error.code = "payment_verification_mismatch";
+    throw error;
+  }
+
+  const transaction = payload?.responseBody || payload?.data?.responseBody || payload?.data || payload;
+  return {
+    transaction,
+    status: extractMonnifyStatus({ data: transaction }),
+    paymentReference: transaction?.paymentReference || transaction?.customerReference || "",
+    providerReference: transaction?.transactionReference || "",
+    amount: transaction?.amountPaid ?? transaction?.totalPayable ?? transaction?.amount,
+    currency: transaction?.currencyCode || transaction?.currency || ""
+  };
+}
+
+async function verifyMonnifyPayment(paymentReference, attempt) {
+  const result = await queryMonnifyTransaction(paymentReference);
+  let amountMinor;
+  try {
+    amountMinor = parseMoneyToMinor(result.amount);
+  } catch {
+    const error = new Error("Monnify returned an invalid transaction amount.");
+    error.code = "payment_verification_mismatch";
+    throw error;
+  }
+
+  if (result.status !== "paid"
+    || result.paymentReference !== paymentReference
+    || amountMinor !== Number(attempt.amount_minor)
+    || String(result.currency).toUpperCase() !== String(attempt.currency).toUpperCase()
+    || (attempt.provider_reference && result.providerReference !== attempt.provider_reference)) {
+    const error = new Error("Monnify transaction details do not match the payment attempt.");
+    error.code = "payment_verification_mismatch";
+    throw error;
+  }
+
+  return {
+    providerReference: result.providerReference,
+    verification: {
+      verified: true,
+      reference: paymentReference,
+      status: "successful",
+      amountMinor,
+      currency: String(result.currency).toUpperCase(),
+      verifiedAt: nowIso()
+    }
   };
 }
 
@@ -762,7 +841,7 @@ async function createMonnifyReservation(transaction) {
 }
 
 function extractMonnifyStatus(payload) {
-  const candidate = payload?.eventData || payload?.data || payload?.result || payload || {};
+  const candidate = payload?.eventData || payload?.data || payload?.responseBody || payload?.result || payload || {};
   const status = candidate.paymentStatus || candidate.status || candidate.transactionStatus || payload.status || payload.paymentStatus || "";
   const normalized = String(status).toUpperCase();
 
@@ -1052,25 +1131,22 @@ function validateServiceRequest(payload) {
 }
 
 async function handleWebhook(request, response) {
-  if (!PAYMENT_OPERATIONS_ENABLED) {
-    sendJson(response, 503, {
-      ok: false,
-      error: "Webhook processing remains disabled until database authorization and payment verification are ready."
-    });
-    return;
-  }
-
+  let claimedEventId = "";
   try {
     const rawBody = await readRawBody(request);
-    const signature = request.headers["x-monnify-signature"] || request.headers["X-Monnify-Signature"] || request.headers["x-monnify-signature"] || "";
-    const webhookSecret = readEnv("MONNIFY_WEBHOOK_SECRET") || "";
+    const signature = request.headers["monnify-signature"] || "";
+    const webhookSecret = getMonnifyConfig().secretKey;
 
     if (!webhookSecret || !signature) {
       sendJson(response, 401, { ok: false, error: "Webhook signature verification is unavailable or missing." });
       return;
     }
 
-    const expected = Buffer.from(crypto.createHmac("sha256", webhookSecret).update(rawBody).digest("hex"), "hex");
+    const expected = crypto.createHmac("sha512", webhookSecret).update(rawBody).digest();
+    if (!/^[a-f\d]{128}$/i.test(signature)) {
+      sendJson(response, 401, { ok: false, error: "Webhook signature verification failed." });
+      return;
+    }
     const received = Buffer.from(signature, "hex");
     if (received.length !== expected.length || !crypto.timingSafeEqual(received, expected)) {
       sendJson(response, 401, { ok: false, error: "Webhook signature verification failed." });
@@ -1084,68 +1160,97 @@ async function handleWebhook(request, response) {
 
     const payload = parseJsonBody(rawBody);
     const event = payload?.eventData || payload?.event || payload?.data || payload;
-    const transactionReference = event?.transactionReference || event?.reference || payload?.reference || "";
-    if (!transactionReference) {
-      sendJson(response, 400, { ok: false, error: "Webhook transaction reference is required." });
+    const providerReference = event?.transactionReference || event?.reference || payload?.reference || "";
+    const merchantReference = event?.paymentReference || event?.customerReference || event?.merchantReference
+      || payload?.paymentReference || payload?.customerReference || "";
+    if (!merchantReference) {
+      sendJson(response, 400, { ok: false, error: "Webhook payment reference is required." });
       return;
     }
     const monnifyStatus = extractMonnifyStatus(payload);
-    const eventId = `${transactionReference}:${event?.eventType || payload?.eventType || "payment"}:${monnifyStatus}`;
-    const processed = readWebhookStore();
+    const eventType = String(event?.eventType || payload?.eventType || "payment");
+    const eventId = String(event?.eventId || payload?.eventId || crypto.createHash("sha256").update(rawBody).digest("hex"));
+    const recorded = await postgresPersistence.recordWebhookEvent({
+      provider: "monnify",
+      providerEventId: eventId,
+      eventType,
+      merchantReference,
+      payload: { eventType, status: monnifyStatus, merchantReference, providerReference }
+    });
 
-    if (processed[eventId]) {
-      sendJson(response, 200, { ok: true, duplicate: true, reference: transactionReference });
+    if (recorded.duplicate
+      && (recorded.event?.event_type !== eventType
+        || recorded.event?.merchant_reference !== merchantReference)) {
+      sendJson(response, 409, { ok: false, error: "Webhook event identifier conflicts with a previously recorded event." });
       return;
     }
 
-    const fallbackReference = event?.customerReference || event?.paymentReference || "";
-    const transaction = getTransaction(transactionReference) || getTransaction(fallbackReference);
-
-    if (!transaction) {
-      sendJson(response, 202, { ok: true, queued: true, reference: transactionReference, note: "Webhook accepted, but no matching local transaction was found." });
+    if (recorded.duplicate && recorded.event?.processing_status !== "failed") {
+      sendJson(response, 200, { ok: true, duplicate: true, reference: merchantReference });
       return;
     }
 
-    if (transactionReference
-      && transactionReference !== transaction.reference
-      && transactionReference !== transaction.monnifyReference) {
-      sendJson(response, 400, { ok: false, error: "Webhook transaction reference does not match the local payment." });
+    const claimed = await postgresPersistence.claimWebhookEvent("monnify", eventId);
+    if (!claimed) {
+      sendJson(response, 200, { ok: true, duplicate: true, reference: merchantReference });
       return;
     }
+    claimedEventId = eventId;
 
-    if (processed[eventId] || transaction.fulfillmentStartedAt) {
-      sendJson(response, 200, { ok: true, duplicate: true, reference: transaction.reference });
-      return;
-    }
-
-    if (monnifyStatus === "paid") {
-      sendJson(response, 503, {
-        ok: false,
-        error: "Payment notification received, but server-side amount, currency, and reference verification is not implemented. No bill was fulfilled."
+    if (monnifyStatus !== "paid") {
+      await postgresPersistence.completeWebhookEvent({
+        provider: "monnify",
+        providerEventId: eventId,
+        status: "ignored"
       });
+      claimedEventId = "";
+      sendJson(response, 200, { ok: true, reference: merchantReference, status: monnifyStatus });
       return;
     }
 
-    processed[eventId] = { processedAt: nowIso(), reference: transactionReference };
-    persistWebhookStore(processed);
-
-    if (monnifyStatus === "payment_failed") {
-      transaction.status = "payment_failed";
-      transaction.paymentStatus = "payment_failed";
-      transaction.fulfillmentStatus = "not_started";
-      transaction.updatedAt = nowIso();
-      saveTransaction(transaction.reference, transaction);
-      sendJson(response, 200, { ok: true, reference: transaction.reference, status: transaction.status });
+    const attempt = await postgresPersistence.getPaymentAttemptByMerchantReference(merchantReference, merchantReference);
+    if (!attempt) {
+      await postgresPersistence.completeWebhookEvent({
+        provider: "monnify",
+        providerEventId: eventId,
+        status: "ignored",
+        errorMessage: "No matching payment attempt was found."
+      });
+      claimedEventId = "";
+      sendJson(response, 200, { ok: true, reference: merchantReference, status: "unmatched" });
       return;
     }
 
-    transaction.status = monnifyStatus === "payment_pending" ? "payment_pending" : "pending";
-    transaction.paymentStatus = monnifyStatus || "payment_pending";
-    transaction.updatedAt = nowIso();
-    saveTransaction(transaction.reference, transaction);
-    sendJson(response, 200, { ok: true, reference: transaction.reference, status: transaction.status });
+    const verified = await verifyMonnifyPayment(merchantReference, attempt);
+    await postgresPersistence.recordVerifiedPaymentAttemptStateChange({
+      merchantReference,
+      orderReference: merchantReference,
+      status: "successful",
+      providerReference: verified.providerReference || providerReference,
+      verification: verified.verification
+    });
+    await postgresPersistence.completeWebhookEvent({
+      provider: "monnify",
+      providerEventId: eventId,
+      status: "processed"
+    });
+    claimedEventId = "";
+    sendJson(response, 200, { ok: true, reference: merchantReference, status: "paid" });
   } catch (error) {
-    sendJson(response, 400, { ok: false, error: "Unable to process webhook." });
+    console.error("Monnify webhook processing failed.", error?.code || "verification_failed");
+    if (claimedEventId) {
+      try {
+        await postgresPersistence.completeWebhookEvent({
+          provider: "monnify",
+          providerEventId: claimedEventId,
+          status: "failed",
+          errorMessage: error?.message || "Webhook processing failed."
+        });
+      } catch (completionError) {
+        console.error("Monnify webhook failure could not be persisted.", completionError?.code || "unknown");
+      }
+    }
+    sendJson(response, 503, { ok: false, error: "Unable to verify or persist the payment notification." });
   }
 }
 
@@ -1170,7 +1275,7 @@ async function handleRequest(request, response) {
     }
     response.setHeader("Access-Control-Allow-Origin", origin);
     response.setHeader("Access-Control-Allow-Methods", "GET,POST,OPTIONS");
-    response.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization, X-Requested-With, x-monnify-signature");
+    response.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization, X-Requested-With, monnify-signature");
     response.setHeader("Access-Control-Allow-Credentials", "true");
     response.setHeader("Vary", "Origin");
   }
@@ -1338,11 +1443,11 @@ async function handleRequest(request, response) {
   }
 
   if (request.method === "POST"
-    && !PAYMENT_OPERATIONS_ENABLED
+    && paymentsBlocked()
     && ["/api/payments/session", "/api/payments/verify", "/api/payments/webhook"].includes(url.pathname)) {
     sendJson(response, 503, {
       ok: false,
-      error: "Payment operations are disabled until database authorization/readiness, authoritative Monnify verification, and a verified vending-provider contract are implemented."
+      error: "Payment operations are blocked. Set PAYMENTS_BLOCKED=false only after payment and database safety requirements are met."
     });
     return;
   }
@@ -1725,43 +1830,50 @@ async function handleRequest(request, response) {
         return;
       }
 
-      const transaction = getTransaction(reference);
-      if (!transaction) {
+      const user = authenticateRequest(request);
+      const order = await postgresPersistence.getOrderByReference(reference, user
+        ? { customerId: user.id }
+        : { guestOrderSecret: getGuestOrderSecretFromRequest(request, reference) });
+      if (!order) {
         sendJson(response, 404, { ok: false, error: "Transaction reference not found." });
         return;
       }
-      const transactionReference = transaction.reference;
-      const user = authenticateRequest(request);
-      if (!canAccessTransaction(
-        transaction,
-        user,
-        getGuestOrderSecretFromRequest(request, transactionReference)
-      )) {
-        sendJson(response, 403, { ok: false, error: "You do not have access to this transaction." });
+      if (order.payment_status === "paid") {
+        sendJson(response, 200, { ok: true, reference, verified: true, status: "paid" });
+        return;
+      }
+      const attempt = await postgresPersistence.getPaymentAttemptByMerchantReference(reference, reference);
+      if (!attempt) {
+        sendJson(response, 409, { ok: false, reference, verified: false, status: order.payment_status });
         return;
       }
 
-      if (!hasMonnifyConfig()) {
-        sendJson(response, 400, {
-          ok: false,
-          error: "Payment verification is unavailable because the required configuration is missing.",
-          reference: transactionReference,
-          status: transaction.status || "unknown"
-        });
-        return;
-      }
-
-      sendJson(response, 503, {
-        ok: false,
+      const verified = await verifyMonnifyPayment(reference, attempt);
+      await postgresPersistence.recordVerifiedPaymentAttemptStateChange({
+        merchantReference: reference,
+        orderReference: order.order_reference,
+        status: "successful",
+        providerReference: verified.providerReference,
+        verification: verified.verification
+      });
+      sendJson(response, 200, {
+        ok: true,
         reference,
-        verified: false,
-        status: transaction.status || "payment_pending",
-        paymentStatus: transaction.paymentStatus || "payment_pending",
-        error: "Authoritative Monnify amount, currency, and transaction-reference verification is not implemented. Payment remains unconfirmed."
+        verified: true,
+        status: "paid",
+        providerReference: verified.providerReference
       });
       return;
     } catch (error) {
-      sendJson(response, 400, { ok: false, verified: false, error: "Unable to verify payment." });
+      if (error?.code === "order_not_found") {
+        sendJson(response, 403, { ok: false, verified: false, error: "You do not have access to this transaction." });
+      } else {
+        console.error("Bills payment verification failed.", error?.code || "unknown");
+        const statusCode = error?.message === "Invalid JSON body."
+          ? 400
+          : (error?.code === "payment_verification_mismatch" ? 409 : 503);
+        sendJson(response, statusCode, { ok: false, verified: false, error: error.message || "Payment verification is unavailable right now." });
+      }
       return;
     }
   }

@@ -46,16 +46,18 @@ Copy the sample variables from the repository root `.env.example` and update the
 
 The example Monnify values are for local sandbox development only. When `NODE_ENV=production`, the API does not default the payment, redirect, or webhook URLs to sandbox/localhost. Configure `MONNIFY_BASE_URL` as an HTTPS non-sandbox endpoint and set `BILLS_PAYMENT_REDIRECT_URL` and `BILLS_WEBHOOK_BASE_URL` to HTTPS URLs. The API reports missing or unsafe payment configuration as unavailable; it does not select sandbox implicitly in production.
 
+Payment routes are blocked by default. Set `PAYMENTS_BLOCKED=false` to enable them only after the PostgreSQL authorization/readiness and payment-safety requirements are satisfied. Payment verification uses Monnify's transaction-query endpoint before updating PostgreSQL payment state; webhooks are validated with HMAC-SHA512 using `MONNIFY_SECRET_KEY` and recorded idempotently in PostgreSQL.
+
 ### Monnify sandbox variables
 
 - `MONNIFY_API_KEY`
 - `MONNIFY_SECRET_KEY`
 - `MONNIFY_CONTRACT_CODE`
 - `MONNIFY_BASE_URL`
-- `MONNIFY_WEBHOOK_SECRET`
 
 ### Bills-specific configuration
 
+- `PAYMENTS_BLOCKED`
 - `ELECTRONY_BILLS_PORT`
 - `BILLS_APP_URL`
 - `BILLS_API_BASE_URL`
