@@ -102,6 +102,15 @@
 .automobile-brand-note { margin: 1rem 0 0; color: var(--color-gray-500); font-family: var(--font-label); font-size: 0.58rem; letter-spacing: 0.1em; text-transform: uppercase; }
 
 .automobile-featured { background: #e9e5de; }
+.automobile-media { background: #f5f3ef; }
+.automobile-media-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: clamp(1rem, 2vw, 1.5rem); }
+.automobile-media-card { display: grid; min-width: 0; gap: 1rem; padding: clamp(1rem, 2vw, 1.5rem); border: 1px solid var(--automobile-border); background: rgba(255, 255, 255, 0.68); }
+.automobile-media-card__heading .automobile-card-label { margin-bottom: 0.35rem; }
+.automobile-media-card__heading h3 { margin: 0; font-family: var(--font-display); font-size: clamp(1.4rem, 2.5vw, 2rem); letter-spacing: -0.04em; }
+.automobile-media-card video { display: block; width: 100%; aspect-ratio: 16 / 9; object-fit: contain; background: #080808; }
+.automobile-media-card__status { margin: 0; color: var(--color-gray-700); font-size: 0.85rem; }
+.automobile-media-card__status[hidden] { display: none; }
+.automobile-media-card__enquire { display: inline-flex; min-height: 2.75rem; align-items: center; justify-self: start; color: var(--automobile-red-deep); font-family: var(--font-label); font-size: 0.65rem; letter-spacing: 0.08em; text-transform: uppercase; }
 .automobile-featured-grid { display: grid; grid-template-columns: repeat(12, minmax(0, 1fr)); gap: clamp(1rem, 2vw, 1.75rem); }
 .automobile-featured-card { display: grid; grid-column: span 6; grid-template-rows: minmax(0, auto) auto; background: rgba(255, 255, 255, 0.66); border: 1px solid var(--automobile-border); overflow: hidden; }
 .automobile-featured-card:first-child { grid-column: span 8; }
@@ -265,7 +274,7 @@
 @media (max-width: 64rem) {
   .automobile-page .container { width: min(calc(100% - 2rem), 100%); }
   .automobile-header__inner { min-height: 4.5rem; }
-  .automobile-menu-toggle { display: inline-flex; grid-column: 2; grid-row: 1; align-items: center; justify-self: end; gap: 0.7rem; padding: 0.65rem 0.75rem; border: 1px solid rgba(255, 255, 255, 0.2); background: transparent; color: var(--automobile-white); font-family: var(--font-label); font-size: 0.6rem; letter-spacing: 0.1em; text-transform: uppercase; cursor: pointer; }
+  .automobile-menu-toggle { display: inline-flex; min-height: 2.75rem; grid-column: 2; grid-row: 1; align-items: center; justify-self: end; gap: 0.7rem; padding: 0.65rem 0.75rem; border: 1px solid rgba(255, 255, 255, 0.2); background: transparent; color: var(--automobile-white); font-family: var(--font-label); font-size: 0.6rem; letter-spacing: 0.1em; text-transform: uppercase; cursor: pointer; }
   .automobile-menu-icon { position: relative; display: inline-flex; width: 1rem; height: 0.8rem; }
   .automobile-menu-icon span { position: absolute; left: 0; width: 100%; height: 2px; background: currentColor; transition: transform 180ms ease, top 180ms ease; }
   .automobile-menu-icon span:first-child { top: 0; }
@@ -274,6 +283,7 @@
   .automobile-menu-toggle[aria-expanded="true"] .automobile-menu-icon span:last-child { top: 0.25rem; transform: rotate(-45deg); }
   .automobile-navigation { position: fixed; z-index: 101; top: 4.5rem; right: 0; left: 0; display: flex; max-height: calc(100dvh - 4.5rem); flex-direction: column; align-items: stretch; gap: 1.1rem; overflow-y: auto; padding: 1.25rem 1rem 2rem; border-bottom: 1px solid rgba(255, 255, 255, 0.1); background: rgba(8, 8, 8, 0.98); visibility: hidden; opacity: 0; transform: translateY(-0.75rem); transition: opacity 180ms ease, transform 180ms ease, visibility 180ms ease; }
   .automobile-navigation.is-open { visibility: visible; opacity: 1; transform: translateY(0); }
+  .automobile-menu-open { overflow: hidden; }
   .automobile-navigation__list { flex-direction: column; align-items: stretch; gap: 0; }
   .automobile-navigation__list li { border-bottom: 1px solid rgba(255, 255, 255, 0.09); }
   .automobile-nav-link { display: block; padding: 1rem 0.3rem; font-size: 0.72rem; }
@@ -288,6 +298,7 @@
   .automobile-section-heading--split, .automobile-rox__inner, .automobile-story__grid, .automobile-contact__inner { grid-template-columns: 1fr; }
   .automobile-section-heading--split { gap: 1.25rem; }
   .automobile-featured-grid { grid-template-columns: 1fr; }
+  .automobile-media-grid { grid-template-columns: 1fr; }
   .automobile-featured-card, .automobile-featured-card:first-child, .automobile-featured-card:nth-child(2), .automobile-featured-card:nth-child(n + 3) { grid-column: 1; }
   .automobile-inventory-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .automobile-power-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }

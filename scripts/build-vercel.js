@@ -7,6 +7,11 @@ const publicDirectories = ["assets", "automobile", "bills", "energy", "hardware"
 const billsFrontendFiles = [
   "assets/brand/electrony-e-logo.png",
   "assets/brand/electrony-xyz-logo .png",
+  "assets/favicons/electrony/favicon.ico",
+  "assets/favicons/electrony/favicon.svg",
+  "assets/favicons/electrony/favicon-16x16.png",
+  "assets/favicons/electrony/favicon-32x32.png",
+  "assets/favicons/electrony/apple-touch-icon.png",
   "src/bills-app.js",
   "src/config.js",
   "src/return-to-top.js",

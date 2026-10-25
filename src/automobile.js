@@ -145,6 +145,63 @@ function renderPowertrainCards() {
     <article class="automobile-power-card"><span>${category.number}</span><div><p>${category.label}</p><h3>${category.description}</h3></div></article>`).join("");
 }
 
+function renderVideoShowcase() {
+  const container = document.querySelector("#automobile-video-showcase");
+  if (!container) return;
+  const vehicles = automobileInventory.filter((vehicle) => vehicle.videos.length);
+  container.replaceChildren();
+  vehicles.forEach((vehicle) => {
+    vehicle.videos.forEach((video, index) => {
+      const article = document.createElement("article");
+      article.className = "automobile-media-card";
+
+      const heading = document.createElement("div");
+      heading.className = "automobile-media-card__heading";
+      const brand = document.createElement("p");
+      brand.className = "automobile-card-label";
+      brand.textContent = vehicle.brand;
+      const title = document.createElement("h3");
+      title.textContent = vehicle.name;
+      heading.append(brand, title);
+
+      const player = document.createElement("video");
+      player.controls = true;
+      player.preload = "none";
+      player.playsInline = true;
+      player.setAttribute("aria-label", `${vehicle.name}: ${video.title || `Vehicle walkaround ${index + 1}`}`);
+      if (vehicle.images.length) player.poster = vehicle.images[0];
+      const source = document.createElement("source");
+      source.src = video.src;
+      source.type = "video/mp4";
+      player.appendChild(source);
+
+      const status = document.createElement("p");
+      status.className = "automobile-media-card__status";
+      status.setAttribute("role", "status");
+      status.hidden = true;
+      status.textContent = "This video is currently unavailable. Please enquire about the vehicle.";
+      player.addEventListener("error", () => {
+        status.hidden = false;
+      });
+      player.addEventListener("loadeddata", () => {
+        status.hidden = true;
+      });
+
+      const enquiry = document.createElement("a");
+      enquiry.className = "automobile-media-card__enquire";
+      enquiry.href = vehicleEnquiryUrl(vehicle);
+      enquiry.textContent = `Enquire about ${vehicle.name}`;
+      enquiry.setAttribute("aria-label", `Enquire about ${vehicle.name}`);
+      if (whatsappNumber()) {
+        enquiry.target = "_blank";
+        enquiry.rel = "noopener noreferrer";
+      }
+      article.append(heading, player, status, enquiry);
+      container.appendChild(article);
+    });
+  });
+}
+
 function getVisibleVehicles() {
   return automobileInventory.filter((vehicle) => {
     const matchesFilter = activeState.filter === "all" || vehicle.powertrainKey === activeState.filter;
@@ -235,11 +292,26 @@ function renderPromotionalImages() {
 
 function initializeConceptTyping() {
   const element = document.querySelector("[data-automobile-concept]");
-  if (!element || window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+  if (!element) return;
   const concepts = ["Electric", "Hybrid", "Extended Range", "Petrol", "Performance", "Luxury", "Off-Road"];
+  const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
+  let timer;
   let wordIndex = 0;
   let characterIndex = 0;
   let deleting = false;
+
+  const showStaticConcept = () => {
+    window.clearTimeout(timer);
+    element.textContent = concepts[wordIndex];
+  };
+  if (reducedMotion.matches) {
+    showStaticConcept();
+    reducedMotion.addEventListener?.("change", (event) => {
+      if (event.matches) showStaticConcept();
+      else timer = window.setTimeout(tick, 500);
+    });
+    return;
+  }
 
   const tick = () => {
     const word = concepts[wordIndex];
@@ -247,18 +319,27 @@ function initializeConceptTyping() {
     element.textContent = word.slice(0, characterIndex);
     if (!deleting && characterIndex === word.length) {
       deleting = true;
-      window.setTimeout(tick, 1100);
+      timer = window.setTimeout(tick, 1100);
       return;
     }
     if (deleting && characterIndex === 0) {
       deleting = false;
       wordIndex = (wordIndex + 1) % concepts.length;
-      window.setTimeout(tick, 250);
+      timer = window.setTimeout(tick, 250);
       return;
     }
-    window.setTimeout(tick, deleting ? 42 : 82);
+    timer = window.setTimeout(tick, deleting ? 42 : 82);
   };
-  window.setTimeout(tick, 500);
+  timer = window.setTimeout(tick, 500);
+  reducedMotion.addEventListener?.("change", (event) => {
+    window.clearTimeout(timer);
+    if (event.matches) showStaticConcept();
+    else {
+      deleting = false;
+      characterIndex = 0;
+      timer = window.setTimeout(tick, 500);
+    }
+  });
 }
 
 function renderGallery() {
@@ -432,14 +513,18 @@ function initializeNavigation() {
   const toggle = document.querySelector(".automobile-menu-toggle");
   const navigation = document.querySelector(".automobile-navigation");
   const links = document.querySelectorAll(".automobile-nav-link");
+  const mobileMenuViewport = window.matchMedia("(max-width: 64rem)");
   const sections = ["home", "vehicles", "brands", "powertrain", "rox", "contact"].map((id) => document.getElementById(id)).filter(Boolean);
 
-  const closeMenu = () => {
+  const closeMenu = (restoreFocus = false) => {
     if (!toggle || !navigation) return;
     toggle.setAttribute("aria-expanded", "false");
     toggle.setAttribute("aria-label", "Open navigation menu");
     navigation.classList.remove("is-open");
     document.body.classList.remove("automobile-menu-open");
+    if (mobileMenuViewport.matches) navigation.setAttribute("aria-hidden", "true");
+    else navigation.removeAttribute("aria-hidden");
+    if (restoreFocus) toggle.focus();
   };
 
   const openMenu = () => {
@@ -448,8 +533,11 @@ function initializeNavigation() {
     toggle.setAttribute("aria-label", "Close navigation menu");
     navigation.classList.add("is-open");
     document.body.classList.add("automobile-menu-open");
+    navigation.setAttribute("aria-hidden", "false");
+    navigation.querySelector("a")?.focus({ preventScroll: true });
   };
 
+  closeMenu();
   toggle?.addEventListener("click", () => {
     const expanded = toggle.getAttribute("aria-expanded") === "true";
     expanded ? closeMenu() : openMenu();
@@ -458,12 +546,17 @@ function initializeNavigation() {
   links.forEach((link) => link.addEventListener("click", closeMenu));
   document.addEventListener("keydown", (event) => {
     if (event.key === "Escape" && toggle?.getAttribute("aria-expanded") === "true") {
-      closeMenu();
-      toggle.focus();
+      closeMenu(true);
     }
   });
+  document.addEventListener("click", (event) => {
+    if (toggle?.getAttribute("aria-expanded") === "true"
+      && !navigation.contains(event.target)
+      && !toggle.contains(event.target)) closeMenu();
+  });
   window.addEventListener("resize", () => {
-    if (window.innerWidth > 64 * 16 && toggle?.getAttribute("aria-expanded") === "true") closeMenu();
+    if (toggle?.getAttribute("aria-expanded") === "true" && !mobileMenuViewport.matches) closeMenu();
+    else if (!mobileMenuViewport.matches) navigation?.removeAttribute("aria-hidden");
   });
 
   const syncHeader = () => header?.classList.toggle("is-scrolled", window.scrollY > 24);
@@ -532,6 +625,7 @@ function initializeVehicleEnquiries() {
 
 renderFeaturedVehicles();
 renderPowertrainCards();
+renderVideoShowcase();
 renderVehicleInventory();
 renderHeroImage();
 renderPromotionalImages();
