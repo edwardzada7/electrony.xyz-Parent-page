@@ -304,15 +304,6 @@ function initializeConceptTyping() {
     window.clearTimeout(timer);
     element.textContent = concepts[wordIndex];
   };
-  if (reducedMotion.matches) {
-    showStaticConcept();
-    reducedMotion.addEventListener?.("change", (event) => {
-      if (event.matches) showStaticConcept();
-      else timer = window.setTimeout(tick, 500);
-    });
-    return;
-  }
-
   const tick = () => {
     const word = concepts[wordIndex];
     characterIndex += deleting ? -1 : 1;
@@ -330,6 +321,16 @@ function initializeConceptTyping() {
     }
     timer = window.setTimeout(tick, deleting ? 42 : 82);
   };
+
+  if (reducedMotion.matches) {
+    showStaticConcept();
+    reducedMotion.addEventListener?.("change", (event) => {
+      if (event.matches) showStaticConcept();
+      else timer = window.setTimeout(tick, 500);
+    });
+    return;
+  }
+
   timer = window.setTimeout(tick, 500);
   reducedMotion.addEventListener?.("change", (event) => {
     window.clearTimeout(timer);
