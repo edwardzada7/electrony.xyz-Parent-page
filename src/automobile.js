@@ -45,13 +45,13 @@ function vehicleImage(vehicle) {
   return vehicle.images[0] || vehicle.fallbackImage;
 }
 
-function whatsappNumber() {
+function getAutomobileWhatsAppNumber() {
   const number = String(window.ElectronyConfig?.whatsappNumber || "").replace(/\D/g, "");
   return /^\d{8,15}$/.test(number) ? number : "";
 }
 
 function vehicleEnquiryUrl(vehicle) {
-  const number = whatsappNumber();
+  const number = getAutomobileWhatsAppNumber();
   if (!number) return "#contact";
   const message = `Hello Electrony, I would like to enquire about ${vehicle.brand} — ${vehicle.name}. Please confirm current availability and share the details.`;
   return `https://wa.me/${number}?text=${encodeURIComponent(message)}`;
@@ -106,7 +106,7 @@ function createVehicleMarkup(vehicle) {
         ${vehicle.specifications?.length ? `<p class="automobile-vehicle-card__specs">${vehicle.specifications.map(escapeHtml).join(" · ")}</p>` : ""}
         ${details}
         ${galleryButton}
-        <a href="${escapeHtml(vehicleEnquiryUrl(vehicle))}" class="automobile-vehicle-card__cta"${whatsappNumber() ? ' target="_blank" rel="noopener noreferrer"' : ""} aria-label="Enquire about ${escapeHtml(vehicle.name)}${whatsappNumber() ? " via WhatsApp" : ""}">Enquire about this vehicle <span aria-hidden="true">↗</span></a>
+        <a href="${escapeHtml(vehicleEnquiryUrl(vehicle))}" class="automobile-vehicle-card__cta"${getAutomobileWhatsAppNumber() ? ' target="_blank" rel="noopener noreferrer"' : ""} aria-label="Enquire about ${escapeHtml(vehicle.name)}${getAutomobileWhatsAppNumber() ? " via WhatsApp" : ""}">Enquire about this vehicle <span aria-hidden="true">↗</span></a>
       </div>
     </article>`;
 }
@@ -192,7 +192,7 @@ function renderVideoShowcase() {
       enquiry.href = vehicleEnquiryUrl(vehicle);
       enquiry.textContent = `Enquire about ${vehicle.name}`;
       enquiry.setAttribute("aria-label", `Enquire about ${vehicle.name}`);
-      if (whatsappNumber()) {
+      if (getAutomobileWhatsAppNumber()) {
         enquiry.target = "_blank";
         enquiry.rel = "noopener noreferrer";
       }
@@ -611,7 +611,7 @@ function initializeVehicleEnquiries() {
     const vehicle = automobileInventory.find((item) => item.id === link.dataset.vehicleEnquiry);
     if (vehicle) {
       link.href = vehicleEnquiryUrl(vehicle);
-      if (whatsappNumber()) {
+      if (getAutomobileWhatsAppNumber()) {
         link.target = "_blank";
         link.rel = "noopener noreferrer";
       }
@@ -619,7 +619,7 @@ function initializeVehicleEnquiries() {
   });
 
   const generalLink = document.querySelector("[data-whatsapp-general]");
-  const number = whatsappNumber();
+  const number = getAutomobileWhatsAppNumber();
   if (!generalLink || !number) return;
   const message = "Hello Electrony, I would like to enquire about the Electrony Automobile vehicle selection.";
   generalLink.href = `https://wa.me/${number}?text=${encodeURIComponent(message)}`;
