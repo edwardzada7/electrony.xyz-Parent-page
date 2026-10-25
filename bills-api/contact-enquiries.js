@@ -22,6 +22,9 @@ const CONTACT_CATEGORIES = Object.freeze({
     "electricity-meters",
     "cables-accessories",
     "custom-project"
+  ]),
+  automobile: new Set([
+    "vehicle-enquiry"
   ])
 });
 
@@ -138,7 +141,11 @@ async function submitContactEnquiry(value, {
     throw new ContactEnquiryError(503, "The enquiry email service is unavailable. Please try again later.");
   }
 
-  const title = enquiry.page === "hardware" ? "Hardware" : "Energy";
+  const title = {
+    hardware: "Hardware",
+    energy: "Energy",
+    automobile: "Automobile"
+  }[enquiry.page];
   const lines = [
     `New Electrony ${title} enquiry`,
     "",

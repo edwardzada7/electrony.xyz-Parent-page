@@ -4,19 +4,19 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="theme-color" content="#080808">
-    <meta name="description" content="Electrony Automobile presents a curated selection of electric, hybrid, REV, petrol and utility vehicles from selected automotive brands.">
+    <meta name="description" content="Explore 13 source-documented NAMMI, Dongfeng, VOYAH and M-HERO vehicles. Compare powertrains, brochure specifications and request current details.">
     <link rel="canonical" href="https://auto.electrony.xyz/">
     <meta property="og:type" content="website">
-    <meta property="og:title" content="Electrony Automobile | Explore the Next Generation of Mobility">
-    <meta property="og:description" content="Discover selected vehicles by brand and powertrain, and enquire directly about details and current availability.">
+    <meta property="og:title" content="Electrony Automobile | Source-documented vehicle catalogue">
+    <meta property="og:description" content="Explore 13 source-documented NAMMI, Dongfeng, VOYAH and M-HERO vehicles. Compare powertrains, brochure specifications and request current details.">
     <meta property="og:url" content="https://auto.electrony.xyz/">
     <meta property="og:image" content="https://auto.electrony.xyz/assets/brand/electrony-e-logo.png">
     <meta property="og:image:alt" content="Electrony E logo">
     <meta name="twitter:card" content="summary">
-    <meta name="twitter:title" content="Electrony Automobile | Explore the Next Generation of Mobility">
-    <meta name="twitter:description" content="Discover selected vehicles by brand and powertrain, and enquire directly about details and current availability.">
+    <meta name="twitter:title" content="Electrony Automobile | Source-documented vehicle catalogue">
+    <meta name="twitter:description" content="Explore 13 source-documented NAMMI, Dongfeng, VOYAH and M-HERO vehicles. Compare powertrains, brochure specifications and request current details.">
     <meta name="twitter:image" content="https://auto.electrony.xyz/assets/brand/electrony-e-logo.png">
-    <title>Electrony Automobile | Explore the Next Generation of Mobility</title>
+    <title>Electrony Automobile | Source-documented vehicle catalogue</title>
     <link rel="icon" href="/assets/favicons/automobile/favicon.ico" sizes="32x32" type="image/x-icon">
     <link rel="icon" href="/assets/favicons/automobile/favicon.svg" type="image/svg+xml">
     <link rel="icon" href="/assets/favicons/automobile/favicon-16x16.png" sizes="16x16" type="image/png">
@@ -30,6 +30,8 @@
     <link rel="stylesheet" href="../styles/site-shell.css">
     <script src="../src/config.js" defer></script>
     <script src="../src/site-shell.js" defer></script>
+    <script src="../src/automobile-catalogue.js" defer></script>
+    <script src="../src/contact-form.js" defer></script>
     <script src="../src/automobile.js" defer></script>
   </head>
   <body class="automobile-page">
@@ -86,7 +88,7 @@
           </div>
         </div>
         <div class="automobile-hero__meta container" aria-label="Selected vehicle categories">
-          <span>Selected brands</span><span>Electric</span><span>Hybrid</span><span>REV</span><span>Petrol</span><span>Pickup</span>
+          <span>Selected brands</span><span>Fully electric</span><span>Plug-in hybrid</span><span>Extended-range electric</span><span>Petrol</span>
         </div>
       </section>
 
@@ -106,7 +108,6 @@
             <button class="automobile-brand-button" type="button" data-brand="voyah" aria-pressed="false"><img src="../assets/automobile/brands/voyah.svg" alt="VOYAH" loading="lazy" decoding="async"></button>
             <button class="automobile-brand-button" type="button" data-brand="m-hero" aria-pressed="false"><img src="../assets/automobile/brands/m-hero.svg" alt="M-HERO" loading="lazy" decoding="async"></button>
             <button class="automobile-brand-button" type="button" data-brand="nammi" aria-pressed="false"><img src="../assets/automobile/brands/nammi.svg" alt="NAMMI" loading="lazy" decoding="async"></button>
-            <button class="automobile-brand-button" type="button" data-brand="rox-motor" aria-pressed="false"><img src="../assets/automobile/brands/rox-motor.svg" alt="ROX Motor" loading="lazy" decoding="async"></button>
           </div>
           <p class="automobile-brand-note">Select a brand to refine the catalogue below.</p>
         </div>
@@ -145,18 +146,65 @@
               <p class="automobile-kicker automobile-kicker--dark"><span></span> The collection</p>
               <h2 id="inventory-title">Explore the<br>current selection.</h2>
             </div>
-            <p>Filter the showroom by powertrain and brand. Specifications may vary by trim and market; CLTC range figures are not real-world range. Confirm current details and availability on enquiry.</p>
+            <p>Search and filter the 13 models by brand, vehicle category and powertrain. Specifications may vary by trim and market; CLTC range figures are test-cycle figures and may differ from real-world range.</p>
           </div>
 
+          <div class="automobile-search-filters">
+            <label class="automobile-search-field" for="vehicle-search">
+              <span>Search vehicles</span>
+              <input id="vehicle-search" type="search" autocomplete="off" placeholder="Search brand, model or specification">
+            </label>
+            <label class="automobile-category-field" for="vehicle-category">
+              <span>Vehicle category</span>
+              <select id="vehicle-category">
+                <option value="all">All categories</option>
+                <option value="Urban Electric">Urban Electric</option>
+                <option value="Family &amp; Mid-Size SUVs">Family &amp; Mid-Size SUVs</option>
+                <option value="Sedans &amp; Crossovers">Sedans &amp; Crossovers</option>
+                <option value="VOYAH Premium">VOYAH Premium</option>
+                <option value="M-HERO Off-Road">M-HERO Off-Road</option>
+              </select>
+            </label>
+          </div>
           <div class="automobile-filter-bar" role="group" aria-label="Filter vehicles by powertrain">
             <button class="automobile-filter is-active" type="button" data-filter="all" aria-pressed="true">All</button>
-            <button class="automobile-filter" type="button" data-filter="ev" aria-pressed="false">EV</button>
-            <button class="automobile-filter" type="button" data-filter="hybrid" aria-pressed="false">Hybrid / PHEV</button>
-            <button class="automobile-filter" type="button" data-filter="rev" aria-pressed="false">REV</button>
+            <button class="automobile-filter" type="button" data-filter="bev" aria-pressed="false">Fully electric (BEV)</button>
+            <button class="automobile-filter" type="button" data-filter="phev" aria-pressed="false">Plug-in hybrid (PHEV)</button>
+            <button class="automobile-filter" type="button" data-filter="erev" aria-pressed="false">Extended-range electric (EREV)</button>
             <button class="automobile-filter" type="button" data-filter="petrol" aria-pressed="false">Petrol</button>
-            <button class="automobile-filter" type="button" data-filter="pickup" aria-pressed="false">Pickup</button>
           </div>
+          <p class="automobile-result-count" id="automobile-result-count" role="status" aria-live="polite"></p>
           <div class="automobile-inventory-grid" id="vehicle-cards" aria-live="polite"></div>
+          <p class="automobile-source-note">Vehicle specifications and photographs are attributed to the Dongfeng range brochure supplied by Fouani Nigeria Ltd. Equipment may vary by trim and market; specifications may change. No Electrony dealership, stock or manufacturer relationship is implied.</p>
+        </div>
+      </section>
+
+      <section class="automobile-detail section" id="vehicle-detail-view" aria-labelledby="automobile-detail-title" hidden>
+        <div class="container">
+          <div id="vehicle-detail-content"></div>
+          <form class="automobile-enquiry-form" id="automobile-vehicle-enquiry" data-contact-form data-contact-page="automobile">
+            <div class="automobile-enquiry-form__heading">
+              <p class="automobile-kicker automobile-kicker--dark"><span></span> Product enquiry</p>
+              <h2>Enquire about this vehicle</h2>
+              <p>Send a question about the exact model. We will confirm current price and availability directly.</p>
+            </div>
+            <input type="hidden" name="category" value="vehicle-enquiry">
+            <input type="hidden" name="product" id="automobile-enquiry-product">
+            <input type="hidden" data-message-label="Product page" id="automobile-enquiry-url">
+            <input type="hidden" data-message-label="Brochure specifications" id="automobile-enquiry-specifications">
+            <label class="automobile-enquiry-form__honeypot" aria-hidden="true">Website <input type="text" name="website" tabindex="-1" autocomplete="off"></label>
+            <div class="automobile-enquiry-form__fields">
+              <label for="automobile-enquiry-name">Full name <span aria-hidden="true">*</span><input id="automobile-enquiry-name" name="name" autocomplete="name" required maxlength="100" aria-describedby="automobile-enquiry-name-error"><span class="automobile-enquiry-form__error" id="automobile-enquiry-name-error"></span></label>
+              <label for="automobile-enquiry-email">Email address <span aria-hidden="true">*</span><input id="automobile-enquiry-email" type="email" name="email" autocomplete="email" required maxlength="254" aria-describedby="automobile-enquiry-email-error"><span class="automobile-enquiry-form__error" id="automobile-enquiry-email-error"></span></label>
+              <label for="automobile-enquiry-phone">Phone number <span class="automobile-enquiry-form__optional">(optional)</span><input id="automobile-enquiry-phone" type="tel" name="phone" autocomplete="tel" maxlength="50" aria-describedby="automobile-enquiry-phone-error"><span class="automobile-enquiry-form__error" id="automobile-enquiry-phone-error"></span></label>
+              <label class="automobile-enquiry-form__message" for="automobile-enquiry-message">Your question <span aria-hidden="true">*</span><textarea id="automobile-enquiry-message" name="message" required maxlength="5000" rows="4" aria-describedby="automobile-enquiry-message-error">Please share current price, availability and details for this vehicle.</textarea><span class="automobile-enquiry-form__error" id="automobile-enquiry-message-error"></span></label>
+            </div>
+            <div class="automobile-enquiry-form__actions">
+              <button class="automobile-button automobile-button--red" type="submit">Send vehicle enquiry</button>
+              <span class="automobile-enquiry-form__status" role="status" aria-live="polite"></span>
+            </div>
+            <p class="automobile-enquiry-form__privacy">Submitting sends your enquiry through Electrony's existing contact service. A success message appears only after the service accepts it.</p>
+          </form>
         </div>
       </section>
 

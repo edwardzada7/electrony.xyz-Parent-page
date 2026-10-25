@@ -1,6 +1,7 @@
 .env
 .env.*
 !.env.example
+.sources/
 bills-api/data/*.json
 node_modules/
 /dist/

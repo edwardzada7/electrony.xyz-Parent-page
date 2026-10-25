@@ -1,30 +1,17 @@
-const automobileInventory = [
-  { id: "nammi-box", brand: "NAMMI", name: "NAMMI BOX", images: ["../assets/automobile/vehicles/nammi-01.jpg"], videos: [{ src: "../assets/automobile/vehicles/nammi-box/01-walkaround.mp4/VID-20261010-WA0038.mp4", title: "Vehicle Walkaround" }], fallbackImage: "", featured: false, powertrain: "EV", powertrainKey: "ev", status: "enquire", statusLabel: "On enquiry", descriptor: "", specifications: ["70 kW motor", "31.4 kWh battery", "330 km CLTC"] },
-  { id: "nammi-06-vigo", brand: "NAMMI", name: "NAMMI 06 VIGO", images: [], videos: [], fallbackImage: "", featured: false, powertrain: "EV", powertrainKey: "ev", status: "enquire", statusLabel: "On enquiry", descriptor: "", specifications: ["135 kW motor", "51.9 kWh battery", "471 km CLTC"] },
-  { id: "mage-m57", brand: "Dongfeng", name: "MAGE M57", images: ["../assets/automobile/vehicles/dongfeng-mage-m57.jpg"], videos: [{ src: "../assets/automobile/vehicles/mage-m57/01-walkaround.mp4/VID-20261010-WA0036.mp4", title: "Vehicle Walkaround" }], fallbackImage: "../assets/automobile/vehicles/dongfeng-mage-m57.svg", featured: true, powertrain: "Petrol", powertrainKey: "petrol", status: "enquire", statusLabel: "On enquiry", descriptor: "A selected petrol model from the current Dongfeng range.", specifications: ["1.5L turbo petrol", "204 hp"] },
-  { id: "mage-s01-ev", brand: "Dongfeng", name: "MAGE S01 EV", images: [], videos: [], fallbackImage: "", featured: false, powertrain: "EV", powertrainKey: "ev", status: "enquire", statusLabel: "On enquiry", descriptor: "", specifications: ["120 kW motor", "50.8 kWh battery", "403 km CLTC"] },
-  { id: "huge-g59", brand: "Dongfeng", name: "HUGE G59", images: [], videos: [], fallbackImage: "", featured: false, powertrain: "Petrol", powertrainKey: "petrol", status: "enquire", statusLabel: "On enquiry", descriptor: "", specifications: ["1.5L turbo petrol", "201 hp", "305 Nm"] },
-  { id: "epi-008", brand: "Dongfeng", name: "eπ 008", images: ["../assets/automobile/vehicles/dongfeng-ep-e008.jpg"], videos: [{ src: "../assets/automobile/vehicles/epi-008/01 walkaround.mp4/VID-20261010-WA0035.mp4", title: "Vehicle Walkaround" }], fallbackImage: "../assets/automobile/vehicles/dongfeng-ep-e008.svg", featured: true, hero: true, powertrain: "REV", powertrainKey: "rev", status: "enquire", statusLabel: "On enquiry", descriptor: "A selected model from the current Dongfeng range.", specifications: ["200 kW motor", "34.3 kWh battery", "202 km electric range (CLTC)"] },
-  { id: "shine-c65", brand: "Dongfeng", name: "SHINE C65", images: [], videos: [{ src: "../assets/automobile/vehicles/shine-c65/01-walkaround.mp4/VID-20261010-WA0034.mp4", title: "Vehicle Walkaround" }], fallbackImage: "", featured: false, powertrain: "Petrol", powertrainKey: "petrol", status: "enquire", statusLabel: "On enquiry", descriptor: "", specifications: ["1.5L petrol", "123 hp", "158 Nm"] },
-  { id: "shine-gs-c68", brand: "Dongfeng", name: "SHINE GS C68", images: [], videos: [], fallbackImage: "", featured: false, powertrain: "Petrol", powertrainKey: "petrol", status: "enquire", statusLabel: "On enquiry", descriptor: "", specifications: ["1.5L petrol", "117 hp", "Automatic gearbox"] },
-  { id: "voyah-dream", brand: "VOYAH", name: "VOYAH DREAM", images: [], videos: [], fallbackImage: "", featured: false, powertrain: "Hybrid / PHEV", powertrainKey: "hybrid", status: "enquire", statusLabel: "On enquiry", descriptor: "", specifications: ["1.5T plug-in hybrid", "62.5 kWh battery", "350 km electric range (CLTC)"] },
-  { id: "voyah-taishan", brand: "VOYAH", name: "VOYAH TAISHAN", images: ["../assets/automobile/vehicles/voyah-taishan.jpg"], videos: [], fallbackImage: "../assets/automobile/vehicles/voyah-taishan.svg", featured: true, powertrain: "Hybrid / PHEV", powertrainKey: "hybrid", status: "enquire", statusLabel: "On enquiry", descriptor: "A selected hybrid / PHEV model from the current VOYAH range.", specifications: ["1.5T plug-in hybrid", "65 kWh battery", "About 290 km electric range (CLTC)"] },
-  { id: "voyah-free-plus", brand: "VOYAH", name: "VOYAH FREE+", images: [], videos: [{ src: "../assets/automobile/vehicles/voyah-free-plus/01-walkaround.mp4/VID-20261010-WA0041.mp4", title: "Vehicle Walkaround" }], fallbackImage: "", featured: false, powertrain: "REV", powertrainKey: "rev", status: "enquire", statusLabel: "On enquiry", descriptor: "", specifications: ["215 kW motor", "43.2 kWh battery", "318 km electric range (CLTC)"] },
-  { id: "m-hero-ii-817", brand: "M-HERO", name: "M-HERO II 817", images: ["../assets/automobile/vehicles/m-hero-817.jpg"], videos: [{ src: "../assets/automobile/vehicles/m-hero-ii-817/01-walkaround.mp4/VID-20261010-WA0040.mp4", title: "Vehicle Walkaround" }], fallbackImage: "../assets/automobile/vehicles/m-hero-817.svg", featured: true, powertrain: "Hybrid / PHEV", powertrainKey: "hybrid", status: "enquire", statusLabel: "On enquiry", descriptor: "A selected hybrid / PHEV model from the current M-HERO range.", specifications: ["505 kW plug-in hybrid", "31.7 kWh battery", "140 km electric range (CLTC)"] },
-  { id: "m-hero-i", brand: "M-HERO", name: "M-HERO I", images: ["../assets/automobile/vehicles/m-hero-917.jpg"], videos: [{ src: "../assets/automobile/vehicles/m-hero-i/01-walkaround.mp4/VID-20261010-WA0039.mp4", title: "Vehicle Walkaround" }], fallbackImage: "../assets/automobile/vehicles/m-hero-917.svg", featured: false, powertrain: "REV", powertrainKey: "rev", status: "enquire", statusLabel: "On enquiry", descriptor: "", specifications: ["600 kW electric motors", "66 kWh battery", "200 km electric range (CLTC)"] },
-  { id: "rox-01", brand: "ROX Motor", name: "ROX 01 SUV", images: ["../assets/automobile/vehicles/rox-01.jpg"], videos: [], fallbackImage: "../assets/automobile/vehicles/rox-01.svg", featured: false, powertrain: "EV", powertrainKey: "ev", status: "enquire", statusLabel: "Confirm availability", descriptor: "Vehicle details and current availability are confirmed on enquiry." },
-  { id: "voyah-free", brand: "VOYAH", name: "VOYAH FREE", images: ["../assets/automobile/vehicles/voyah-free.jpg"], videos: [], fallbackImage: "../assets/automobile/vehicles/voyah-free.svg", featured: false, powertrain: "EV", powertrainKey: "ev", status: "enquire", statusLabel: "Confirm availability", descriptor: "Vehicle details and current availability are confirmed on enquiry." }
-];
+const automobileInventory = window.ElectronyAutomobileData.vehicles;
+const legacyShowcaseVehicles = window.ElectronyAutomobileData.legacyShowcaseVehicles;
+const featuredAutomobileVideos = window.ElectronyAutomobileData.featuredVideos;
+const getYouTubeVideoId = window.ElectronyAutomobileData.getYouTubeVideoId;
+const allAutomobileVehicles = [...automobileInventory, ...legacyShowcaseVehicles];
 
 const powertrainCategories = [
-  { number: "01", label: "Petrol", key: "petrol", description: "Conventional combustion power for familiar everyday driving." },
-  { number: "02", label: "Hybrid / PHEV", key: "hybrid", description: "Electric assistance with flexible long-distance capability." },
-  { number: "03", label: "EV", key: "ev", description: "Fully electric mobility with quiet, efficient operation." },
-  { number: "04", label: "REV", key: "rev", description: "Electric driving with range-extension technology for longer journeys." },
-  { number: "05", label: "Pickup", key: "pickup", description: "Utility-focused mobility with practical loading capability." }
+  { number: "01", label: "Petrol", key: "petrol", description: "Petrol-powered models from sedans to family SUVs." },
+  { number: "02", label: "Plug-in hybrid (PHEV)", key: "phev", description: "Plug-in hybrid vehicles with electric and petrol power." },
+  { number: "03", label: "Fully electric (BEV)", key: "bev", description: "Battery-electric vehicles with no petrol engine." },
+  { number: "04", label: "Extended-range electric (EREV)", key: "erev", description: "Electric-drive vehicles with an onboard petrol range extender." }
 ];
 
-const activeState = { filter: "all", brand: "all" };
+const activeState = { filter: "all", brand: "all", category: "all", search: "" };
 const galleryState = { vehicle: null, index: 0, touchStartX: null };
 
 function escapeHtml(value) {
@@ -37,12 +24,18 @@ function normalizeBrandName(value) {
   return String(value || "").trim().toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
 }
 
-function vehicleAlt(vehicle) {
-  return `Electrony Automobile — ${vehicle.name}`;
+function vehicleAlt(vehicle, index = 0) {
+  if (vehicle.imageAlt && index === 0) return vehicle.imageAlt;
+  if (!vehicle.source) return `${vehicle.brand} ${vehicle.name} image in the Electrony Automobile selection`;
+  return `${vehicle.name} interior detail from the Fouani Nigeria brochure`;
 }
 
 function vehicleImage(vehicle) {
   return vehicle.images[0] || vehicle.fallbackImage;
+}
+
+function findVehicleById(vehicleId) {
+  return allAutomobileVehicles.find((vehicle) => vehicle.id === vehicleId);
 }
 
 function getAutomobileWhatsAppNumber() {
@@ -53,7 +46,12 @@ function getAutomobileWhatsAppNumber() {
 function vehicleEnquiryUrl(vehicle) {
   const number = getAutomobileWhatsAppNumber();
   if (!number) return "#contact";
-  const message = `Hello Electrony, I would like to enquire about ${vehicle.brand} — ${vehicle.name}. Please confirm current availability and share the details.`;
+  const details = vehicle.headlineSpecifications?.length
+    ? `\nBrochure specifications: ${vehicle.headlineSpecifications.join("; ")}`
+    : "";
+  const productUrl = new URL(window.location.href);
+  productUrl.hash = `vehicle/${vehicle.id}`;
+  const message = `Hello Electrony, I would like to enquire about ${vehicle.brand} — ${vehicle.name}. Please confirm current price and availability.${details}\nProduct page: ${productUrl.href}`;
   return `https://wa.me/${number}?text=${encodeURIComponent(message)}`;
 }
 
@@ -66,9 +64,7 @@ function imageMarkup(vehicle, className, priority = false) {
 }
 
 function createStatusMarkup(vehicle) {
-  const status = vehicle.status || "enquire";
-  const label = status === "enquire" ? "Confirm availability" : vehicle.statusLabel;
-  return `<span class="automobile-status status-${escapeHtml(status)}">${escapeHtml(label || "Enquire for details")}</span>`;
+  return `<span class="automobile-status status-enquire">${escapeHtml(vehicle.statusLabel || "Confirm availability")}</span>`;
 }
 
 function createFeaturedVehicleMarkup(vehicle) {
@@ -84,8 +80,8 @@ function createFeaturedVehicleMarkup(vehicle) {
       </div>
       <div class="automobile-featured-card__body">
         <div><p class="automobile-card-label">${escapeHtml(vehicle.brand)}</p><h3>${escapeHtml(vehicle.name)}</h3></div>
-        ${vehicle.descriptor || vehicle.powertrain ? `<div>${vehicle.powertrain ? `<p class="automobile-featured-card__power">${escapeHtml(vehicle.powertrain)}</p>` : ""}<p>${escapeHtml(vehicle.descriptor || "")}</p></div>` : ""}
-        <div class="automobile-featured-card__footer">${createStatusMarkup(vehicle)}${galleryButton}<a href="#vehicle-inventory" data-vehicle-link="${escapeHtml(vehicle.id)}">Explore vehicle <span aria-hidden="true">→</span></a></div>
+        <div><p class="automobile-featured-card__power">${escapeHtml(vehicle.powertrain)}</p><p>${vehicle.headlineSpecifications.slice(0, 3).map(escapeHtml).join(" · ")}</p></div>
+        <div class="automobile-featured-card__footer">${createStatusMarkup(vehicle)}${galleryButton}<a href="#vehicle/${escapeHtml(vehicle.id)}">View details <span aria-hidden="true">→</span></a></div>
       </div>
     </article>`;
 }
@@ -95,18 +91,16 @@ function createVehicleMarkup(vehicle) {
   const galleryButton = hasMedia
     ? `<button class="automobile-gallery-trigger" type="button" data-gallery-open="${escapeHtml(vehicle.id)}" aria-label="Open media gallery for ${escapeHtml(vehicle.name)}">View ${vehicle.videos.length ? "media" : "photos"} <span aria-hidden="true">↗</span></button>`
     : "";
-  const details = vehicle.powertrain
-    ? `<div class="automobile-vehicle-card__details"><span>${escapeHtml(vehicle.powertrain)}</span>${createStatusMarkup(vehicle)}</div>`
-    : `<div class="automobile-vehicle-card__details">${createStatusMarkup(vehicle)}</div>`;
   return `
     <article class="automobile-vehicle-card" data-vehicle-id="${escapeHtml(vehicle.id)}" data-brand="${normalizeBrandName(vehicle.brand)}" data-powertrain="${escapeHtml(vehicle.powertrainKey)}">
       <div class="automobile-vehicle-card__image">${imageMarkup(vehicle, "")}<span class="automobile-vehicle-card__index">${String(automobileInventory.indexOf(vehicle) + 1).padStart(2, "0")}</span></div>
       <div class="automobile-vehicle-card__body">
-        <div><p class="automobile-card-label">${escapeHtml(vehicle.brand)}</p><h3>${escapeHtml(vehicle.name)}</h3>${vehicle.descriptor ? `<p class="automobile-vehicle-card__description">${escapeHtml(vehicle.descriptor)}</p>` : ""}</div>
-        ${vehicle.specifications?.length ? `<p class="automobile-vehicle-card__specs">${vehicle.specifications.map(escapeHtml).join(" · ")}</p>` : ""}
-        ${details}
+        <div><p class="automobile-card-label">${escapeHtml(vehicle.brand)} · ${escapeHtml(vehicle.category)}</p><h3>${escapeHtml(vehicle.name)}</h3><p class="automobile-vehicle-card__description">${escapeHtml(vehicle.vehicleType)}</p></div>
+        <p class="automobile-vehicle-card__power">${escapeHtml(vehicle.powertrain)}</p>
+        <p class="automobile-vehicle-card__specs">${vehicle.headlineSpecifications.map(escapeHtml).join(" · ")}</p>
+        <div class="automobile-vehicle-card__details"><span>${escapeHtml(vehicle.priceLabel)}</span>${createStatusMarkup(vehicle)}</div>
         ${galleryButton}
-        <a href="${escapeHtml(vehicleEnquiryUrl(vehicle))}" class="automobile-vehicle-card__cta"${getAutomobileWhatsAppNumber() ? ' target="_blank" rel="noopener noreferrer"' : ""} aria-label="Enquire about ${escapeHtml(vehicle.name)}${getAutomobileWhatsAppNumber() ? " via WhatsApp" : ""}">Enquire about this vehicle <span aria-hidden="true">↗</span></a>
+        <a href="#vehicle/${escapeHtml(vehicle.id)}" class="automobile-vehicle-card__cta" aria-label="View ${escapeHtml(vehicle.brand)} ${escapeHtml(vehicle.name)} details and enquire">View details &amp; enquire <span aria-hidden="true">↗</span></a>
       </div>
     </article>`;
 }
@@ -114,7 +108,7 @@ function createVehicleMarkup(vehicle) {
 function bindVehicleImages(root) {
   root.querySelectorAll("img[data-photo-path]").forEach((image) => {
     image.onerror = () => {
-      const vehicle = automobileInventory.find((item) => item.id === (image.closest("[data-vehicle-id]")?.dataset.vehicleId || image.dataset.vehicleId || image.dataset.vehicleImage))
+      const vehicle = findVehicleById(image.closest("[data-vehicle-id]")?.dataset.vehicleId || image.dataset.vehicleId || image.dataset.vehicleImage)
         || galleryState.vehicle;
       if (!vehicle) {
         image.remove();
@@ -143,6 +137,61 @@ function renderPowertrainCards() {
   if (!container) return;
   container.innerHTML = powertrainCategories.map((category) => `
     <article class="automobile-power-card"><span>${category.number}</span><div><p>${category.label}</p><h3>${category.description}</h3></div></article>`).join("");
+}
+
+function configuredYouTubeVideo(video, fallbackTitle) {
+  const source = typeof video === "string" ? video : video?.url || video?.id || video?.video;
+  const id = getYouTubeVideoId(source);
+  if (!id) return null;
+  const title = typeof video === "object" && typeof video.title === "string" && video.title.trim()
+    ? video.title.trim()
+    : fallbackTitle;
+  return { id, title };
+}
+
+function youtubeFrameMarkup(video) {
+  return `
+    <div class="automobile-youtube-frame">
+      <iframe
+        src="https://www.youtube-nocookie.com/embed/${escapeHtml(video.id)}"
+        title="${escapeHtml(video.title)}"
+        loading="lazy"
+        referrerpolicy="strict-origin-when-cross-origin"
+        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+        allowfullscreen></iframe>
+    </div>`;
+}
+
+function appendYouTubeVideoCard(container, { brand, model, video, vehicle }) {
+  const configured = configuredYouTubeVideo(video, `${model} video`);
+  if (!configured) return false;
+
+  const article = document.createElement("article");
+  article.className = "automobile-media-card";
+  const heading = document.createElement("div");
+  heading.className = "automobile-media-card__heading";
+  const brandLabel = document.createElement("p");
+  brandLabel.className = "automobile-card-label";
+  brandLabel.textContent = brand;
+  const title = document.createElement("h3");
+  title.textContent = model;
+  heading.append(brandLabel, title);
+  article.append(heading);
+  article.insertAdjacentHTML("beforeend", youtubeFrameMarkup(configured));
+
+  if (vehicle) {
+    const enquiry = document.createElement("a");
+    enquiry.className = "automobile-media-card__enquire";
+    enquiry.href = vehicleEnquiryUrl(vehicle);
+    enquiry.textContent = `Enquire about ${vehicle.name}`;
+    if (getAutomobileWhatsAppNumber()) {
+      enquiry.target = "_blank";
+      enquiry.rel = "noopener noreferrer";
+    }
+    article.append(enquiry);
+  }
+  container.append(article);
+  return true;
 }
 
 function renderVideoShowcase() {
@@ -199,6 +248,27 @@ function renderVideoShowcase() {
       article.append(heading, player, status, enquiry);
       container.appendChild(article);
     });
+
+    const youtubeVideo = configuredYouTubeVideo(vehicle.youtubeVideo, `${vehicle.name} video`);
+    if (youtubeVideo) {
+      appendYouTubeVideoCard(container, {
+        brand: vehicle.brand,
+        model: vehicle.name,
+        video: vehicle.youtubeVideo,
+        vehicle
+      });
+    }
+  });
+
+  featuredAutomobileVideos.forEach((video) => {
+    if (!video || typeof video !== "object" || typeof video.title !== "string" || !video.title.trim()) return;
+    const vehicle = automobileInventory.find((item) => item.id === video.vehicleId);
+    appendYouTubeVideoCard(container, {
+      brand: vehicle?.brand || "Electrony Automobile",
+      model: video.title.trim(),
+      video,
+      vehicle
+    });
   });
 }
 
@@ -206,7 +276,18 @@ function getVisibleVehicles() {
   return automobileInventory.filter((vehicle) => {
     const matchesFilter = activeState.filter === "all" || vehicle.powertrainKey === activeState.filter;
     const matchesBrand = activeState.brand === "all" || normalizeBrandName(vehicle.brand) === activeState.brand;
-    return matchesFilter && matchesBrand;
+    const matchesCategory = activeState.category === "all" || vehicle.category === activeState.category;
+    const searchableText = [
+      vehicle.brand,
+      vehicle.name,
+      vehicle.category,
+      vehicle.vehicleType,
+      vehicle.powertrain,
+      ...vehicle.headlineSpecifications,
+      ...vehicle.specificationGroups.flatMap((group) => group.items)
+    ].join(" ").toLocaleLowerCase();
+    const matchesSearch = !activeState.search || searchableText.includes(activeState.search);
+    return matchesFilter && matchesBrand && matchesCategory && matchesSearch;
   });
 }
 
@@ -214,7 +295,11 @@ function renderVehicleInventory() {
   const container = document.querySelector("#vehicle-cards");
   if (!container) return;
   const vehicles = getVisibleVehicles();
-  container.innerHTML = vehicles.length ? vehicles.map(createVehicleMarkup).join("") : `<div class="automobile-empty-state"><p>No vehicles found</p><span>Try another powertrain or brand combination.</span></div>`;
+  container.innerHTML = vehicles.length
+    ? vehicles.map(createVehicleMarkup).join("")
+    : `<div class="automobile-empty-state"><p>No vehicles found</p><span>Try another search or filter combination.</span></div>`;
+  const resultCount = document.querySelector("#automobile-result-count");
+  if (resultCount) resultCount.textContent = `Showing ${vehicles.length} of ${automobileInventory.length} vehicles`;
   bindVehicleImages(container);
 }
 
@@ -244,14 +329,22 @@ function attachFilters() {
       document.querySelector("#vehicle-inventory")?.scrollIntoView({ behavior, block: "start" });
     });
   });
+
+  document.querySelector("#vehicle-search")?.addEventListener("input", (event) => {
+    activeState.search = event.currentTarget.value.trim().toLocaleLowerCase();
+    renderVehicleInventory();
+  });
+  document.querySelector("#vehicle-category")?.addEventListener("change", (event) => {
+    activeState.category = event.currentTarget.value || "all";
+    renderVehicleInventory();
+  });
 }
 
 function renderHeroImage() {
   const image = document.querySelector(".automobile-hero__image img");
   if (!image) return;
   const vehicle = automobileInventory.find((item) => item.hero && item.images.length)
-    || automobileInventory.find((item) => item.catalogue !== false && item.images.length)
-    || automobileInventory.find((item) => item.catalogue !== false && item.fallbackImage);
+    || automobileInventory.find((item) => item.images.length);
   if (!vehicle) return;
   image.src = vehicleImage(vehicle);
   image.alt = "";
@@ -277,7 +370,7 @@ function renderHeroImage() {
 
 function renderPromotionalImages() {
   document.querySelectorAll("[data-vehicle-image]").forEach((image) => {
-    const vehicle = automobileInventory.find((item) => item.id === image.dataset.vehicleImage);
+    const vehicle = findVehicleById(image.dataset.vehicleImage);
     if (!vehicle) return;
     const source = vehicleImage(vehicle);
     image.src = source;
@@ -343,6 +436,132 @@ function initializeConceptTyping() {
   });
 }
 
+function renderVehicleDetail(vehicle) {
+  const content = document.querySelector("#vehicle-detail-content");
+  const detailSection = document.querySelector("#vehicle-detail-view");
+  if (!content || !detailSection) return;
+  detailSection.hidden = false;
+
+  const gallery = vehicle.images.map((image, index) => `
+    <button class="automobile-detail-gallery__item" type="button" data-gallery-open="${escapeHtml(vehicle.id)}" data-gallery-index="${index}" aria-label="Open ${escapeHtml(vehicle.name)} image ${index + 1} of ${vehicle.images.length}">
+      <img src="${escapeHtml(image)}" data-photo-path="${escapeHtml(image)}" alt="${escapeHtml(vehicleAlt(vehicle, index))}" loading="lazy" decoding="async">
+    </button>`).join("");
+  const specificationGroups = vehicle.specificationGroups.map((group) => `
+    <section class="automobile-detail-specification-group" aria-labelledby="specification-${escapeHtml(vehicle.id)}-${normalizeBrandName(group.title)}">
+      <h3 id="specification-${escapeHtml(vehicle.id)}-${normalizeBrandName(group.title)}">${escapeHtml(group.title)}</h3>
+      <ul>${group.items.map((item) => `<li>${escapeHtml(item)}</li>`).join("")}</ul>
+    </section>`).join("");
+  const youtubeVideo = configuredYouTubeVideo(vehicle.youtubeVideo, `${vehicle.name} video`);
+  let videoMarkup;
+  if (youtubeVideo) {
+    videoMarkup = youtubeFrameMarkup(youtubeVideo);
+  } else if (vehicle.videos.length) {
+    const video = vehicle.videos[0];
+    videoMarkup = `
+      <video class="automobile-detail-local-video" controls playsinline preload="none" aria-label="${escapeHtml(`${vehicle.name}: ${video.title || "Vehicle walkaround"}`)}"${vehicle.images[0] ? ` poster="${escapeHtml(vehicle.images[0])}"` : ""}>
+        <source src="${escapeHtml(video.src)}" type="video/mp4">
+        Video playback is not supported by this browser.
+      </video>`;
+  } else {
+    videoMarkup = `<p class="automobile-detail-video-fallback">No verified vehicle video is currently configured.</p>`;
+  }
+  const sourceUrl = new URL(window.location.href);
+  sourceUrl.hash = `vehicle/${vehicle.id}`;
+  const sourceModel = vehicle.brand === "Dongfeng" ? `${vehicle.brand} ${vehicle.name}` : vehicle.name;
+
+  content.innerHTML = `
+    <a class="automobile-detail-back" href="#vehicle-inventory">← Back to the catalogue</a>
+    <header class="automobile-detail-heading">
+      <p class="automobile-kicker automobile-kicker--dark"><span></span>${escapeHtml(vehicle.brand)} · ${escapeHtml(vehicle.category)}</p>
+      <h1 id="automobile-detail-title" tabindex="-1">${escapeHtml(vehicle.name)}</h1>
+      <p class="automobile-detail-heading__type">${escapeHtml(vehicle.vehicleType)} · ${escapeHtml(vehicle.powertrain)}</p>
+      <div class="automobile-detail-heading__status"><span>${escapeHtml(vehicle.priceLabel)}</span>${createStatusMarkup(vehicle)}</div>
+    </header>
+    <div class="automobile-detail-gallery" aria-label="${escapeHtml(vehicle.name)} image gallery">${gallery}</div>
+    <section class="automobile-detail-highlights" aria-labelledby="automobile-detail-highlights-title">
+      <h2 id="automobile-detail-highlights-title">Headline specifications</h2>
+      <ul>${vehicle.headlineSpecifications.map((item) => `<li>${escapeHtml(item)}</li>`).join("")}</ul>
+    </section>
+    <div class="automobile-detail-specifications">${specificationGroups}</div>
+    <section class="automobile-detail-video" aria-labelledby="automobile-detail-video-title">
+      <h2 id="automobile-detail-video-title">Vehicle video</h2>
+      ${videoMarkup}
+    </section>
+    <aside class="automobile-detail-caveats">
+      <h2>Source and qualifications</h2>
+      <p>Source: <cite>${escapeHtml(vehicle.source.brochure)}</cite>, identified in the brochure as supplied by ${escapeHtml(vehicle.source.publisher)} (PDF page ${vehicle.source.pdfPage}; model page ${vehicle.source.modelPage} of 13).</p>
+      <p>Equipment marked with an asterisk may vary by trim and market. Specifications may change. CLTC is a test-cycle figure and may differ from real-world range.</p>
+      <p>Electrony Automobile presents this information for enquiry; this listing does not claim vehicle ownership, confirmed stock, authorized-dealer status or a manufacturer partnership.</p>
+    </aside>
+    <p class="automobile-detail-price-note">${escapeHtml(vehicle.priceLabel)} · ${escapeHtml(vehicle.statusLabel)}</p>`;
+
+  const form = document.querySelector("#automobile-vehicle-enquiry");
+  if (form) {
+    form.querySelector("#automobile-enquiry-product").value = sourceModel;
+    form.querySelector("#automobile-enquiry-url").value = sourceUrl.href;
+    form.querySelector("#automobile-enquiry-specifications").value = vehicle.headlineSpecifications.join("; ");
+  }
+  renderVehicleDetailGalleryErrors(vehicle);
+
+  const configuredDescription = `${vehicle.name} ${vehicle.vehicleType.toLowerCase()}. ${vehicle.headlineSpecifications.slice(0, 3).join(", ")}. Request current price and confirm availability.`;
+  document.title = `${vehicle.name} | Electrony Automobile`;
+  document.querySelector('meta[name="description"]')?.setAttribute("content", configuredDescription);
+  document.querySelector('meta[property="og:title"]')?.setAttribute("content", document.title);
+  document.querySelector('meta[property="og:description"]')?.setAttribute("content", configuredDescription);
+  document.querySelector('meta[name="twitter:title"]')?.setAttribute("content", document.title);
+  document.querySelector('meta[name="twitter:description"]')?.setAttribute("content", configuredDescription);
+  document.querySelector('meta[property="og:url"]')?.setAttribute("content", sourceUrl.href);
+  document.querySelector('link[rel="canonical"]')?.setAttribute("href", sourceUrl.href);
+}
+
+function renderVehicleDetailGalleryErrors(vehicle) {
+  document.querySelectorAll(".automobile-detail-gallery__item img").forEach((image) => {
+    image.addEventListener("error", () => {
+      image.closest(".automobile-detail-gallery__item")?.remove();
+      vehicle.images = vehicle.images.filter((photo) => photo !== image.dataset.photoPath);
+      renderFeaturedVehicles();
+      renderVehicleInventory();
+    }, { once: true });
+  });
+}
+
+function renderVehicleRoute() {
+  const detailSection = document.querySelector("#vehicle-detail-view");
+  const detailId = window.location.hash.match(/^#vehicle\/([a-z0-9-]+)$/)?.[1] || "";
+  const vehicle = automobileInventory.find((item) => item.id === detailId);
+  const showDetail = Boolean(detailId);
+
+  document.querySelectorAll("#main > section:not(#vehicle-detail-view)").forEach((section) => {
+    section.hidden = showDetail;
+  });
+  if (detailSection) detailSection.hidden = !showDetail;
+  document.body.classList.toggle("automobile-detail-active", showDetail);
+
+  if (!showDetail) {
+    const canonical = document.querySelector('link[rel="canonical"]');
+    document.title = "Electrony Automobile | Source-documented vehicle catalogue";
+    document.querySelector('meta[name="description"]')?.setAttribute("content", "Explore 13 source-documented NAMMI, Dongfeng, VOYAH and M-HERO vehicles. Compare powertrains, brochure specifications and request current details.");
+    document.querySelector('meta[property="og:title"]')?.setAttribute("content", document.title);
+    document.querySelector('meta[property="og:description"]')?.setAttribute("content", "Explore 13 source-documented NAMMI, Dongfeng, VOYAH and M-HERO vehicles. Compare powertrains, brochure specifications and request current details.");
+    document.querySelector('meta[name="twitter:title"]')?.setAttribute("content", document.title);
+    document.querySelector('meta[name="twitter:description"]')?.setAttribute("content", "Explore 13 source-documented NAMMI, Dongfeng, VOYAH and M-HERO vehicles. Compare powertrains, brochure specifications and request current details.");
+    document.querySelector('meta[property="og:url"]')?.setAttribute("content", "https://auto.electrony.xyz/");
+    canonical?.setAttribute("href", "https://auto.electrony.xyz/");
+    return;
+  }
+
+  if (vehicle) {
+    renderVehicleDetail(vehicle);
+  } else if (detailSection) {
+    document.querySelector("#vehicle-detail-content").innerHTML = `
+      <div class="automobile-empty-state">
+        <h1 id="automobile-detail-title">Vehicle not found</h1>
+        <p>This vehicle link may be outdated.</p>
+        <a class="automobile-button automobile-button--red" href="#vehicle-inventory">Return to the catalogue</a>
+      </div>`;
+  }
+}
+
 function renderGallery() {
   const dialog = document.querySelector("#automobile-gallery");
   const stage = document.querySelector("#automobile-gallery-stage");
@@ -365,7 +584,7 @@ function renderGallery() {
   if (stage) stage.hidden = !source;
   const multiple = photos.length > 1;
   image.classList.add("is-changing");
-  image.alt = vehicleAlt(vehicle);
+  image.alt = vehicleAlt(vehicle, galleryState.index);
   image.dataset.photoPath = photos[galleryState.index] || "";
   if (source) image.src = source;
   else image.removeAttribute("src");
@@ -382,7 +601,7 @@ function renderGallery() {
   thumbnails.hidden = !multiple;
   thumbnails.innerHTML = multiple ? photos.map((photo, index) => `
     <button class="automobile-gallery__thumbnail${index === galleryState.index ? " is-active" : ""}" type="button" data-gallery-index="${index}" aria-label="Show image ${index + 1} of ${photos.length}" aria-pressed="${index === galleryState.index}">
-      <img src="${escapeHtml(photo)}" alt="${escapeHtml(vehicleAlt(vehicle))}" loading="lazy" decoding="async" data-gallery-thumbnail>
+      <img src="${escapeHtml(photo)}" alt="${escapeHtml(vehicleAlt(vehicle, index))}" loading="lazy" decoding="async" data-gallery-thumbnail>
     </button>`).join("") : "";
   thumbnails.querySelectorAll("[data-gallery-thumbnail]").forEach((thumbnail) => {
     thumbnail.addEventListener("error", () => {
@@ -396,7 +615,8 @@ function renderGallery() {
   });
 
   if (videos && videoList) {
-    videos.hidden = vehicle.videos.length === 0;
+    const youtubeVideo = configuredYouTubeVideo(vehicle.youtubeVideo, `${vehicle.name} video`);
+    videos.hidden = vehicle.videos.length === 0 && !youtubeVideo;
     videoList.innerHTML = vehicle.videos.map((video, index) => {
       const title = video.title || `${vehicle.name} video ${index + 1}`;
       const poster = vehicle.images[0] ? ` poster="${escapeHtml(vehicle.images[0])}"` : "";
@@ -408,7 +628,11 @@ function renderGallery() {
           </video>
           <p class="automobile-gallery__video-error" role="status" hidden>Video unavailable. Please try again later or enquire about this vehicle.</p>
         </article>`;
-    }).join("");
+    }).join("") + (youtubeVideo ? `
+      <article class="automobile-gallery__video">
+        <h4>${escapeHtml(youtubeVideo.title)}</h4>
+        ${youtubeFrameMarkup(youtubeVideo)}
+      </article>` : "");
     videoList.querySelectorAll("video").forEach((video) => {
       const error = video.parentElement.querySelector(".automobile-gallery__video-error");
       video.addEventListener("error", () => {
@@ -441,7 +665,7 @@ function renderGallery() {
 }
 
 function openGallery(vehicleId) {
-  const vehicle = automobileInventory.find((item) => item.id === vehicleId);
+  const vehicle = findVehicleById(vehicleId);
   const dialog = document.querySelector("#automobile-gallery");
   if (!vehicle || !dialog || (!vehicle.images.length && !vehicle.fallbackImage && !vehicle.videos.length)) return;
   galleryState.vehicle = vehicle;
@@ -608,7 +832,7 @@ function initializeVehicleLinks() {
 
 function initializeVehicleEnquiries() {
   document.querySelectorAll("[data-vehicle-enquiry]").forEach((link) => {
-    const vehicle = automobileInventory.find((item) => item.id === link.dataset.vehicleEnquiry);
+    const vehicle = findVehicleById(link.dataset.vehicleEnquiry);
     if (vehicle) {
       link.href = vehicleEnquiryUrl(vehicle);
       if (getAutomobileWhatsAppNumber()) {
@@ -641,3 +865,5 @@ initializeReturnToTop();
 initializeVehicleLinks();
 initializeVehicleEnquiries();
 initializeConceptTyping();
+window.addEventListener("hashchange", renderVehicleRoute);
+renderVehicleRoute();

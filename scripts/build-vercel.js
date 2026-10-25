@@ -23,6 +23,20 @@ const billsFrontendFiles = [
 ];
 const sites = new Set(["parent", "automobile", "energy", "hardware", "bills"]);
 
+function copyPublicDirectory(directory) {
+  const sourceDirectory = path.join(projectRoot, directory);
+  const destinationDirectory = path.join(outputDirectory, directory);
+  fs.cpSync(sourceDirectory, destinationDirectory, {
+    recursive: true,
+    filter: (sourcePath) => {
+      const name = path.basename(sourcePath);
+      return !name.startsWith(".")
+        && !/\.(?:md|pdf)$/i.test(name)
+        && !/\.test\.[cm]?js$/i.test(name);
+    }
+  });
+}
+
 function getSite() {
   const args = process.argv.slice(2);
   if (args.length !== 2 || args[0] !== "--site" || !sites.has(args[1])) {
@@ -35,7 +49,7 @@ function getSite() {
 function getPublicApiUrl(site) {
   const configuredUrl = String(process.env.BILLS_API_BASE_URL || "").trim();
   if (!configuredUrl) {
-    throw new Error("Set BILLS_API_BASE_URL in the Vercel build environment to the deployed Railway API base URL before building the Bills frontend.");
+    throw new Error("Set BILLS_API_BASE_URL to the deployed Railway API base URL for builds that include the Bills app.");
   }
 
   let apiUrl;
@@ -110,7 +124,7 @@ function prepareAutomobileEntrypoint() {
 }
 
 function buildStaticSite(site) {
-  const apiUrl = getPublicApiUrl(site);
+  const apiUrl = ["parent", "bills"].includes(site) ? getPublicApiUrl(site) : null;
   fs.rmSync(outputDirectory, { recursive: true, force: true });
   fs.mkdirSync(outputDirectory, { recursive: true });
 
@@ -118,9 +132,9 @@ function buildStaticSite(site) {
     copyBillsFrontend();
   } else {
     for (const directory of publicDirectories) {
-      fs.cpSync(path.join(projectRoot, directory), path.join(outputDirectory, directory), { recursive: true });
+      copyPublicDirectory(directory);
     }
-      if (site === "automobile") {
+    if (site === "automobile") {
       fs.writeFileSync(path.join(outputDirectory, "index.html"), prepareAutomobileEntrypoint());
     } else {
       const entrypoint = site === "parent" ? "index.html" : path.join(site, "index.html");
@@ -129,10 +143,12 @@ function buildStaticSite(site) {
   }
 
   if (site === "automobile") {
-    const automobileScriptPath = path.join(outputDirectory, "src", "automobile.js");
-    let automobileScript = fs.readFileSync(automobileScriptPath, "utf8");
-    automobileScript = automobileScript.split("../assets/").join("/assets/");
-    fs.writeFileSync(automobileScriptPath, automobileScript);
+    for (const script of ["automobile.js", "automobile-catalogue.js"]) {
+      const automobileScriptPath = path.join(outputDirectory, "src", script);
+      let automobileScript = fs.readFileSync(automobileScriptPath, "utf8");
+      automobileScript = automobileScript.split("../assets/").join("/assets/");
+      fs.writeFileSync(automobileScriptPath, automobileScript);
+    }
   }
 
   const configPath = path.join(outputDirectory, "src", "config.js");
@@ -141,7 +157,7 @@ function buildStaticSite(site) {
   if (!config.includes(localApiSetting)) {
     throw new Error("Unable to locate the local Bills API setting in src/config.js.");
   }
-  config = config.replace(localApiSetting, `billsApiBaseUrl: ${JSON.stringify(apiUrl)}`);
+  config = config.replace(localApiSetting, `billsApiBaseUrl: ${apiUrl ? JSON.stringify(apiUrl) : "null"}`);
   fs.writeFileSync(configPath, config);
 }
 

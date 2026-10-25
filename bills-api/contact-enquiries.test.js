@@ -18,6 +18,17 @@ const validEnquiry = {
   message: "Please share product information."
 };
 
+const validAutomobileEnquiry = {
+  page: "automobile",
+  name: "Casey Customer",
+  email: "casey@example.org",
+  phone: "",
+  company: "",
+  category: "vehicle-enquiry",
+  product: "VOYAH — VOYAH FREE+",
+  message: "Please share current pricing and availability.\n\nProduct page: https://auto.electrony.xyz/#vehicle/voyah-free-plus\nBrochure specifications: 215 kW electric motor; 318 km electric range (CLTC)."
+};
+
 const configuredEnv = {
   CONTACT_EMAIL: "enquiries@example.org",
   CONTACT_FROM_EMAIL: "Electrony Enquiries <hello@verified.example.org>",
@@ -26,6 +37,17 @@ const configuredEnv = {
 
 test("validates enquiry fields and category against the selected page", () => {
   assert.equal(validateContactEnquiry(validEnquiry).product, "Laptop enquiry");
+  assert.equal(validateContactEnquiry({
+    ...validEnquiry,
+    page: "energy",
+    category: "solar-panels",
+    product: "Solar panel enquiry"
+  }).page, "energy");
+  assert.equal(validateContactEnquiry(validAutomobileEnquiry).page, "automobile");
+  assert.throws(() => validateContactEnquiry(null), {
+    name: "ContactEnquiryError",
+    statusCode: 400
+  });
   assert.throws(() => validateContactEnquiry({ ...validEnquiry, category: "electricity-meters" }), {
     name: "ContactEnquiryError",
     statusCode: 400
@@ -35,6 +57,10 @@ test("validates enquiry fields and category against the selected page", () => {
     statusCode: 400
   });
   assert.throws(() => validateContactEnquiry({ ...validEnquiry, website: "spam" }), {
+    name: "ContactEnquiryError",
+    statusCode: 400
+  });
+  assert.throws(() => validateContactEnquiry({ ...validAutomobileEnquiry, category: "computers" }), {
     name: "ContactEnquiryError",
     statusCode: 400
   });
@@ -76,6 +102,25 @@ test("sends a validated enquiry to Resend and accepts only a provider message id
       providerRequest = { url, options };
       return { ok: true, json: async () => ({ id: "email-accepted" }) };
     }
+  });
+
+  test("routes a validated vehicle enquiry with its model, URL and specifications to Resend", async () => {
+    let providerRequest;
+    await submitContactEnquiry(validAutomobileEnquiry, {
+      clientKey: "automobile-provider-success-test",
+      env: configuredEnv,
+      fetchImpl: async (url, options) => {
+        providerRequest = { url, options };
+        return { ok: true, json: async () => ({ id: "automobile-email-accepted" }) };
+      }
+    });
+
+    const email = JSON.parse(providerRequest.options.body);
+    assert.equal(email.subject, "Electrony Automobile enquiry");
+    assert.equal(email.to[0], configuredEnv.CONTACT_EMAIL);
+    assert.match(email.text, /VOYAH — VOYAH FREE\+/);
+    assert.match(email.text, /https:\/\/auto\.electrony\.xyz\/#vehicle\/voyah-free-plus/);
+    assert.match(email.text, /318 km electric range \(CLTC\)/);
   });
 
   assert.equal(providerRequest.url, "https://api.resend.com/emails");

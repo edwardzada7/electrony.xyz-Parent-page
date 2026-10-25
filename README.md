@@ -34,7 +34,9 @@ The parent site and the Automobile, Energy, Hardware, and Bills projects use thi
 | Hardware | `npm run build:vercel -- --site hardware` | `dist` |
 | Bills purchasing app | `npm run build:vercel -- --site bills` | `dist` |
 
-Parent, Automobile, Energy, and Hardware builds copy the existing pages and shared assets into `dist`, and select the requested page as the deployment's `/` entry point. The Bills build instead uses `bills/app/index.html` as `/` and copies only the CSS, JavaScript, and brand images needed by that frontend. The parent site's Bills marketing page and app remain available at `/bills/` and `/bills/app/`. For the separate Bills Vercel project, configure `BILLS_API_BASE_URL` with the actual Railway API's HTTPS origin (no path, credentials, query, or fragment). The build injects it into `dist/src/config.js`; the Bills API remains a separate Railway service, and `bills-api/` must not be deployed as a static site.
+Parent, Automobile, Energy, and Hardware builds copy the existing pages and shared runtime assets into `dist`, and select the requested page as the deployment's `/` entry point. Non-runtime Markdown documents, PDFs, hidden files, and `*.test.js` files are excluded. The Automobile brochure and the Energy source PDF are private source material and are not published. A new build does not remove files from an older deployment: after redeploying, verify that direct requests for both source-PDF paths return `404`. The Bills build instead uses `bills/app/index.html` as `/` and copies only the CSS, JavaScript, and brand images needed by that frontend. The parent site's Bills marketing page and app remain available at `/bills/` and `/bills/app/`.
+
+The source canonical URLs for the two catalogues are `https://auto.electrony.xyz/` and `https://energy.electrony.xyz/`. These are the intended public URLs recorded in their HTML, not evidence that the Vercel projects or custom domains are configured or deployed; confirm the dashboard settings before launch. For Parent Electrony.xyz and the separate Bills Vercel project, configure `BILLS_API_BASE_URL` with the actual Railway API's HTTPS origin (no path, credentials, query, or fragment). The build injects it into `dist/src/config.js` for those two builds, which include the Bills app. Automobile, Energy, and Hardware builds use their same-origin `/api/contact` enquiry endpoint and do not require `BILLS_API_BASE_URL`. The Bills API remains a separate Railway service, and `bills-api/` must not be deployed as a static site.
 
 The `buildCommand` is intentionally project-specific and is not fixed in `vercel.json`; configure the exact command above in each Vercel project's **Build & Development Settings**. Keep the Output Directory as `dist`. See [the Bills API deployment notes](./bills-api/README.md#vercel-frontend-and-railway-api) for CORS and Railway configuration. Vercel project Root Directory, framework, build command, environment variables, and custom domains are dashboard settings and must be checked or updated there.
 
@@ -42,7 +44,7 @@ Product status labels are maintained in `src/products.js`; product destinations 
 
 ## Electrony Automobile
 
-The public Electrony Automobile page is available at `/automobile/`. It presents a curated selection of vehicles, powertrain categories and selected brands for a marketing-only catalogue experience. The internal landing-page link is maintained in `src/config.js` and the product record in `src/products.js`.
+The public Electrony Automobile page is available at `/automobile/`. Its 13 source-documented vehicle records are maintained in [`src/automobile-catalogue.js`](./src/automobile-catalogue.js), separately from the page renderer. Brochure specifications and availability are presented for enquiry, not as confirmation of stock, ownership, authorized-dealer status or manufacturer partnership. The source brochure is kept locally at `.sources/automobile/Dongfeng Range - Fouani Nigeria (no contacts).pdf` and is not included in public builds. The internal landing-page link is maintained in `src/config.js` and the product record in `src/products.js`.
 
 ## Electrony Hardware
 
@@ -52,11 +54,17 @@ A future verified catalogue integration can still provide `window.ElectronyHardw
 
 ## Electrony Energy
 
-The Energy catalogue is available at `/energy/`. Its locally maintained categories and illustrations are enquiry prompts, not verified product listings. Customers can request an individual item, complete solar installation or customised project; specifications and availability must be confirmed.
+The Energy catalogue is available at `/energy/`. Its product data is maintained separately from the page renderer in [`src/energy-catalogue.js`](./src/energy-catalogue.js). Each record includes its brand, product category, model where supplied, source-supported description/specifications, source page, and warranty only when stated. The public records contain no price field. The five-page source PDF is kept locally at `.sources/energy/POWER-SOLAR PL.pdf`; `.sources/` is ignored by Git and Vercel builds do not copy it, so the source price column is not published.
+
+No secure Energy catalogue CMS or upload workflow exists. Until an authenticated administration system with server-side file validation and persistent storage is implemented, an authorized developer should add or update catalogue records and media through a reviewed repository change. Use descriptive filenames in `assets/catalogue/energy/`, retain original aspect ratios, use only approved matching product photographs, and keep the current clearly labelled category illustrations when an exact product image is unavailable. Do not add a public upload endpoint. The logos under `assets/catalogue/energy/brands/` were extracted from the supplied catalogue and are used only as brand marks.
+
+Product videos are optional. To add one, set the product's `video` property in `src/energy-catalogue.js` to a verified 11-character YouTube video ID or HTTPS URL on `youtube.com`, `youtu.be`, or `youtube-nocookie.com`; no video is configured by default. A featured video can be configured with `window.ElectronyEnergyFeaturedVideo = { title: "…", video: "…" }` in that data file. The renderer validates each value and omits invalid or missing videos. Do not label a video as official without evidence.
+
+Customers can request a quote for an individual catalogue item, complete installation or customised project. Product enquiries include the selected brand, model, source description, available specifications, warranty and page reference. The catalogue and calculator are not a system design or technical recommendation; suitability, electrical protection, compatibility and availability must be confirmed for each project.
 
 ## Contact enquiry delivery
 
-Hardware and Energy forms submit to a server-side Resend integration. The same endpoint is available as a Vercel function at `/api/contact` and as a route in the combined Railway website/API service. Local API development can serve both the pages and route with `npm run dev:api` at `http://localhost:4174`; the static Python server (`npm run dev`) does not provide API routes.
+Automobile, Hardware and Energy forms submit to a server-side Resend integration. The same endpoint is available as a Vercel function at `/api/contact` and as a route in the combined Railway website/API service. Local API development can serve the pages and route with `npm run dev:api` at `http://localhost:4174`; the static Python server (`npm run dev`) does not provide API routes.
 
 Configure these server-only environment variables in the deployment that will deliver enquiries:
 
@@ -66,4 +74,4 @@ Configure these server-only environment variables in the deployment that will de
 
 Set them in Vercel for the Vercel serverless endpoint, and in Railway if using its `/api/contact` route. Never add these values to `src/config.js`, browser JavaScript, or public build-time variables. Missing or invalid configuration returns an explicit `503` error; the form only reports success when Resend returns an accepted message identifier. Provider acceptance is not proof of inbox delivery. The repository does not define a recipient mailbox or a production Railway service URL.
 
-The Vercel build also retains the existing requirement for `BILLS_API_BASE_URL` to identify the Railway Bills API. The contact endpoint itself is same-origin and does not rely on Railway being available when the site is deployed to Vercel. The browser validates enquiries and reports API acceptance or failure; provider acceptance is not proof of inbox delivery. Confirm the recipient mailbox, Resend key and verified sender in the target deployment before relying on form submissions.
+The contact endpoint itself is same-origin and does not rely on Railway being available when a catalogue site is deployed to Vercel. The browser validates enquiries and reports API acceptance or failure; provider acceptance is not proof of inbox delivery. Confirm the recipient mailbox, Resend key and verified sender in the target deployment before relying on form submissions.

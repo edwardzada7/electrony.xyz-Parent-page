@@ -91,7 +91,7 @@
 .automobile-section-heading > p { max-width: 36rem; margin: 0; color: var(--color-gray-700); line-height: 1.75; }
 
 .automobile-brand-intro { background: var(--automobile-ivory); }
-.automobile-brand-rail { display: grid; grid-template-columns: 1.25fr repeat(5, minmax(8rem, 1fr)); border-top: 1px solid var(--automobile-border); border-bottom: 1px solid var(--automobile-border); }
+.automobile-brand-rail { display: grid; grid-template-columns: 1.25fr repeat(4, minmax(8rem, 1fr)); border-top: 1px solid var(--automobile-border); border-bottom: 1px solid var(--automobile-border); }
 .automobile-brand-button { display: flex; min-height: 9rem; align-items: center; justify-content: center; padding: 1.25rem; border: 0; border-right: 1px solid var(--automobile-border); background: transparent; cursor: pointer; transition: color 180ms ease, background-color 180ms ease; }
 .automobile-brand-button:last-child { border-right: 0; }
 .automobile-brand-button img { width: 100%; max-width: 8rem; height: auto; filter: grayscale(1); opacity: 0.56; transition: filter 180ms ease, opacity 180ms ease, transform 180ms ease; }
@@ -351,4 +351,343 @@
 
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { scroll-behavior: auto !important; transition-duration: 0.01ms !important; animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; }
+}
+
+.automobile-page #main > section[hidden],
+.automobile-detail[hidden] { display: none; }
+
+.automobile-search-filters {
+  display: grid;
+  grid-template-columns: minmax(0, 1.4fr) minmax(14rem, 0.6fr);
+  gap: 1rem;
+  margin-bottom: 1.25rem;
+}
+
+.automobile-search-field,
+.automobile-category-field {
+  display: grid;
+  gap: 0.45rem;
+  color: var(--color-gray-700);
+  font-family: var(--font-label);
+  font-size: 0.62rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.automobile-search-field input,
+.automobile-category-field select {
+  width: 100%;
+  min-height: 3rem;
+  padding: 0.65rem 0.8rem;
+  border: 1px solid var(--automobile-border);
+  border-radius: 0;
+  background: var(--automobile-white);
+  color: var(--color-ink);
+  font: inherit;
+  letter-spacing: normal;
+  text-transform: none;
+}
+
+.automobile-search-field input:focus-visible,
+.automobile-category-field select:focus-visible {
+  outline: 3px solid var(--automobile-red);
+  outline-offset: 2px;
+}
+
+.automobile-result-count {
+  margin: -0.35rem 0 1rem;
+  color: var(--color-gray-700);
+  font-family: var(--font-label);
+  font-size: 0.6rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.automobile-source-note {
+  max-width: 70rem;
+  margin: 2rem 0 0;
+  color: var(--color-gray-700);
+  font-size: 0.78rem;
+  line-height: 1.7;
+}
+
+.automobile-vehicle-card__power {
+  margin: 0;
+  color: var(--color-ink);
+  font-family: var(--font-label);
+  font-size: 0.62rem;
+  font-weight: 500;
+  line-height: 1.65;
+}
+
+.automobile-vehicle-card__details {
+  align-items: flex-start;
+  flex-wrap: wrap;
+}
+
+.automobile-detail {
+  min-height: 75vh;
+  padding-top: calc(var(--automobile-section-space) + 5rem) !important;
+  background: var(--automobile-ivory);
+}
+
+.automobile-detail-back {
+  display: inline-flex;
+  min-height: 2.75rem;
+  align-items: center;
+  margin-bottom: 2rem;
+  color: var(--automobile-red-deep);
+  font-family: var(--font-label);
+  font-size: 0.68rem;
+  letter-spacing: 0.08em;
+  text-decoration: none;
+  text-transform: uppercase;
+}
+
+.automobile-detail-heading {
+  display: grid;
+  gap: 0.8rem;
+  margin-bottom: clamp(2rem, 5vw, 4rem);
+}
+
+.automobile-detail-heading .automobile-kicker { margin-bottom: 0; }
+.automobile-detail-heading h1 {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: clamp(3rem, 8vw, 7rem);
+  font-weight: 600;
+  line-height: 0.9;
+  letter-spacing: -0.07em;
+  overflow-wrap: anywhere;
+}
+
+.automobile-detail-heading__type {
+  margin: 0;
+  color: var(--color-gray-700);
+  font-size: clamp(1rem, 2vw, 1.35rem);
+}
+
+.automobile-detail-heading__status {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.6rem;
+  color: var(--color-gray-700);
+  font-family: var(--font-label);
+  font-size: 0.62rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.automobile-detail-gallery {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 21rem), 1fr));
+  gap: 0.8rem;
+  margin-bottom: clamp(3rem, 6vw, 5rem);
+}
+
+.automobile-detail-gallery__item {
+  min-width: 0;
+  padding: 0;
+  border: 1px solid var(--automobile-border);
+  background: #151515;
+  cursor: zoom-in;
+}
+
+.automobile-detail-gallery__item:focus-visible {
+  outline: 3px solid var(--automobile-red);
+  outline-offset: 3px;
+}
+
+.automobile-detail-gallery__item img {
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  object-fit: contain;
+}
+
+.automobile-detail-highlights {
+  margin-bottom: 3rem;
+  padding: clamp(1.25rem, 3vw, 2rem);
+  border: 1px solid var(--automobile-border);
+  background: rgba(255, 255, 255, 0.62);
+}
+
+.automobile-detail-highlights h2,
+.automobile-detail-video h2,
+.automobile-detail-caveats h2,
+.automobile-enquiry-form h2 {
+  margin: 0 0 1rem;
+  font-family: var(--font-display);
+  font-size: clamp(1.5rem, 3vw, 2.25rem);
+  letter-spacing: -0.045em;
+}
+
+.automobile-detail-highlights ul,
+.automobile-detail-specification-group ul {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 15rem), 1fr));
+  gap: 0.7rem 1.5rem;
+  margin: 0;
+  padding-left: 1.15rem;
+}
+
+.automobile-detail-highlights li,
+.automobile-detail-specification-group li {
+  padding-left: 0.15rem;
+  line-height: 1.6;
+}
+
+.automobile-detail-specifications {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: clamp(1rem, 2vw, 1.5rem);
+  margin-bottom: 3rem;
+}
+
+.automobile-detail-specification-group {
+  min-width: 0;
+  padding: clamp(1.2rem, 2.5vw, 1.8rem);
+  border: 1px solid var(--automobile-border);
+  background: rgba(255, 255, 255, 0.5);
+}
+
+.automobile-detail-specification-group h3 {
+  margin: 0 0 1rem;
+  color: var(--automobile-red-deep);
+  font-family: var(--font-label);
+  font-size: 0.72rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.automobile-detail-specification-group ul { grid-template-columns: 1fr; }
+
+.automobile-detail-video {
+  max-width: 64rem;
+  margin-bottom: 3rem;
+}
+
+.automobile-detail-local-video {
+  display: block;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  background: #080808;
+}
+
+.automobile-detail-video-fallback {
+  margin: 0;
+  padding: 1rem;
+  border: 1px dashed var(--automobile-border);
+  color: var(--color-gray-700);
+}
+
+.automobile-youtube-frame {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  overflow: hidden;
+  background: #080808;
+}
+
+.automobile-youtube-frame iframe {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  border: 0;
+}
+
+.automobile-detail-caveats {
+  max-width: 68rem;
+  margin-bottom: 1.5rem;
+  padding: clamp(1.2rem, 2.5vw, 1.8rem);
+  border-left: 3px solid var(--automobile-red);
+  background: #e9e5de;
+}
+
+.automobile-detail-caveats p {
+  margin: 0.6rem 0 0;
+  color: var(--color-gray-700);
+  font-size: 0.86rem;
+  line-height: 1.7;
+}
+
+.automobile-detail-price-note {
+  margin: 0 0 3rem;
+  color: var(--automobile-red-deep);
+  font-family: var(--font-label);
+  font-size: 0.65rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.automobile-enquiry-form {
+  display: grid;
+  gap: 1.3rem;
+  max-width: 58rem;
+  padding: clamp(1.25rem, 4vw, 3rem);
+  border: 1px solid var(--automobile-border);
+  background: var(--automobile-white);
+}
+
+.automobile-enquiry-form__heading > p:last-child {
+  margin: 0;
+  color: var(--color-gray-700);
+}
+
+.automobile-enquiry-form__fields {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1rem;
+}
+
+.automobile-enquiry-form__fields label {
+  display: grid;
+  min-width: 0;
+  gap: 0.4rem;
+  color: var(--color-ink);
+  font-family: var(--font-label);
+  font-size: 0.65rem;
+  letter-spacing: 0.04em;
+}
+
+.automobile-enquiry-form__fields input,
+.automobile-enquiry-form__fields textarea {
+  width: 100%;
+  min-width: 0;
+  min-height: 3rem;
+  padding: 0.7rem 0.8rem;
+  border: 1px solid var(--automobile-border);
+  border-radius: 0;
+  background: #fff;
+  color: var(--color-ink);
+  font: inherit;
+  letter-spacing: normal;
+}
+
+.automobile-enquiry-form__fields textarea { resize: vertical; }
+.automobile-enquiry-form__fields input:focus-visible,
+.automobile-enquiry-form__fields textarea:focus-visible {
+  outline: 3px solid var(--automobile-red);
+  outline-offset: 2px;
+}
+
+.automobile-enquiry-form__fields [aria-invalid="true"] { border-color: var(--automobile-red); }
+.automobile-enquiry-form__message { grid-column: 1 / -1; }
+.automobile-enquiry-form__optional { color: var(--color-gray-500); font-size: 0.58rem; }
+.automobile-enquiry-form__error { min-height: 1.1em; color: var(--automobile-red-deep); font-family: var(--font-body); font-size: 0.75rem; letter-spacing: normal; }
+.automobile-enquiry-form__actions { display: flex; flex-wrap: wrap; align-items: center; gap: 1rem; }
+.automobile-enquiry-form__actions button:disabled { cursor: wait; opacity: 0.68; }
+.automobile-enquiry-form__status { color: var(--color-gray-700); font-size: 0.85rem; }
+.automobile-enquiry-form__status.is-error { color: var(--automobile-red-deep); }
+.automobile-enquiry-form__privacy { margin: 0; color: var(--color-gray-500); font-size: 0.75rem; line-height: 1.6; }
+.automobile-enquiry-form__honeypot { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+
+@media (max-width: 47.99rem) {
+  .automobile-search-filters,
+  .automobile-detail-specifications,
+  .automobile-enquiry-form__fields { grid-template-columns: 1fr; }
+  .automobile-detail { padding-top: calc(var(--automobile-section-space) + 3.5rem) !important; }
+  .automobile-detail-gallery { grid-template-columns: 1fr; }
+  .automobile-enquiry-form__message { grid-column: auto; }
 }

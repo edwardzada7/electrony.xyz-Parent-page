@@ -4,17 +4,17 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="theme-color" content="#EAF7E8">
-    <meta name="description" content="Explore solar, energy storage, electrical distribution and project supply enquiries for homes, businesses and infrastructure with Electrony Energy.">
+    <meta name="description" content="Explore Electrony Energy's sourced solar, storage, inverter, transformer and electrical equipment catalogue. Request a quote for products and projects.">
     <link rel="canonical" href="https://energy.electrony.xyz/">
     <meta property="og:type" content="website">
     <meta property="og:title" content="Electrony Energy — Powering a More Connected Future">
-    <meta property="og:description" content="Explore solar, energy storage, electrical distribution and project supply enquiries with Electrony Energy.">
+    <meta property="og:description" content="Explore sourced solar, storage, inverter, transformer and electrical equipment from Electrony Energy. Request a quote for products and projects.">
     <meta property="og:url" content="https://energy.electrony.xyz/">
     <meta property="og:image" content="https://energy.electrony.xyz/assets/brand/electrony-e-logo.png">
     <meta property="og:image:alt" content="Electrony E logo">
     <meta name="twitter:card" content="summary">
     <meta name="twitter:title" content="Electrony Energy — Powering a More Connected Future">
-    <meta name="twitter:description" content="Explore solar, energy storage, electrical distribution and project supply enquiries with Electrony Energy.">
+    <meta name="twitter:description" content="Explore sourced solar, storage, inverter, transformer and electrical equipment from Electrony Energy. Request a quote for products and projects.">
     <meta name="twitter:image" content="https://energy.electrony.xyz/assets/brand/electrony-e-logo.png">
     <title>Electrony Energy — Powering a More Connected Future</title>
     <link rel="icon" href="/assets/favicons/energy/favicon.ico" sizes="32x32" type="image/x-icon">
@@ -200,38 +200,42 @@
         <div class="container">
           <div class="energy-section-heading">
             <div>
-              <p class="energy-eyebrow">Energy product discovery</p>
+              <p class="energy-eyebrow">Energy product catalogue</p>
               <h2 id="catalogue-title">Explore equipment and complete solutions.</h2>
             </div>
-            <p>These illustrative enquiry categories are not confirmed inventory. Technical details, suitability, availability and terms are verified for each request.</p>
+            <p>Browse products transcribed from the supplied catalogue. The artwork is illustrative, not product photography; confirm suitability, compatibility and availability with a qualified professional.</p>
           </div>
           <div class="energy-discovery">
-            <label class="visually-hidden" for="energy-search">Search energy enquiry categories</label>
+            <label class="visually-hidden" for="energy-search">Search products by brand, model or name</label>
             <div class="energy-search">
               <span aria-hidden="true">⌕</span>
-              <input id="energy-search" type="search" autocomplete="off" placeholder="Search enquiry categories…" aria-describedby="energy-discovery-help">
+              <input id="energy-search" type="search" autocomplete="off" placeholder="Search brand, model or product…" aria-describedby="energy-discovery-help">
               <button class="energy-search-clear" id="energy-clear-search" type="button" disabled>Clear</button>
             </div>
-            <div class="energy-filter-group" id="energy-filter-group" role="group" aria-label="Filter energy products by category">
-              <button type="button" class="energy-filter is-selected" data-energy-filter="all" aria-pressed="true">All categories</button>
-              <button type="button" class="energy-filter" data-energy-filter="solar-panels" aria-pressed="false">Solar panels</button>
-              <button type="button" class="energy-filter" data-energy-filter="solar-inverters" aria-pressed="false">Inverters</button>
-              <button type="button" class="energy-filter" data-energy-filter="batteries-storage" aria-pressed="false">Batteries &amp; storage</button>
-              <button type="button" class="energy-filter" data-energy-filter="complete-systems" aria-pressed="false">Complete systems</button>
-              <button type="button" class="energy-filter" data-energy-filter="transformers" aria-pressed="false">Transformers</button>
-              <button type="button" class="energy-filter" data-energy-filter="electricity-meters" aria-pressed="false">Electricity meters</button>
-              <button type="button" class="energy-filter" data-energy-filter="cables-accessories" aria-pressed="false">Cables &amp; accessories</button>
+            <div class="energy-catalogue-filters">
+              <div>
+                <label for="energy-brand-filter">Brand</label>
+                <select id="energy-brand-filter">
+                  <option value="all">All brands</option>
+                </select>
+              </div>
+              <div>
+                <label for="energy-category-filter">Product category</label>
+                <select id="energy-category-filter">
+                  <option value="all">All categories</option>
+                </select>
+              </div>
             </div>
-            <p class="energy-discovery-help" id="energy-discovery-help">Browse enquiry categories. Specifications, compatibility, availability and supply terms are confirmed for each request.</p>
+            <p class="energy-discovery-help" id="energy-discovery-help">Search by brand, model or product name, then combine brand and category filters. Product protection equipment requires a project-specific electrical design assessment.</p>
           </div>
           <p class="energy-results-status" id="energy-catalogue-status" role="status" aria-live="polite"></p>
           <div class="energy-product-grid" id="energy-products" aria-live="polite"></div>
           <div class="energy-catalogue-empty" id="energy-catalogue-empty" hidden>
             <span class="energy-catalogue__mark" aria-hidden="true"><span></span><span></span><span></span></span>
             <div>
-              <p class="energy-eyebrow" id="energy-empty-label">No matching categories</p>
-              <h3 id="energy-empty-title">No enquiry categories match.</h3>
-              <p id="energy-empty-copy">Try a different search or category. The energy categories and project enquiry options remain available above and below.</p>
+              <p class="energy-eyebrow" id="energy-empty-label">No matching products</p>
+              <h3 id="energy-empty-title">No products match these filters.</h3>
+              <p id="energy-empty-copy">Try a different search or category. The project enquiry option remains available below.</p>
               <a class="energy-text-link" href="#quote" data-quote-category="custom-project" data-product-name="Custom energy installation or project">Discuss a complete installation or project <span aria-hidden="true">↗</span></a>
             </div>
           </div>
@@ -243,6 +247,30 @@
             </div>
             <a class="button energy-button energy-button--primary" href="#quote" data-quote-category="custom-project" data-product-name="Custom energy installation or project">Discuss your project <span aria-hidden="true">↗</span></a>
           </div>
+          <section class="energy-featured-video" id="energy-featured-video" aria-label="Featured Energy video" hidden>
+            <div>
+              <p class="energy-eyebrow">Featured Energy video</p>
+              <h3 id="energy-featured-video-title"></h3>
+            </div>
+            <div class="energy-video-frame" id="energy-featured-video-frame"></div>
+          </section>
+          <dialog class="energy-product-dialog" id="energy-product-dialog" aria-labelledby="energy-dialog-title">
+            <button class="energy-product-dialog__close" id="energy-dialog-close" type="button" aria-label="Close product details">×</button>
+            <p class="energy-eyebrow" id="energy-dialog-brand"></p>
+            <h3 id="energy-dialog-title"></h3>
+            <p class="energy-product-dialog__category" id="energy-dialog-category"></p>
+            <p class="energy-product-dialog__description" id="energy-dialog-description"></p>
+            <section class="energy-product-dialog__specs" id="energy-dialog-specs-section" hidden aria-labelledby="energy-dialog-specs-title">
+              <h4 id="energy-dialog-specs-title">Specifications from the catalogue</h4>
+              <ul id="energy-dialog-specs"></ul>
+            </section>
+            <p class="energy-product-dialog__warranty" id="energy-dialog-warranty"></p>
+            <p class="energy-product-dialog__source" id="energy-dialog-source"></p>
+            <section class="energy-product-dialog__video" id="energy-dialog-video" hidden aria-label="Product video">
+              <div class="energy-video-frame" id="energy-dialog-video-frame"></div>
+            </section>
+            <button class="button energy-button energy-button--primary" id="energy-dialog-enquire" type="button">Request a quote</button>
+          </dialog>
         </div>
       </section>
 

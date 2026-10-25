@@ -1,8 +1,10 @@
 # Automobile asset sources
 
+The supplied Automobile brochure is kept locally at `.sources/automobile/Dongfeng Range - Fouani Nigeria (no contacts).pdf`. It is source material, not a public asset; do not add `.sources/` or the PDF to a release commit.
+
 ## Vehicle photos
 
-Add photographs to the matching model folder under `assets/automobile/vehicles/`. Use readable, ordered names such as `01-front.jpg`, `02-side.jpg`, and `03-interior.jpg`; any number of photos is supported. Add each relative URL to that vehicle's `images` array in `src/automobile.js`, in the desired display order, for example:
+Add photographs to the matching model folder under `assets/automobile/vehicles/`. Use readable, ordered names such as `01-front.jpg`, `02-side.jpg`, and `03-interior.jpg`; any number of photos is supported. Add each relative URL to that vehicle's `images` array in `src/automobile-catalogue.js`, in the desired display order, for example:
 
 ```js
 images: [
@@ -24,13 +26,13 @@ The following existing JPEGs are currently registered in the centralized data:
 - `../assets/automobile/vehicles/m-hero-817.jpg` — M-HERO II 817
 - `../assets/automobile/vehicles/m-hero-917.jpg` — M-HERO I (917)
 
-The ROX 01 and VOYAH FREE promotional images are also registered centrally for their existing page sections. Seven of the 13 brochure models have no matching JPEG in this checkout, so their photo arrays remain empty. The Dongfeng pickup JPEG is not assigned to a brochure model.
+The ROX 01 and VOYAH FREE promotional images are also registered centrally for their existing page sections. All 13 brochure models currently have at least one registered JPEG. The Dongfeng pickup JPEG is not assigned to a brochure model.
 
 The repository does not record a source or license for these JPEG files. Confirm usage rights before publication.
 
 ## Vehicle videos
 
-Place MP4 files in the matching model folder under `assets/automobile/vehicles/`, using readable ordered filenames such as `01-exterior.mp4` or `02-driving.mp4`. Register each real file in that model's `videos` array in `src/automobile.js`; the optional `title` is shown above the player:
+Place MP4 files in the matching model folder under `assets/automobile/vehicles/`, using readable ordered filenames such as `01-exterior.mp4` or `02-driving.mp4`. Register each real file in that model's `videos` array in `src/automobile-catalogue.js`; the optional `title` is shown above the player:
 
 ```js
 videos: [

@@ -1873,3 +1873,261 @@
     align-items: flex-start;
   }
 }
+
+.energy-catalogue-filters {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.8rem;
+}
+
+.energy-catalogue-filters > div {
+  display: grid;
+  gap: 0.35rem;
+}
+
+.energy-catalogue-filters label {
+  color: var(--energy-muted);
+  font-size: 0.76rem;
+  font-weight: 600;
+}
+
+.energy-catalogue-filters select {
+  width: 100%;
+  min-width: 0;
+  min-height: 3rem;
+  padding: 0.55rem 0.75rem;
+  border: 1px solid #a8c7a5;
+  border-radius: 0;
+  background: #fff;
+  color: var(--energy-forest);
+  font: inherit;
+  font-size: 0.86rem;
+}
+
+.energy-catalogue-filters select:focus-visible,
+.energy-product-card__details:focus-visible,
+.energy-product-dialog__close:focus-visible {
+  outline: var(--focus-ring);
+  outline-offset: 3px;
+}
+
+.energy-product-card__image {
+  padding: 1rem;
+}
+
+.energy-product-card__image img {
+  min-height: 0;
+  height: 10rem;
+  object-fit: contain;
+}
+
+.energy-product-card__brand {
+  display: flex;
+  min-height: 1.7rem;
+  align-items: center;
+  gap: 0.5rem;
+  color: var(--energy-forest);
+  font-family: var(--font-label);
+  font-size: 0.69rem;
+  font-weight: 600;
+  letter-spacing: 0.07em;
+}
+
+.energy-product-card__brand img {
+  width: auto;
+  max-width: 6rem;
+  height: 1.5rem;
+  object-fit: contain;
+}
+
+.energy-product-card__model {
+  margin: -0.35rem 0 0;
+  color: var(--energy-forest);
+  font-family: var(--font-label);
+  font-size: 0.78rem;
+  font-weight: 500;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+
+.energy-product-card__specifications {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  padding: 0;
+  margin: 0;
+  list-style: none;
+}
+
+.energy-product-card__specifications li {
+  padding: 0.25rem 0.45rem;
+  border: 1px solid var(--energy-line);
+  background: #f5faf4;
+  color: var(--energy-forest);
+  font-size: 0.7rem;
+  line-height: 1.45;
+  overflow-wrap: anywhere;
+}
+
+.energy-product-card__warranty {
+  margin: 0;
+  color: var(--energy-muted);
+  font-size: 0.76rem;
+  font-weight: 600;
+  line-height: 1.5;
+}
+
+.energy-product-card__footer {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.55rem;
+}
+
+.energy-product-card__details {
+  display: inline-flex;
+  min-height: 2.75rem;
+  align-items: center;
+  justify-content: center;
+  padding: 0.65rem 0.85rem;
+  border: 1px solid var(--energy-forest);
+  background: #fff;
+  color: var(--energy-forest);
+  font: inherit;
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.energy-product-card__details:hover {
+  background: #f3faf1;
+}
+
+.energy-product-card__enquire {
+  flex: 1;
+}
+
+.energy-product-dialog {
+  width: min(46rem, calc(100% - 2rem));
+  max-width: none;
+  max-height: min(88vh, 54rem);
+  max-height: min(88svh, 54rem);
+  padding: clamp(1.25rem, 4vw, 2.5rem);
+  border: 1px solid var(--energy-line);
+  background: var(--energy-paper);
+  color: var(--energy-ink);
+  overflow-y: auto;
+}
+
+.energy-product-dialog::backdrop {
+  background: rgb(13 28 17 / 68%);
+}
+
+.energy-product-dialog__close {
+  display: block;
+  width: 2.75rem;
+  height: 2.75rem;
+  margin: 0 0 1rem auto;
+  border: 1px solid var(--energy-line);
+  background: #fff;
+  color: var(--energy-forest);
+  font: inherit;
+  font-size: 1.5rem;
+  cursor: pointer;
+}
+
+.energy-product-dialog h3 {
+  max-width: 38rem;
+  margin: 0.25rem 3rem 0.65rem 0;
+  font-size: clamp(1.55rem, 4vw, 2.4rem);
+  line-height: 1.15;
+  overflow-wrap: anywhere;
+}
+
+.energy-product-dialog__category,
+.energy-product-dialog__description,
+.energy-product-dialog__warranty,
+.energy-product-dialog__source {
+  color: var(--energy-muted);
+  line-height: 1.65;
+}
+
+.energy-product-dialog__category {
+  margin-bottom: 1.4rem;
+  font-size: 0.82rem;
+  font-weight: 600;
+}
+
+.energy-product-dialog__specs h4 {
+  margin-bottom: 0.5rem;
+  font-size: 0.95rem;
+}
+
+.energy-product-dialog__specs ul {
+  display: grid;
+  gap: 0.45rem;
+  padding-left: 1.2rem;
+  color: var(--energy-muted);
+  line-height: 1.5;
+}
+
+.energy-product-dialog__warranty {
+  padding-top: 0.7rem;
+  border-top: 1px solid var(--energy-line);
+  font-weight: 600;
+}
+
+.energy-product-dialog__source {
+  font-size: 0.78rem;
+}
+
+.energy-product-dialog__video,
+.energy-featured-video {
+  margin: 1.5rem 0;
+}
+
+.energy-featured-video {
+  display: grid;
+  gap: 1rem;
+  padding: clamp(1rem, 3vw, 2rem);
+  border: 1px solid var(--energy-line);
+  background: #f3faf1;
+}
+
+.energy-featured-video[hidden],
+.energy-product-dialog__video[hidden] {
+  display: none;
+}
+
+.energy-featured-video h3 {
+  margin: 0;
+  font-size: clamp(1.3rem, 3vw, 1.8rem);
+}
+
+.energy-video-frame {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  overflow: hidden;
+  background: #142219;
+}
+
+.energy-video-frame iframe {
+  display: block;
+  width: 100%;
+  height: 100%;
+  border: 0;
+}
+
+@media (max-width: 32rem) {
+  .energy-catalogue-filters {
+    grid-template-columns: 1fr;
+  }
+
+  .energy-product-card__footer {
+    flex-direction: column;
+  }
+
+  .energy-product-card__footer button {
+    width: 100%;
+  }
+}
