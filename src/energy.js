@@ -9,6 +9,7 @@ const clearSearchButton = document.querySelector("#energy-clear-search");
 const brandFilter = document.querySelector("#energy-brand-filter");
 const categoryFilter = document.querySelector("#energy-category-filter");
 const productGrid = document.querySelector("#energy-products");
+const energyRecommendationProducts = document.querySelector("#energy-recommendation-products");
 const catalogueEmpty = document.querySelector("#energy-catalogue-empty");
 const catalogueStatus = document.querySelector("#energy-catalogue-status");
 const categorySelect = document.querySelector("#energy-category");
@@ -18,6 +19,7 @@ const customerTypeSelect = document.querySelector("#energy-customer-type");
 const productDialog = document.querySelector("#energy-product-dialog");
 const featuredVideo = document.querySelector("#energy-featured-video");
 let selectedProduct = null;
+let selectedProductCalculationSummary = "";
 
 function safeImageUrl(value) {
   if (typeof value !== "string" || !value.trim()) return null;
@@ -193,8 +195,9 @@ function renderEnergyCatalogue() {
   catalogueStatus.textContent = `${filteredProducts.length} ${filteredProducts.length === 1 ? "product" : "products"} shown.`;
 }
 
-function renderProductDetails(product) {
+function renderProductDetails(product, calculationSummary = "") {
   selectedProduct = product;
+  selectedProductCalculationSummary = calculationSummary;
   document.querySelector("#energy-dialog-brand").textContent = product.brand;
   document.querySelector("#energy-dialog-title").textContent = product.model
     ? `${product.name} — ${product.model}`
@@ -224,7 +227,7 @@ function renderProductDetails(product) {
   if (frame) videoFrame.appendChild(frame);
 }
 
-function requestProduct(product) {
+function requestProduct(product, calculationSummary = "") {
   categorySelect.value = product.enquiryCategory;
   productInput.value = `${product.brand} | ${product.model || product.name} | ${product.name}`;
   requirementsInput.value = [
@@ -237,6 +240,7 @@ function requestProduct(product) {
     product.warranty ? `Source-stated warranty: ${product.warranty}` : "",
     `Source: ${product.source.document}, page ${product.source.page}.`,
     product.sourceNote ? `Source note: ${product.sourceNote}.` : "",
+    calculationSummary ? `Energy calculator estimates:\n${calculationSummary}` : "",
     "Please confirm current availability, compatibility and suitability for my application."
   ].filter(Boolean).join("\n");
   [categorySelect, productInput, requirementsInput].forEach((field) => {
@@ -256,6 +260,10 @@ function selectQuoteOptions(link) {
   else if (link.dataset.enquiryType && !productInput.value) productInput.value = "Custom energy or project enquiry";
   if (link.dataset.enquiryType) customerTypeSelect.value = link.dataset.enquiryType;
   productInput.dispatchEvent(new Event("input", { bubbles: true }));
+  if (document.querySelector("#energy-recommendations").contains(link) && window.ElectronyEnergyCalculationSummary) {
+    requirementsInput.value = window.ElectronyEnergyCalculationSummary;
+    requirementsInput.dispatchEvent(new Event("input", { bubbles: true }));
+  }
 }
 
 function renderFeaturedVideo() {
@@ -283,18 +291,25 @@ clearSearchButton.addEventListener("click", () => {
   searchInput.focus();
 });
 
-productGrid.addEventListener("click", (event) => {
+document.addEventListener("click", (event) => {
+  if (!(event.target instanceof Element)) return;
   const button = event.target.closest("[data-product-details], [data-request-product]");
-  if (!button) return;
+  if (!button || (!productGrid.contains(button) && !energyRecommendationProducts.contains(button))) return;
   const productId = button.dataset.productDetails || button.dataset.requestProduct;
   const product = energyProducts.find((item) => item.id === productId);
   if (!product) return;
   if (button.dataset.productDetails) {
-    renderProductDetails(product);
+    const calculationSummary = recommendationProducts.contains(button)
+      ? window.ElectronyEnergyCalculationSummary || ""
+      : "";
+    renderProductDetails(product, calculationSummary);
     productDialog.showModal();
     return;
   }
-  requestProduct(product);
+  const calculationSummary = energyRecommendationProducts.contains(button)
+    ? window.ElectronyEnergyCalculationSummary || ""
+    : "";
+  requestProduct(product, calculationSummary);
 });
 
 document.querySelector("#energy-dialog-close").addEventListener("click", () => productDialog.close());
@@ -307,8 +322,10 @@ productDialog.addEventListener("click", (event) => {
 });
 document.querySelector("#energy-dialog-enquire").addEventListener("click", () => {
   if (!selectedProduct) return;
+  const product = selectedProduct;
+  const calculationSummary = selectedProductCalculationSummary;
   productDialog.close();
-  requestProduct(selectedProduct);
+  requestProduct(product, calculationSummary);
 });
 
 addFilterOptions();

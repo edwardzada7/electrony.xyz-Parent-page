@@ -4,19 +4,19 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="theme-color" content="#EAF7E8">
-    <meta name="description" content="Explore Electrony Energy's sourced solar, storage, inverter, transformer and electrical equipment catalogue. Request a quote for products and projects.">
+    <meta name="description" content="Estimate your appliance load and explore power products from the Electrony Energy catalogue. Request a quote for products and projects.">
     <link rel="canonical" href="https://energy.electrony.xyz/">
     <meta property="og:type" content="website">
-    <meta property="og:title" content="Electrony Energy — Powering a More Connected Future">
-    <meta property="og:description" content="Explore sourced solar, storage, inverter, transformer and electrical equipment from Electrony Energy. Request a quote for products and projects.">
+    <meta property="og:title" content="Electrony Energy — Calculate Your Power Needs">
+    <meta property="og:description" content="Estimate your appliance load and explore power products from the Electrony Energy catalogue. Request a quote for products and projects.">
     <meta property="og:url" content="https://energy.electrony.xyz/">
     <meta property="og:image" content="https://energy.electrony.xyz/assets/brand/electrony-e-logo.png">
     <meta property="og:image:alt" content="Electrony E logo">
     <meta name="twitter:card" content="summary">
-    <meta name="twitter:title" content="Electrony Energy — Powering a More Connected Future">
-    <meta name="twitter:description" content="Explore sourced solar, storage, inverter, transformer and electrical equipment from Electrony Energy. Request a quote for products and projects.">
+    <meta name="twitter:title" content="Electrony Energy — Calculate Your Power Needs">
+    <meta name="twitter:description" content="Estimate your appliance load and explore power products from the Electrony Energy catalogue. Request a quote for products and projects.">
     <meta name="twitter:image" content="https://energy.electrony.xyz/assets/brand/electrony-e-logo.png">
-    <title>Electrony Energy — Powering a More Connected Future</title>
+    <title>Electrony Energy — Calculate Your Power Needs</title>
     <link rel="icon" href="/assets/favicons/energy/favicon.ico" sizes="32x32" type="image/x-icon">
     <link rel="icon" href="/assets/favicons/energy/favicon.svg" type="image/svg+xml">
     <link rel="icon" href="/assets/favicons/energy/favicon-16x16.png" sizes="16x16" type="image/png">
@@ -35,6 +35,7 @@
     <script src="../src/main.js" defer></script>
     <script src="../src/energy-catalogue.js" defer></script>
     <script src="../src/energy.js" defer></script>
+    <script src="../src/energy-calculations.js" defer></script>
     <script src="../src/energy-calculator.js" defer></script>
     <script src="../src/contact-form.js" defer></script>
   </head>
@@ -46,7 +47,7 @@
           <img class="brand-logo-header" data-brand-logo src="../assets/brand/electrony-xyz-logo%20.png" alt="Electrony.xyz" hidden>
           <span class="brand-logo-fallback" data-brand-fallback>Electrony<span class="wordmark-period" aria-hidden="true">.</span></span>
         </a>
-        <button class="menu-toggle" type="button" aria-expanded="false" aria-controls="primary-navigation">
+        <button class="menu-toggle" type="button" aria-label="Open navigation menu" aria-expanded="false" aria-controls="primary-navigation">
           <span class="menu-toggle-label">Menu</span>
           <span class="menu-icon" aria-hidden="true"><span></span><span></span></span>
         </button>
@@ -69,32 +70,189 @@
     </header>
 
     <main id="main" class="energy-main">
-      <section class="energy-hero" aria-labelledby="energy-title">
-        <div class="energy-hero__grid" aria-hidden="true"></div>
-        <div class="energy-hero__glow" aria-hidden="true"></div>
-        <div class="container energy-hero__inner">
-          <div class="energy-hero__copy">
-            <p class="energy-kicker"><span aria-hidden="true"></span> ELECTRONY / ENERGY</p>
-            <h1 id="energy-title">Powering a More Connected Future.</h1>
-            <p class="energy-hero__description">Explore energy and electrical-power solutions for homes, businesses and infrastructure through the Electrony ecosystem.</p>
-            <div class="energy-hero__actions">
-              <a class="button energy-button energy-button--primary" href="#solutions">Explore Energy Solutions <span aria-hidden="true">↓</span></a>
-              <a class="button energy-button energy-button--outline" href="#quote">Request a Quote <span aria-hidden="true">↗</span></a>
+      <section class="energy-calculator energy-calculator--hero energy-section" id="calculator" aria-labelledby="energy-calculator-title">
+        <div class="energy-calculator__hero-grid" aria-hidden="true"></div>
+        <div class="container">
+          <div class="energy-calculator__heading energy-calculator__hero-heading">
+            <div>
+              <p class="energy-kicker"><span aria-hidden="true"></span> ELECTRONY / ENERGY</p>
+              <h1 id="energy-calculator-title">Calculate Your Power Needs</h1>
+              <p>Estimate your appliance load, daily energy use and preliminary solar or backup requirements, then explore products from the Electrony Energy catalogue.</p>
             </div>
+            <a class="button energy-button energy-button--outline" href="#catalogue">Browse all products <span aria-hidden="true">↓</span></a>
           </div>
-          <div class="energy-hero-art" role="img" aria-label="Abstract illustration of solar generation, battery storage and connected power lines">
-            <div class="energy-hero-art__sun"></div>
-            <div class="energy-hero-art__orbit energy-hero-art__orbit--one"></div>
-            <div class="energy-hero-art__orbit energy-hero-art__orbit--two"></div>
-            <div class="energy-hero-art__panel"><span></span><span></span><span></span><span></span><span></span><span></span></div>
-            <div class="energy-hero-art__battery"><span></span></div>
-            <div class="energy-hero-art__node energy-hero-art__node--one"></div>
-            <div class="energy-hero-art__node energy-hero-art__node--two"></div>
-            <div class="energy-hero-art__caption">GENERATION / STORAGE / DISTRIBUTION</div>
-            <div class="energy-hero-art__index">E / 03</div>
+          <p class="energy-calculator__estimate-note">Start with an appliance preset, then edit its wattage to match the label or manual. Preset wattages are estimates, not universal specifications.</p>
+
+          <div class="energy-calculator__workspace">
+            <section class="energy-calculator__panel" aria-labelledby="energy-appliances-title">
+              <div class="energy-calculator__panel-heading">
+                <div>
+                  <p class="energy-eyebrow">01 / Your appliances</p>
+                  <h2 id="energy-appliances-title">Build your load list.</h2>
+                </div>
+                <button class="energy-calculator__text-button" id="energy-calculator-reset" type="button">Reset</button>
+              </div>
+              <div class="energy-calculator__appliances" id="energy-appliance-rows"></div>
+              <button class="energy-calculator__add" id="energy-appliance-add" type="button"><span aria-hidden="true">+</span> Add appliance</button>
+              <p class="energy-calculator__helper">Daily energy = quantity × watts per appliance × hours used per day.</p>
+              <details class="energy-calculator__assumption-details">
+                <summary>Adjust calculation assumptions</summary>
+                <div class="energy-calculator__assumption-grid">
+                  <div class="energy-calculator__field">
+                    <label for="energy-month-days">Days for monthly estimate</label>
+                    <input id="energy-month-days" type="number" min="1" max="365" step="1" value="30" inputmode="numeric">
+                  </div>
+                  <div class="energy-calculator__field">
+                    <label for="energy-backup-hours">Backup duration (hours, optional)</label>
+                    <input id="energy-backup-hours" type="number" min="0.1" max="8760" step="0.1" value="" inputmode="decimal" placeholder="Leave blank to skip battery sizing">
+                  </div>
+                  <div class="energy-calculator__field">
+                    <label for="energy-design-margin">Inverter design margin (%)</label>
+                    <input id="energy-design-margin" type="number" min="0" max="500" step="1" value="25" inputmode="decimal">
+                  </div>
+                  <div class="energy-calculator__field">
+                    <label for="energy-battery-usable">Battery usable capacity (%)</label>
+                    <input id="energy-battery-usable" type="number" min="1" max="100" step="1" value="80" inputmode="decimal">
+                  </div>
+                  <div class="energy-calculator__field">
+                    <label for="energy-system-efficiency">Inverter efficiency (%)</label>
+                    <input id="energy-system-efficiency" type="number" min="1" max="100" step="1" value="90" inputmode="decimal">
+                  </div>
+                  <div class="energy-calculator__field">
+                    <label for="energy-peak-sun-hours">Peak-sun-hours assumption (h/day)</label>
+                    <input id="energy-peak-sun-hours" type="number" min="0.1" max="24" step="0.1" value="5" inputmode="decimal">
+                  </div>
+                  <div class="energy-calculator__field">
+                    <label for="energy-solar-losses">Solar system derating (%)</label>
+                    <input id="energy-solar-losses" type="number" min="0" max="99.9" step="0.1" value="20" inputmode="decimal">
+                  </div>
+                </div>
+                <p class="energy-calculator__helper">Defaults: 30 days/month, 25% inverter margin, 80% battery usable fraction, 90% inverter efficiency, 5 peak-sun-hours/day and 20% solar derating. Sunlight is not location-specific.</p>
+              </details>
+              <button class="button energy-button energy-button--primary energy-calculator__calculate" id="energy-calculate" type="button">Calculate My Power Needs <span aria-hidden="true">↗</span></button>
+            </section>
           </div>
+
+          <p class="energy-calculator__validation" id="energy-calculator-validation" role="status" aria-live="polite"></p>
+
+          <section class="energy-calculator__results" id="energy-calculator-results" aria-labelledby="energy-results-title" hidden>
+              <div class="energy-calculator__results-heading">
+                <div>
+                  <p class="energy-eyebrow">02 / Your estimate</p>
+                  <h2 id="energy-results-title">Consumption and preliminary sizing.</h2>
+                </div>
+                <button class="button energy-button energy-button--primary" id="energy-results-enquiry" type="button">Request a Quote <span aria-hidden="true">↗</span></button>
+              </div>
+              <div class="energy-calculator__metric-grid" aria-live="polite">
+                <article class="energy-calculator__metric">
+                  <p>Connected load</p>
+                  <output id="energy-result-load" aria-label="Connected load">—</output>
+                  <small>Appliances running at once; starting surges are not included.</small>
+                </article>
+                <article class="energy-calculator__metric">
+                  <p>Daily energy</p>
+                  <output id="energy-result-daily" aria-label="Estimated daily energy">—</output>
+                  <small id="energy-result-daily-detail">—</small>
+                </article>
+                <article class="energy-calculator__metric">
+                  <p>Monthly energy</p>
+                  <output id="energy-result-monthly" aria-label="Estimated monthly energy">—</output>
+                  <small id="energy-result-monthly-detail">—</small>
+                </article>
+                <article class="energy-calculator__metric">
+                  <p>Backup-period energy</p>
+                  <output id="energy-result-backup" aria-label="Estimated backup-period energy">—</output>
+                  <small id="energy-result-backup-detail">—</small>
+                </article>
+              </div>
+              <div class="energy-calculator__sizing-grid">
+                <article class="energy-calculator__size">
+                  <p>Preliminary inverter capacity</p>
+                  <output id="energy-result-inverter" aria-label="Preliminary inverter capacity">—</output>
+                  <small id="energy-result-inverter-assumption">—</small>
+                </article>
+                <article class="energy-calculator__size">
+                  <p>Estimated battery sizing</p>
+                  <output id="energy-result-battery" aria-label="Estimated battery sizing">—</output>
+                  <small id="energy-result-battery-assumption">—</small>
+                </article>
+                <article class="energy-calculator__size">
+                  <p>Preliminary solar-array capacity</p>
+                  <output id="energy-result-solar" aria-label="Preliminary solar-array capacity">—</output>
+                  <small id="energy-result-solar-assumption">—</small>
+                </article>
+              </div>
+              <div class="energy-calculator__recommendations" id="energy-recommendations" aria-labelledby="energy-recommendations-title">
+                <div>
+                  <p class="energy-eyebrow">03 / Catalogue matches</p>
+                  <h3 id="energy-recommendations-title">Products to discuss</h3>
+                  <p class="energy-calculator__helper">Matches use stated ratings only: inverter listings must identify an inverter and meet the estimate without exceeding 2× it; battery items use the same capacity band; panel groups may exceed the array estimate by at most 25%. A capacity match does not establish electrical compatibility or installation suitability.</p>
+                </div>
+                <div class="energy-calculator__recommendation-grid" id="energy-recommendation-products"></div>
+                <p class="energy-calculator__consultation" id="energy-recommendation-fallback" role="status"></p>
+                <a class="button energy-button energy-button--outline" href="#quote" data-quote-category="complete-systems" data-product-name="Energy calculator estimate — product and system consultation">Request a Quote for My Estimate <span aria-hidden="true">↗</span></a>
+              </div>
+              <div class="energy-calculator__breakdown">
+                <div class="energy-calculator__breakdown-heading">
+                  <h3>Appliance energy breakdown</h3>
+                  <span>1 kWh = 1,000 Wh</span>
+                </div>
+                <div class="energy-calculator__table-wrap">
+                  <table>
+                    <thead>
+                      <tr><th scope="col">Appliance</th><th scope="col">Quantity</th><th scope="col">Watts each</th><th scope="col">Hours/day</th><th scope="col">Daily energy</th></tr>
+                    </thead>
+                    <tbody id="energy-appliance-breakdown"></tbody>
+                  </table>
+                </div>
+              </div>
+              <div class="energy-calculator__caveats">
+                <p>These are planning estimates, not a professional installation design. Inverter sizing must account for starting surges. Battery voltage, chemistry, discharge limits and system compatibility require confirmation. Solar production varies with location, shading, orientation, weather and season.</p>
+              </div>
+              <div class="energy-calculator__actions">
+                <a class="energy-text-link" href="#catalogue">Browse all 123 Energy products <span aria-hidden="true">↗</span></a>
+                <a class="energy-text-link" href="#quote" data-quote-category="complete-systems" data-product-name="Energy calculator estimate — product and system consultation">Request a quote <span aria-hidden="true">↗</span></a>
+              </div>
+          </section>
         </div>
-        <div class="energy-hero__meta" aria-hidden="true"><span>POWER FOR PEOPLE AND PLACES</span><span>ELECTRONY ENERGY</span></div>
+
+        <template id="energy-appliance-template">
+          <div class="energy-calculator__appliance-row">
+            <div class="energy-calculator__field energy-calculator__appliance-type">
+              <label>Appliance preset</label>
+              <select data-appliance-type>
+                <option value="led-bulb" data-name="LED bulb" data-watts="9">LED bulb</option>
+                <option value="television" data-name="Television" data-watts="100">Television</option>
+                <option value="fan" data-name="Fan" data-watts="60">Fan</option>
+                <option value="refrigerator" data-name="Refrigerator" data-watts="150">Refrigerator</option>
+                <option value="air-conditioner" data-name="Air conditioner" data-watts="1200">Air conditioner</option>
+                <option value="laptop" data-name="Laptop" data-watts="65">Laptop</option>
+                <option value="desktop-computer" data-name="Desktop computer" data-watts="200">Desktop computer</option>
+                <option value="water-pump" data-name="Water pump" data-watts="750">Water pump</option>
+                <option value="microwave" data-name="Microwave" data-watts="1000">Microwave</option>
+                <option value="washing-machine" data-name="Washing machine" data-watts="500">Washing machine</option>
+                <option value="other" data-name="Other appliance" data-watts="100">Other appliance</option>
+              </select>
+            </div>
+            <div class="energy-calculator__field energy-calculator__appliance-name">
+              <label>Appliance name</label>
+              <input data-appliance-name type="text" maxlength="80" value="LED bulb" required>
+            </div>
+            <div class="energy-calculator__field">
+              <label>Watts each</label>
+              <input data-appliance-watts type="number" min="1" max="100000" step="any" value="9" inputmode="decimal" required>
+            </div>
+            <div class="energy-calculator__field">
+              <label>Quantity</label>
+              <input data-appliance-quantity type="number" min="1" max="10000" step="1" value="1" inputmode="numeric" required>
+            </div>
+            <div class="energy-calculator__field">
+              <label>Hours/day</label>
+              <input data-appliance-hours type="number" min="0" max="24" step="any" value="5" inputmode="decimal" required>
+            </div>
+            <button class="energy-calculator__remove" type="button" aria-label="Remove this appliance">Remove</button>
+          </div>
+        </template>
       </section>
 
       <section class="energy-intro energy-section" aria-labelledby="intro-title">
@@ -105,7 +263,7 @@
           </div>
           <div class="energy-intro__copy">
             <p>Electrony Energy brings relevant power-generation, storage, electrical-distribution and infrastructure categories together, making it easier to explore the right conversation for a home, business or project.</p>
-            <p>Product specifications, compatibility, availability and supply terms must be confirmed for each product or project. The categories here are areas of enquiry, not a live product listing.</p>
+            <p>The catalogue below lists products transcribed from the supplied source. Specifications, compatibility, availability and supply terms must still be confirmed for each product or project.</p>
           </div>
         </div>
       </section>
@@ -272,185 +430,6 @@
             <button class="button energy-button energy-button--primary" id="energy-dialog-enquire" type="button">Request a quote</button>
           </dialog>
         </div>
-      </section>
-
-      <section class="energy-calculator energy-section" id="calculator" aria-labelledby="energy-calculator-title">
-        <div class="container">
-          <div class="energy-section-heading energy-calculator__heading">
-            <div>
-              <p class="energy-eyebrow">Plan your power requirements</p>
-              <h2 id="energy-calculator-title">Energy Calculator</h2>
-              <p>Estimate your electricity consumption and explore the solar and backup power capacity your household or business may need.</p>
-            </div>
-            <a class="button energy-button energy-button--outline" href="#catalogue">Explore Energy Products <span aria-hidden="true">↗</span></a>
-          </div>
-          <p class="energy-calculator__estimate-note">Appliance wattages are illustrative estimates only. Check the rating label or manual on each appliance and replace these values with its actual rated watts.</p>
-
-          <div class="energy-calculator__workspace">
-            <section class="energy-calculator__panel" aria-labelledby="energy-appliances-title">
-              <div class="energy-calculator__panel-heading">
-                <div>
-                  <p class="energy-eyebrow">01 / Your appliances</p>
-                  <h3 id="energy-appliances-title">Build your load list.</h3>
-                </div>
-                <button class="energy-calculator__text-button" id="energy-calculator-reset" type="button">Clear / reset</button>
-              </div>
-              <div class="energy-calculator__appliances" id="energy-appliance-rows"></div>
-              <button class="energy-calculator__add" id="energy-appliance-add" type="button"><span aria-hidden="true">+</span> Add appliance</button>
-              <p class="energy-calculator__helper">Hours are estimated average daily use. Daily energy is quantity × watts per appliance × hours per day.</p>
-            </section>
-
-            <section class="energy-calculator__panel energy-calculator__assumptions" aria-labelledby="energy-assumptions-title">
-              <div class="energy-calculator__panel-heading">
-                <div>
-                  <p class="energy-eyebrow">02 / System assumptions</p>
-                  <h3 id="energy-assumptions-title">Adjust the estimates.</h3>
-                </div>
-              </div>
-              <div class="energy-calculator__assumption-grid">
-                <div class="energy-calculator__field">
-                  <label for="energy-month-days">Days for monthly estimate</label>
-                  <input id="energy-month-days" type="number" min="1" max="365" step="1" value="30" inputmode="numeric">
-                </div>
-                <div class="energy-calculator__field">
-                  <label for="energy-backup-hours">Backup period (hours)</label>
-                  <input id="energy-backup-hours" type="number" min="0.1" max="8760" step="0.1" value="8" inputmode="decimal">
-                </div>
-                <div class="energy-calculator__field">
-                  <label for="energy-design-margin">Inverter design margin (%)</label>
-                  <input id="energy-design-margin" type="number" min="0" max="500" step="1" value="25" inputmode="decimal">
-                </div>
-                <div class="energy-calculator__field">
-                  <label for="energy-battery-usable">Usable battery capacity (%)</label>
-                  <input id="energy-battery-usable" type="number" min="1" max="100" step="1" value="80" inputmode="decimal">
-                </div>
-                <div class="energy-calculator__field">
-                  <label for="energy-system-efficiency">Inverter / system efficiency (%)</label>
-                  <input id="energy-system-efficiency" type="number" min="1" max="100" step="1" value="90" inputmode="decimal">
-                </div>
-                <div class="energy-calculator__field">
-                  <label for="energy-peak-sun-hours">Peak-sun-hours assumption (h/day)</label>
-                  <input id="energy-peak-sun-hours" type="number" min="0.1" max="24" step="0.1" value="5" inputmode="decimal">
-                </div>
-                <div class="energy-calculator__field">
-                  <label for="energy-solar-losses">Solar system losses (%)</label>
-                  <input id="energy-solar-losses" type="number" min="0" max="99.9" step="0.1" value="20" inputmode="decimal">
-                </div>
-              </div>
-              <p class="energy-calculator__helper">Peak sun hours are an editable planning assumption, not location-specific sunlight data.</p>
-            </section>
-          </div>
-
-          <p class="energy-calculator__validation" id="energy-calculator-validation" role="status" aria-live="polite"></p>
-
-          <section class="energy-calculator__results" aria-labelledby="energy-results-title">
-            <div class="energy-calculator__results-heading">
-              <div>
-                <p class="energy-eyebrow">03 / Estimate summary</p>
-                <h3 id="energy-results-title">Consumption and preliminary sizing.</h3>
-              </div>
-              <button class="button energy-button energy-button--primary" id="energy-results-enquiry" type="button">Send My Results as an Enquiry <span aria-hidden="true">↗</span></button>
-            </div>
-            <div class="energy-calculator__metric-grid" aria-live="polite">
-              <article class="energy-calculator__metric">
-                <p>Connected load</p>
-                <output id="energy-result-load" aria-label="Connected load in watts">—</output>
-                <small>Rated watts of all listed appliances at once</small>
-              </article>
-              <article class="energy-calculator__metric">
-                <p>Daily energy</p>
-                <output id="energy-result-daily" aria-label="Estimated daily energy in watt-hours">—</output>
-                <small id="energy-result-daily-detail">—</small>
-              </article>
-              <article class="energy-calculator__metric">
-                <p>Monthly energy</p>
-                <output id="energy-result-monthly" aria-label="Estimated monthly energy in kilowatt-hours">—</output>
-                <small id="energy-result-monthly-detail">—</small>
-              </article>
-              <article class="energy-calculator__metric">
-                <p>Backup-period energy</p>
-                <output id="energy-result-backup" aria-label="Estimated backup-period energy in watt-hours">—</output>
-                <small id="energy-result-backup-detail">—</small>
-              </article>
-            </div>
-            <div class="energy-calculator__sizing-grid">
-              <article class="energy-calculator__size">
-                <p>Preliminary inverter capacity</p>
-                <output id="energy-result-inverter" aria-label="Preliminary inverter capacity">—</output>
-                <small id="energy-result-inverter-assumption">—</small>
-              </article>
-              <article class="energy-calculator__size">
-                <p>Preliminary battery nominal capacity</p>
-                <output id="energy-result-battery" aria-label="Preliminary battery nominal capacity">—</output>
-                <small id="energy-result-battery-assumption">—</small>
-              </article>
-              <article class="energy-calculator__size">
-                <p>Preliminary solar array capacity</p>
-                <output id="energy-result-solar" aria-label="Preliminary solar array capacity">—</output>
-                <small id="energy-result-solar-assumption">—</small>
-              </article>
-            </div>
-            <div class="energy-calculator__breakdown">
-              <div class="energy-calculator__breakdown-heading">
-                <h4>Appliance energy breakdown</h4>
-                <span>1 kWh = 1,000 Wh</span>
-              </div>
-              <div class="energy-calculator__table-wrap">
-                <table>
-                  <thead>
-                    <tr><th scope="col">Appliance</th><th scope="col">Quantity</th><th scope="col">Watts each</th><th scope="col">Hours/day</th><th scope="col">Daily energy</th></tr>
-                  </thead>
-                  <tbody id="energy-appliance-breakdown"></tbody>
-                </table>
-              </div>
-            </div>
-            <div class="energy-calculator__caveats">
-              <p>These are preliminary estimates, not a final engineering design. Inverter selection must account for appliance starting surges. Battery capacity depends on battery specifications and required autonomy. Solar production varies with location, shading, orientation, weather and seasonal conditions.</p>
-            </div>
-            <div class="energy-calculator__actions">
-              <a class="button energy-button energy-button--primary" href="#quote" data-quote-category="complete-systems" data-product-name="Solar solution enquiry">Request a Solar Solution <span aria-hidden="true">↗</span></a>
-              <a class="energy-text-link" href="#catalogue">Explore Energy Products <span aria-hidden="true">↗</span></a>
-            </div>
-          </section>
-        </div>
-
-        <template id="energy-appliance-template">
-          <div class="energy-calculator__appliance-row">
-            <div class="energy-calculator__field energy-calculator__appliance-type">
-              <label>Appliance</label>
-              <select data-appliance-type>
-                <option value="led-bulb" data-name="LED bulb" data-watts="9">LED bulb</option>
-                <option value="television" data-name="Television" data-watts="100">Television</option>
-                <option value="fan" data-name="Fan" data-watts="60">Fan</option>
-                <option value="refrigerator" data-name="Refrigerator" data-watts="150">Refrigerator</option>
-                <option value="air-conditioner" data-name="Air conditioner" data-watts="1200">Air conditioner</option>
-                <option value="laptop" data-name="Laptop" data-watts="65">Laptop</option>
-                <option value="desktop-computer" data-name="Desktop computer" data-watts="200">Desktop computer</option>
-                <option value="water-pump" data-name="Water pump" data-watts="750">Water pump</option>
-                <option value="microwave" data-name="Microwave" data-watts="1000">Microwave</option>
-                <option value="washing-machine" data-name="Washing machine" data-watts="500">Washing machine</option>
-                <option value="other" data-name="Other appliance" data-watts="100">Other appliance</option>
-              </select>
-            </div>
-            <div class="energy-calculator__field energy-calculator__appliance-name">
-              <label>Editable appliance name</label>
-              <input data-appliance-name type="text" maxlength="80" value="LED bulb" required>
-            </div>
-            <div class="energy-calculator__field">
-              <label>Watts each</label>
-              <input data-appliance-watts type="number" min="0" max="100000" step="any" value="9" inputmode="decimal" required>
-            </div>
-            <div class="energy-calculator__field">
-              <label>Quantity</label>
-              <input data-appliance-quantity type="number" min="1" max="10000" step="1" value="8" inputmode="numeric" required>
-            </div>
-            <div class="energy-calculator__field">
-              <label>Hours/day</label>
-              <input data-appliance-hours type="number" min="0" max="24" step="any" value="5" inputmode="decimal" required>
-            </div>
-            <button class="energy-calculator__remove" type="button" aria-label="Remove this appliance">Remove</button>
-          </div>
-        </template>
       </section>
 
       <section class="energy-process energy-section" id="process" aria-labelledby="process-title">

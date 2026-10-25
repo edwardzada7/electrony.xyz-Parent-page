@@ -1874,6 +1874,228 @@
   }
 }
 
+.energy-calculator--hero {
+  position: relative;
+  overflow: hidden;
+  padding-block: clamp(2rem, 5vw, 4.5rem);
+  background:
+    radial-gradient(ellipse at 88% 5%, rgb(77 139 87 / 16%), transparent 38%),
+    linear-gradient(135deg, #eaf7e8, #f7faf6 64%, #dcefd9);
+}
+
+.energy-calculator__hero-grid {
+  position: absolute;
+  inset: 0;
+  background-image: linear-gradient(rgb(77 139 87 / 5%) 1px, transparent 1px), linear-gradient(90deg, rgb(77 139 87 / 5%) 1px, transparent 1px);
+  background-size: 4rem 4rem;
+  mask-image: linear-gradient(115deg, transparent 8%, #000 100%);
+  pointer-events: none;
+}
+
+.energy-calculator--hero > .container {
+  position: relative;
+}
+
+.energy-calculator__hero-heading {
+  align-items: center;
+  margin-bottom: 1.25rem;
+}
+
+.energy-calculator__hero-heading > div {
+  max-width: 58rem;
+}
+
+.energy-calculator__hero-heading .energy-kicker {
+  margin-bottom: 0.9rem;
+}
+
+.energy-calculator__hero-heading h1 {
+  margin: 0;
+  color: var(--energy-forest);
+  font-size: clamp(2.4rem, 6vw, 5.4rem);
+  font-weight: 600;
+  letter-spacing: -0.075em;
+  line-height: 0.98;
+}
+
+.energy-calculator__hero-heading > div > p:last-child {
+  max-width: 45rem;
+  margin: 1rem 0 0;
+  color: var(--energy-muted);
+  font-size: clamp(0.95rem, 1.5vw, 1.1rem);
+  line-height: 1.6;
+}
+
+.energy-calculator__hero-heading > a {
+  flex-shrink: 0;
+}
+
+.energy-calculator--hero .energy-calculator__estimate-note {
+  margin: 0 0 1rem;
+}
+
+.energy-calculator--hero .energy-calculator__workspace {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.energy-calculator--hero .energy-calculator__panel {
+  padding: clamp(1rem, 2vw, 1.5rem);
+}
+
+.energy-calculator__panel-heading h2 {
+  margin: 0;
+  color: var(--energy-forest);
+  font-size: clamp(1.3rem, 2.2vw, 1.8rem);
+  font-weight: 600;
+  letter-spacing: -0.04em;
+}
+
+.energy-calculator__assumption-details {
+  margin-top: 1rem;
+  border-top: 1px solid var(--energy-line);
+}
+
+.energy-calculator__assumption-details summary {
+  width: fit-content;
+  min-height: 2.75rem;
+  padding-block: 0.75rem;
+  color: var(--energy-forest);
+  font-size: 0.84rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.energy-calculator__assumption-details[open] .energy-calculator__assumption-grid {
+  margin-top: 0.5rem;
+}
+
+.energy-calculator__calculate {
+  width: 100%;
+  min-height: 3.5rem;
+  margin-top: 1rem;
+  font-size: 1rem;
+}
+
+.energy-calculator--hero .energy-calculator__validation {
+  margin-block: 0.75rem 0;
+}
+
+.energy-calculator__recommendations {
+  display: grid;
+  gap: 1rem;
+  margin-top: 1rem;
+  padding: clamp(1rem, 2vw, 1.5rem);
+  border: 1px solid var(--energy-line);
+  background: #f4faf2;
+}
+
+.energy-calculator__recommendations h3 {
+  margin: 0;
+  color: var(--energy-forest);
+  font-size: clamp(1.35rem, 2.5vw, 2rem);
+  letter-spacing: -0.04em;
+}
+
+.energy-calculator__recommendations > div:first-child > p:last-child {
+  max-width: 50rem;
+}
+
+.energy-calculator__recommendation-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.75rem;
+}
+
+.energy-recommendation-card {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.55rem;
+  padding: 1rem;
+  border: 1px solid var(--energy-line);
+  background: #fff;
+}
+
+.energy-recommendation-card__brand {
+  margin: 0;
+  color: var(--energy-green);
+  font-family: var(--font-label);
+  font-size: 0.67rem;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+}
+
+.energy-recommendation-card h4 {
+  margin: 0;
+  color: var(--energy-forest);
+  font-size: 1rem;
+  overflow-wrap: anywhere;
+}
+
+.energy-recommendation-card > p:not(.energy-recommendation-card__brand) {
+  margin: 0;
+  color: var(--energy-muted);
+  font-size: 0.78rem;
+  line-height: 1.55;
+}
+
+.energy-recommendation-card__rating {
+  font-weight: 700;
+}
+
+.energy-recommendation-card__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-top: auto;
+  padding-top: 0.5rem;
+}
+
+.energy-recommendation-card__actions button {
+  min-height: 2.75rem;
+  padding: 0.55rem 0.7rem;
+}
+
+.energy-calculator__consultation {
+  margin: 0;
+  color: var(--energy-muted);
+  font-size: 0.82rem;
+  line-height: 1.6;
+}
+
+.energy-calculator__recommendations > .button {
+  width: fit-content;
+}
+
+.energy-calculator--hero .energy-calculator__breakdown {
+  margin-top: 1rem;
+}
+
+.energy-calculator--hero .energy-calculator__actions {
+  justify-content: flex-start;
+}
+
+.energy-calculator__breakdown-heading h3 {
+  margin: 0;
+  color: var(--energy-forest);
+  font-size: 1rem;
+}
+
+@media (max-width: 48rem) {
+  .energy-calculator__hero-heading {
+    align-items: flex-start;
+  }
+
+  .energy-calculator__hero-heading > a {
+    display: none;
+  }
+
+  .energy-calculator__recommendation-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
 .energy-catalogue-filters {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));

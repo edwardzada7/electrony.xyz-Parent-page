@@ -281,7 +281,7 @@
   .automobile-menu-icon span:last-child { top: 0.5rem; }
   .automobile-menu-toggle[aria-expanded="true"] .automobile-menu-icon span:first-child { top: 0.25rem; transform: rotate(45deg); }
   .automobile-menu-toggle[aria-expanded="true"] .automobile-menu-icon span:last-child { top: 0.25rem; transform: rotate(-45deg); }
-  .automobile-navigation { position: fixed; z-index: 101; top: 4.5rem; right: 0; left: 0; display: flex; max-height: calc(100dvh - 4.5rem); flex-direction: column; align-items: stretch; gap: 1.1rem; overflow-y: auto; padding: 1.25rem 1rem 2rem; border-bottom: 1px solid rgba(255, 255, 255, 0.1); background: rgba(8, 8, 8, 0.98); visibility: hidden; opacity: 0; transform: translateY(-0.75rem); transition: opacity 180ms ease, transform 180ms ease, visibility 180ms ease; }
+  .automobile-navigation { position: absolute; z-index: 101; top: 100%; right: 0; left: 0; display: flex; max-height: calc(100dvh - 4.5rem); flex-direction: column; align-items: stretch; gap: 1.1rem; overflow-y: auto; overscroll-behavior: contain; padding: 1.25rem 1rem calc(2rem + env(safe-area-inset-bottom)); border-bottom: 1px solid rgba(255, 255, 255, 0.1); background: rgba(8, 8, 8, 0.98); visibility: hidden; opacity: 0; transform: translateY(-0.75rem); transition: opacity 180ms ease, transform 180ms ease, visibility 180ms ease; }
   .automobile-navigation.is-open { visibility: visible; opacity: 1; transform: translateY(0); }
   .automobile-menu-open { overflow: hidden; }
   .automobile-navigation__list { flex-direction: column; align-items: stretch; gap: 0; }
@@ -580,6 +580,8 @@
   border: 1px dashed var(--automobile-border);
   color: var(--color-gray-700);
 }
+
+.automobile-detail-video-error[hidden] { display: none; }
 
 .automobile-youtube-frame {
   position: relative;

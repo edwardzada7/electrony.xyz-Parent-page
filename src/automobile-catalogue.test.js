@@ -52,6 +52,11 @@ test("each brochure vehicle has sourced specs, source-page mapping and resolvabl
       const imagePath = path.resolve(repositoryRoot, "automobile", image);
       assert.ok(fs.existsSync(imagePath), `${vehicle.name} image missing: ${image}`);
     }
+    for (const video of vehicle.videos) {
+      assert.ok(video.title, `${vehicle.name} video is missing its title`);
+      const videoPath = path.resolve(repositoryRoot, "automobile", video.src);
+      assert.ok(fs.existsSync(videoPath), `${vehicle.name} video missing: ${video.src}`);
+    }
   }
 });
 
@@ -71,4 +76,10 @@ test("optional YouTube data is empty until verified media is supplied", () => {
 test("legacy ROX and VOYAH showcase entries remain separate from the brochure import", () => {
   assert.deepEqual(Array.from(legacyShowcaseVehicles, (vehicle) => vehicle.id), ["rox-01", "voyah-free"]);
   assert.ok(vehicles.every((vehicle) => !legacyShowcaseVehicles.some((legacy) => legacy.id === vehicle.id)));
+  for (const vehicle of legacyShowcaseVehicles) {
+    for (const image of [...vehicle.images, vehicle.fallbackImage].filter(Boolean)) {
+      const imagePath = path.resolve(repositoryRoot, "automobile", image);
+      assert.ok(fs.existsSync(imagePath), `${vehicle.name} image missing: ${image}`);
+    }
+  }
 });

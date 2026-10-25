@@ -386,13 +386,19 @@ function renderPromotionalImages() {
 function initializeConceptTyping() {
   const element = document.querySelector("[data-automobile-concept]");
   if (!element) return;
+  if (element.dataset.typingInitialized === "true") return;
+  element.dataset.typingInitialized = "true";
   const concepts = ["Electric", "Hybrid", "Extended Range", "Petrol", "Performance", "Luxury", "Off-Road"];
   const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
-  let timer;
+  let timer = null;
   let wordIndex = 0;
   let characterIndex = 0;
   let deleting = false;
 
+  const schedule = (delay) => {
+    window.clearTimeout(timer);
+    timer = window.setTimeout(tick, delay);
+  };
   const showStaticConcept = () => {
     window.clearTimeout(timer);
     element.textContent = concepts[wordIndex];
@@ -403,35 +409,35 @@ function initializeConceptTyping() {
     element.textContent = word.slice(0, characterIndex);
     if (!deleting && characterIndex === word.length) {
       deleting = true;
-      timer = window.setTimeout(tick, 1100);
+      schedule(1100);
       return;
     }
     if (deleting && characterIndex === 0) {
       deleting = false;
       wordIndex = (wordIndex + 1) % concepts.length;
-      timer = window.setTimeout(tick, 250);
+      schedule(250);
       return;
     }
-    timer = window.setTimeout(tick, deleting ? 42 : 82);
+    schedule(deleting ? 42 : 82);
   };
 
   if (reducedMotion.matches) {
     showStaticConcept();
     reducedMotion.addEventListener?.("change", (event) => {
       if (event.matches) showStaticConcept();
-      else timer = window.setTimeout(tick, 500);
+      else schedule(500);
     });
     return;
   }
 
-  timer = window.setTimeout(tick, 500);
+  schedule(500);
   reducedMotion.addEventListener?.("change", (event) => {
     window.clearTimeout(timer);
     if (event.matches) showStaticConcept();
     else {
       deleting = false;
       characterIndex = 0;
-      timer = window.setTimeout(tick, 500);
+      schedule(500);
     }
   });
 }
@@ -461,7 +467,8 @@ function renderVehicleDetail(vehicle) {
       <video class="automobile-detail-local-video" controls playsinline preload="none" aria-label="${escapeHtml(`${vehicle.name}: ${video.title || "Vehicle walkaround"}`)}"${vehicle.images[0] ? ` poster="${escapeHtml(vehicle.images[0])}"` : ""}>
         <source src="${escapeHtml(video.src)}" type="video/mp4">
         Video playback is not supported by this browser.
-      </video>`;
+      </video>
+      <p class="automobile-detail-video-fallback automobile-detail-video-error" role="status" hidden>Video unavailable. Please enquire about this vehicle.</p>`;
   } else {
     videoMarkup = `<p class="automobile-detail-video-fallback">No verified vehicle video is currently configured.</p>`;
   }
@@ -494,6 +501,15 @@ function renderVehicleDetail(vehicle) {
       <p>Electrony Automobile presents this information for enquiry; this listing does not claim vehicle ownership, confirmed stock, authorized-dealer status or a manufacturer partnership.</p>
     </aside>
     <p class="automobile-detail-price-note">${escapeHtml(vehicle.priceLabel)} · ${escapeHtml(vehicle.statusLabel)}</p>`;
+
+  const detailVideo = content.querySelector(".automobile-detail-local-video");
+  const videoError = content.querySelector(".automobile-detail-video-error");
+  detailVideo?.addEventListener("error", () => {
+    if (videoError) videoError.hidden = false;
+  });
+  detailVideo?.addEventListener("loadeddata", () => {
+    if (videoError) videoError.hidden = true;
+  });
 
   const form = document.querySelector("#automobile-vehicle-enquiry");
   if (form) {
@@ -737,6 +753,8 @@ function initializeNavigation() {
   const header = document.querySelector(".automobile-header");
   const toggle = document.querySelector(".automobile-menu-toggle");
   const navigation = document.querySelector(".automobile-navigation");
+  if (toggle?.dataset.navigationInitialized === "true") return;
+  if (toggle) toggle.dataset.navigationInitialized = "true";
   const links = document.querySelectorAll(".automobile-nav-link");
   const mobileMenuViewport = window.matchMedia("(max-width: 64rem)");
   const sections = ["home", "vehicles", "brands", "powertrain", "rox", "contact"].map((id) => document.getElementById(id)).filter(Boolean);
@@ -745,6 +763,8 @@ function initializeNavigation() {
     if (!toggle || !navigation) return;
     toggle.setAttribute("aria-expanded", "false");
     toggle.setAttribute("aria-label", "Open navigation menu");
+    const label = toggle.querySelector(":scope > span:first-child");
+    if (label) label.textContent = "Menu";
     navigation.classList.remove("is-open");
     document.body.classList.remove("automobile-menu-open");
     if (mobileMenuViewport.matches) navigation.setAttribute("aria-hidden", "true");
@@ -756,6 +776,8 @@ function initializeNavigation() {
     if (!toggle || !navigation) return;
     toggle.setAttribute("aria-expanded", "true");
     toggle.setAttribute("aria-label", "Close navigation menu");
+    const label = toggle.querySelector(":scope > span:first-child");
+    if (label) label.textContent = "Close";
     navigation.classList.add("is-open");
     document.body.classList.add("automobile-menu-open");
     navigation.setAttribute("aria-hidden", "false");
@@ -768,13 +790,32 @@ function initializeNavigation() {
     expanded ? closeMenu() : openMenu();
   });
 
-  links.forEach((link) => link.addEventListener("click", closeMenu));
+  links.forEach((link) => link.addEventListener("click", () => closeMenu(true)));
+  navigation?.querySelector(".automobile-enquire-link")?.addEventListener("click", () => closeMenu(true));
   document.addEventListener("keydown", (event) => {
     if (event.key === "Escape" && toggle?.getAttribute("aria-expanded") === "true") {
       closeMenu(true);
+      return;
+    }
+
+    if (event.key === "Tab" && toggle?.getAttribute("aria-expanded") === "true" && navigation) {
+      const focusableItems = [
+        toggle,
+        ...navigation.querySelectorAll("a[href], button:not([disabled]), [tabindex]:not([tabindex='-1'])")
+      ];
+      const first = focusableItems[0];
+      const last = focusableItems[focusableItems.length - 1];
+      if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault();
+        last.focus();
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault();
+        first.focus();
+      }
     }
   });
   document.addEventListener("click", (event) => {
+    if (!(event.target instanceof Element)) return;
     if (toggle?.getAttribute("aria-expanded") === "true"
       && !navigation.contains(event.target)
       && !toggle.contains(event.target)) closeMenu();

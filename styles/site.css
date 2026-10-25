@@ -2126,6 +2126,76 @@ button:focus-visible {
   }
 }
 
+@media (max-width: 64rem) and (min-width: 48.001rem) {
+  .menu-toggle {
+    display: inline-flex;
+    min-width: 2.875rem;
+    min-height: 2.875rem;
+    align-items: center;
+    justify-content: center;
+    gap: var(--space-2);
+    border: 1px solid var(--color-border);
+    border-radius: 2px;
+    background: transparent;
+    color: var(--color-ink);
+    font: inherit;
+    cursor: pointer;
+  }
+
+  .primary-navigation {
+    position: absolute;
+    top: 100%;
+    right: 0;
+    left: 0;
+    z-index: 25;
+    display: flex;
+    max-height: calc(100dvh - 4.75rem);
+    flex-direction: column;
+    align-items: stretch;
+    justify-content: flex-start;
+    gap: var(--space-5);
+    padding: var(--space-5) var(--content-gutter) calc(var(--space-8) + env(safe-area-inset-bottom));
+    border-top: 1px solid var(--color-border);
+    background: rgba(245, 244, 240, 0.99);
+    box-shadow: 0 1.25rem 2.5rem rgba(17, 17, 16, 0.08);
+    visibility: hidden;
+    opacity: 0;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    pointer-events: none;
+    transition: opacity 180ms ease, visibility 180ms ease;
+  }
+
+  .primary-navigation.is-open {
+    visibility: visible;
+    opacity: 1;
+    pointer-events: auto;
+  }
+
+  .navigation-list {
+    display: grid;
+    gap: 0;
+  }
+
+  .navigation-list li {
+    border-bottom: 1px solid var(--color-border);
+  }
+
+  .navigation-list a,
+  .navigation-list span {
+    display: flex;
+    min-height: 3.5rem;
+    align-items: center;
+    font-family: var(--font-display);
+    font-size: 1.25rem;
+  }
+
+  .navigation-actions {
+    display: grid;
+    grid-template-columns: 1fr;
+  }
+}
+
 @media (max-width: 48rem) {
   html {
     scroll-padding-top: 4rem;
@@ -2180,21 +2250,26 @@ button:focus-visible {
   }
 
   .primary-navigation {
-    position: fixed;
-    inset: 4.25rem 0 0;
+    position: absolute;
+    top: 100%;
+    right: 0;
+    bottom: auto;
+    left: 0;
     z-index: 25;
     display: flex;
+    max-height: calc(100dvh - 4.25rem);
     visibility: hidden;
     flex-direction: column;
     align-items: stretch;
     justify-content: flex-start;
     gap: var(--space-7);
-    padding: var(--space-7) var(--content-gutter) var(--space-8);
+    padding: var(--space-7) var(--content-gutter) calc(var(--space-8) + env(safe-area-inset-bottom));
     background: rgba(245, 244, 240, 0.98);
     border-top: 1px solid var(--color-border);
     box-shadow: 0 1.25rem 2.5rem rgba(17, 17, 16, 0.08);
     opacity: 0;
     overflow-y: auto;
+    overscroll-behavior: contain;
     pointer-events: none;
     transition: opacity 180ms ease, visibility 180ms ease;
   }
@@ -2225,7 +2300,7 @@ button:focus-visible {
 
   .navigation-actions {
     display: grid;
-    grid-template-columns: 1fr 1fr;
+    grid-template-columns: 1fr;
   }
 
   .hero {
