@@ -100,6 +100,15 @@ function copyBillsFrontend() {
   fs.writeFileSync(path.join(outputDirectory, "index.html"), prepareBillsEntrypoint());
 }
 
+function prepareAutomobileEntrypoint() {
+  const htmlPath = path.join(projectRoot, "automobile", "index.html");
+  let html = fs.readFileSync(htmlPath, "utf8");
+  for (const directory of ["assets", "src", "styles"]) {
+    html = html.split(`../${directory}/`).join(`/${directory}/`);
+  }
+  return html;
+}
+
 function buildStaticSite(site) {
   const apiUrl = getPublicApiUrl(site);
   fs.rmSync(outputDirectory, { recursive: true, force: true });
@@ -111,8 +120,19 @@ function buildStaticSite(site) {
     for (const directory of publicDirectories) {
       fs.cpSync(path.join(projectRoot, directory), path.join(outputDirectory, directory), { recursive: true });
     }
-    const entrypoint = site === "parent" ? "index.html" : path.join(site, "index.html");
-    fs.copyFileSync(path.join(projectRoot, entrypoint), path.join(outputDirectory, "index.html"));
+      if (site === "automobile") {
+      fs.writeFileSync(path.join(outputDirectory, "index.html"), prepareAutomobileEntrypoint());
+    } else {
+      const entrypoint = site === "parent" ? "index.html" : path.join(site, "index.html");
+      fs.copyFileSync(path.join(projectRoot, entrypoint), path.join(outputDirectory, "index.html"));
+    }
+  }
+
+  if (site === "automobile") {
+    const automobileScriptPath = path.join(outputDirectory, "src", "automobile.js");
+    let automobileScript = fs.readFileSync(automobileScriptPath, "utf8");
+    automobileScript = automobileScript.split("../assets/").join("/assets/");
+    fs.writeFileSync(automobileScriptPath, automobileScript);
   }
 
   const configPath = path.join(outputDirectory, "src", "config.js");

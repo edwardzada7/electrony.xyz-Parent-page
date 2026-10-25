@@ -555,8 +555,12 @@ function initializeNavigation() {
       && !toggle.contains(event.target)) closeMenu();
   });
   window.addEventListener("resize", () => {
-    if (toggle?.getAttribute("aria-expanded") === "true" && !mobileMenuViewport.matches) closeMenu();
-    else if (!mobileMenuViewport.matches) navigation?.removeAttribute("aria-hidden");
+    if (!mobileMenuViewport.matches) {
+      closeMenu();
+      navigation?.removeAttribute("aria-hidden");
+    } else if (toggle?.getAttribute("aria-expanded") !== "true") {
+      navigation?.setAttribute("aria-hidden", "true");
+    }
   });
 
   const syncHeader = () => header?.classList.toggle("is-scrolled", window.scrollY > 24);
