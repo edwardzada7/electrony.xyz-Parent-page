@@ -101,6 +101,36 @@ function makeProduct(brand, details) {
   });
 }
 
+function filterEnergyProducts(products, filters, categories) {
+  const query = filters.query.trim().toLocaleLowerCase();
+  return products.filter((product) => {
+    const searchableText = [
+      product.brand,
+      product.model,
+      product.name,
+      categories[product.category],
+      product.description,
+      ...product.specifications
+    ].join(" ").toLocaleLowerCase();
+    return (filters.brand === "all" || product.brand === filters.brand)
+      && (filters.category === "all" || product.category === filters.category)
+      && searchableText.includes(query);
+  });
+}
+
+function getEnergyProductPage(products, page, pageSize) {
+  const pageCount = Math.max(1, Math.ceil(products.length / pageSize));
+  const currentPage = Math.min(Math.max(1, page), pageCount);
+  const startIndex = (currentPage - 1) * pageSize;
+  return {
+    page: currentPage,
+    pageCount,
+    startIndex,
+    endIndex: Math.min(startIndex + pageSize, products.length),
+    products: products.slice(startIndex, startIndex + pageSize)
+  };
+}
+
 const products = [
   ...[
     ["585N-72HL4-BD", "585W", "Solar Panel Half Cut BIFACIAL(36)"],
@@ -628,3 +658,7 @@ const products = [
 window.ElectronyEnergyProducts = Object.freeze(products);
 window.ElectronyEnergyCategories = categoryLabels;
 window.ElectronyEnergyFeaturedVideo = null;
+window.ElectronyEnergyCatalogue = Object.freeze({
+  filterEnergyProducts,
+  getEnergyProductPage
+});

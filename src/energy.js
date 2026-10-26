@@ -1,7 +1,12 @@
 const energyProducts = window.ElectronyEnergyProducts;
 const energyCategories = window.ElectronyEnergyCategories;
+const solarPackages = window.ElectronySolarPackages;
+const energyCatalogue = window.ElectronyEnergyCatalogue;
 if (!Array.isArray(energyProducts) || !energyProducts.length || !energyCategories) {
   throw new Error("Energy catalogue data did not load.");
+}
+if (!Array.isArray(solarPackages) || !energyCatalogue) {
+  throw new Error("Solar package catalogue data did not load.");
 }
 
 const searchInput = document.querySelector("#energy-search");
@@ -9,17 +14,31 @@ const clearSearchButton = document.querySelector("#energy-clear-search");
 const brandFilter = document.querySelector("#energy-brand-filter");
 const categoryFilter = document.querySelector("#energy-category-filter");
 const productGrid = document.querySelector("#energy-products");
+const activeFilters = document.querySelector("#energy-active-filters");
+const resetFiltersButton = document.querySelector("#energy-reset-filters");
 const energyRecommendationProducts = document.querySelector("#energy-recommendation-products");
 const catalogueEmpty = document.querySelector("#energy-catalogue-empty");
 const catalogueStatus = document.querySelector("#energy-catalogue-status");
+const pagination = document.querySelector("#energy-catalogue-pagination");
+const previousPageButton = document.querySelector("#energy-page-previous");
+const nextPageButton = document.querySelector("#energy-page-next");
+const pageStatus = document.querySelector("#energy-page-status");
 const categorySelect = document.querySelector("#energy-category");
 const productInput = document.querySelector("#energy-product");
 const requirementsInput = document.querySelector("#energy-requirements");
 const customerTypeSelect = document.querySelector("#energy-customer-type");
 const productDialog = document.querySelector("#energy-product-dialog");
 const featuredVideo = document.querySelector("#energy-featured-video");
+const packageCatalogue = document.querySelector("#energy-package-catalogue");
+const packageResultsRecommendedGrid = document.querySelector("#energy-recommended-packages");
+const packageResultsExploreGrid = document.querySelector("#energy-explore-packages");
+const packageResultsExploreWrap = document.querySelector("#energy-packages-to-explore");
+const packageResultsIntro = document.querySelector("#energy-package-recommendation-intro");
+const packageResultsEmpty = document.querySelector("#energy-package-recommendation-empty");
+const productPageSize = 12;
 let selectedProduct = null;
 let selectedProductCalculationSummary = "";
+let currentProductPage = 1;
 
 function safeImageUrl(value) {
   if (typeof value !== "string" || !value.trim()) return null;
@@ -163,36 +182,166 @@ function createEnergyProductCard(product) {
   return card;
 }
 
+function updateActiveFilters() {
+  const filters = [];
+  if (searchInput.value.trim()) filters.push(`Search: ${searchInput.value.trim()}`);
+  if (brandFilter.value !== "all") filters.push(`Brand: ${brandFilter.value}`);
+  if (categoryFilter.value !== "all") filters.push(`Category: ${energyCategories[categoryFilter.value]}`);
+  activeFilters.replaceChildren();
+  filters.forEach((filter) => activeFilters.appendChild(createElement("span", "energy-active-filter", filter)));
+  activeFilters.hidden = !filters.length;
+  resetFiltersButton.disabled = !filters.length;
+}
+
 function renderEnergyCatalogue() {
-  const query = searchInput.value.trim().toLocaleLowerCase();
-  const selectedBrand = brandFilter.value;
-  const selectedCategory = categoryFilter.value;
-  const filteredProducts = energyProducts.filter((product) => {
-    const searchableText = [
-      product.brand,
-      product.model,
-      product.name,
-      energyCategories[product.category],
-      product.description,
-      ...product.specifications
-    ].join(" ").toLocaleLowerCase();
-    return (selectedBrand === "all" || product.brand === selectedBrand)
-      && (selectedCategory === "all" || product.category === selectedCategory)
-      && searchableText.includes(query);
-  });
+  const filters = {
+    query: searchInput.value,
+    brand: brandFilter.value,
+    category: categoryFilter.value
+  };
+  const filteredProducts = energyCatalogue.filterEnergyProducts(energyProducts, filters, energyCategories);
+  const page = energyCatalogue.getEnergyProductPage(filteredProducts, currentProductPage, productPageSize);
+  currentProductPage = page.page;
 
   productGrid.replaceChildren();
   catalogueEmpty.hidden = filteredProducts.length > 0;
-  clearSearchButton.disabled = !searchInput.value;
+  clearSearchButton.disabled = !searchInput.value.trim();
+  updateActiveFilters();
+  pagination.hidden = filteredProducts.length === 0 || page.pageCount <= 1;
+  previousPageButton.disabled = page.page <= 1;
+  nextPageButton.disabled = page.page >= page.pageCount;
+  pageStatus.textContent = `Page ${page.page} of ${page.pageCount}`;
   if (!filteredProducts.length) {
-    document.querySelector("#energy-empty-label").textContent = query ? "No search matches" : "No matching products";
+    document.querySelector("#energy-empty-label").textContent = searchInput.value.trim() ? "No search matches" : "No matching products";
     document.querySelector("#energy-empty-title").textContent = "No products match these filters.";
-    catalogueStatus.textContent = "No products match. Try another search, brand or category.";
+    catalogueStatus.textContent = `Showing 0 of ${energyProducts.length} products. Try another search, brand or category.`;
     return;
   }
 
-  filteredProducts.forEach((product) => productGrid.appendChild(createEnergyProductCard(product)));
-  catalogueStatus.textContent = `${filteredProducts.length} ${filteredProducts.length === 1 ? "product" : "products"} shown.`;
+  page.products.forEach((product) => productGrid.appendChild(createEnergyProductCard(product)));
+  catalogueStatus.textContent = `Showing ${page.startIndex + 1}–${page.endIndex} of ${filteredProducts.length} ${filteredProducts.length === 1 ? "product" : "products"}.`;
+}
+
+function createPackageCard(solarPackage, comparison = null) {
+  const card = createElement("article", "energy-package-card");
+  const application = createElement("p", "energy-package-card__application", solarPackage.application);
+  const title = createElement("h3", "energy-package-card__title", solarPackage.name);
+  const badge = comparison
+    ? createElement("p", "energy-package-card__badge", comparison.recommended ? "Preliminary rating comparison" : "Explore with Electrony")
+    : null;
+  const summary = createElement("ul", "energy-package-card__summary");
+  summary.append(
+    createElement("li", "", `Inverter: ${formatPackageWatts(solarPackage.inverterWatts)}; ${solarPackage.components[0].details}.`),
+    createElement("li", "", `Solar array: ${solarPackage.panelCount} × ${solarPackage.panelWatts}W panels (${formatPackageWatts(solarPackage.panelCount * solarPackage.panelWatts)} rated total).`),
+    createElement("li", "", solarPackage.batterySummary)
+  );
+  card.append(title, application);
+  if (badge) card.appendChild(badge);
+  card.appendChild(summary);
+  if (comparison) {
+    const comparisonList = createElement("ul", "energy-package-card__comparison");
+    comparisonList.append(
+      createElement("li", "", comparison.inverterMeets
+        ? `${formatPackageWatts(solarPackage.inverterWatts)} listed inverter rating meets or exceeds the ${formatPackageWatts(comparison.estimate.inverterW)} calculator estimate.`
+        : `${formatPackageWatts(solarPackage.inverterWatts)} listed inverter rating is below the ${formatPackageWatts(comparison.estimate.inverterW)} calculator estimate.`),
+      createElement("li", "", comparison.solarMeets
+        ? `${formatPackageWatts(comparison.solarArrayW)} listed panel-array rating meets or exceeds the ${formatPackageWatts(comparison.estimate.solarW)} calculator estimate.`
+        : `${formatPackageWatts(comparison.solarArrayW)} listed panel-array rating is below the ${formatPackageWatts(comparison.estimate.solarW)} calculator estimate.`)
+    );
+    if (comparison.batteryStatus !== "not-required") {
+      comparisonList.appendChild(createElement("li", "", comparison.batteryStatus === "meets"
+        ? `${formatPackageEnergy(solarPackage.batteryNominalWh)} stated nominal battery capacity meets or exceeds the ${formatPackageEnergy(comparison.estimate.batteryNominalWh)} calculator estimate.`
+        : comparison.batteryStatus === "below"
+          ? `${formatPackageEnergy(solarPackage.batteryNominalWh)} stated nominal battery capacity is below the ${formatPackageEnergy(comparison.estimate.batteryNominalWh)} calculator estimate.`
+          : `Battery capacity cannot be compared with the ${formatPackageEnergy(comparison.estimate.batteryNominalWh)} calculator estimate because the package source is ambiguous.`));
+    }
+    comparisonList.appendChild(createElement("li", "", "The source does not state daily energy capacity in kWh/day, so daily consumption cannot be compared."));
+    card.appendChild(comparisonList);
+  }
+
+  const details = document.createElement("details");
+  details.className = "energy-package-card__details";
+  const disclosure = document.createElement("summary");
+  disclosure.textContent = "View package specifications";
+  const componentList = document.createElement("ul");
+  solarPackage.components.forEach((component) => {
+    componentList.appendChild(createElement("li", "", `${component.category} — ${component.model}: ${component.details}; quantity ${component.quantity}.`));
+  });
+  details.append(disclosure, componentList);
+  card.appendChild(details);
+  if (solarPackage.reviewNote) {
+    card.appendChild(createElement("p", "energy-package-card__review", `Source detail to confirm: ${solarPackage.reviewNote}`));
+  }
+  const source = createElement("p", "energy-package-card__source", `Source: ${solarPackage.source.document}, page ${solarPackage.source.page}.`);
+  const footer = createElement("div", "energy-package-card__footer");
+  const quote = document.createElement("a");
+  quote.className = "button energy-button energy-button--primary";
+  quote.href = "#quote";
+  quote.textContent = "Request a Quote";
+  quote.addEventListener("click", (event) => {
+    event.preventDefault();
+    requestSolarPackage(solarPackage, comparison?.estimate || null);
+  });
+  footer.appendChild(quote);
+  card.append(source, footer);
+  return card;
+}
+
+function formatPackageWatts(watts) {
+  return `${new Intl.NumberFormat().format(watts)} W`;
+}
+
+function formatPackageEnergy(wattHours) {
+  return `${new Intl.NumberFormat(undefined, { maximumFractionDigits: 2 }).format(wattHours / 1000)} kWh`;
+}
+
+function renderSolarPackageCatalogue() {
+  packageCatalogue.replaceChildren();
+  solarPackages.forEach((solarPackage) => packageCatalogue.appendChild(createPackageCard(solarPackage)));
+}
+
+function renderSolarPackageRecommendations(estimate) {
+  packageResultsRecommendedGrid.replaceChildren();
+  packageResultsExploreGrid.replaceChildren();
+  const { recommended, explore } = window.ElectronyEnergyCalculations
+    .recommendSolarPackages(solarPackages, estimate);
+  const recommendationCandidates = recommended.map((comparison) => ({ ...comparison, estimate }));
+  const exploreCandidates = explore.map((comparison) => ({ ...comparison, estimate }));
+  recommendationCandidates.forEach((comparison) => {
+    packageResultsRecommendedGrid.appendChild(createPackageCard(comparison.package, comparison));
+  });
+  exploreCandidates.forEach((comparison) => {
+    packageResultsExploreGrid.appendChild(createPackageCard(comparison.package, comparison));
+  });
+  packageResultsExploreWrap.hidden = exploreCandidates.length === 0;
+  packageResultsEmpty.hidden = recommendedCandidates.length > 0;
+  packageResultsEmpty.textContent = recommendedCandidates.length
+    ? ""
+    : "No package meets all comparable calculator ratings. The package source also lacks daily energy capacity and other design details, so request a tailored assessment.";
+  packageResultsIntro.textContent = "Ordered by closest documented inverter, panel-array and (when supplied) battery ratings. These are preliminary comparisons, not confirmed system matches; phase, MPPT/string design, operating conditions and compatibility still require assessment.";
+}
+
+function requestSolarPackage(solarPackage, estimate = null) {
+  categorySelect.value = "complete-systems";
+  productInput.value = solarPackage.name;
+  requirementsInput.value = [
+    `Solar package enquiry: ${solarPackage.name}`,
+    `Intended application in source: ${solarPackage.application}`,
+    ...solarPackage.components.map((component) =>
+      `${component.category}: ${component.model}; ${component.details}; quantity ${component.quantity}.`),
+    solarPackage.reviewNote ? `Please confirm: ${solarPackage.reviewNote}` : "",
+    `Source: ${solarPackage.source.document}, page ${solarPackage.source.page}.`,
+    estimate ? window.ElectronyEnergyCalculationSummary : "",
+    "Please confirm current price, availability, electrical compatibility and suitability for my application."
+  ].filter(Boolean).join("\n");
+  [categorySelect, productInput, requirementsInput].forEach((field) => {
+    field.dispatchEvent(new Event(field instanceof HTMLSelectElement ? "change" : "input", { bubbles: true }));
+  });
+  document.querySelector("#quote").scrollIntoView({
+    behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth",
+    block: "start"
+  });
+  productInput.focus({ preventScroll: true });
 }
 
 function renderProductDetails(product, calculationSummary = "") {
@@ -282,13 +431,39 @@ document.querySelectorAll("[data-quote-category], [data-enquiry-type]").forEach(
   link.addEventListener("click", () => selectQuoteOptions(link));
 });
 
-searchInput.addEventListener("input", renderEnergyCatalogue);
-brandFilter.addEventListener("change", renderEnergyCatalogue);
-categoryFilter.addEventListener("change", renderEnergyCatalogue);
+brandFilter.addEventListener("change", () => {
+  currentProductPage = 1;
+  renderEnergyCatalogue();
+});
+categoryFilter.addEventListener("change", () => {
+  currentProductPage = 1;
+  renderEnergyCatalogue();
+});
+searchInput.addEventListener("input", () => {
+  currentProductPage = 1;
+  renderEnergyCatalogue();
+});
 clearSearchButton.addEventListener("click", () => {
   searchInput.value = "";
+  currentProductPage = 1;
   renderEnergyCatalogue();
   searchInput.focus();
+});
+resetFiltersButton.addEventListener("click", () => {
+  searchInput.value = "";
+  brandFilter.value = "all";
+  categoryFilter.value = "all";
+  currentProductPage = 1;
+  renderEnergyCatalogue();
+  searchInput.focus();
+});
+previousPageButton.addEventListener("click", () => {
+  currentProductPage -= 1;
+  renderEnergyCatalogue();
+});
+nextPageButton.addEventListener("click", () => {
+  currentProductPage += 1;
+  renderEnergyCatalogue();
 });
 
 document.addEventListener("click", (event) => {
@@ -330,4 +505,5 @@ document.querySelector("#energy-dialog-enquire").addEventListener("click", () =>
 
 addFilterOptions();
 renderFeaturedVideo();
+renderSolarPackageCatalogue();
 renderEnergyCatalogue();

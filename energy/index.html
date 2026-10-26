@@ -34,6 +34,7 @@
     <script src="../src/products.js" defer></script>
     <script src="../src/main.js" defer></script>
     <script src="../src/energy-catalogue.js" defer></script>
+    <script src="../src/energy-packages.js" defer></script>
     <script src="../src/energy.js" defer></script>
     <script src="../src/energy-calculations.js" defer></script>
     <script src="../src/energy-calculator.js" defer></script>
@@ -57,6 +58,7 @@
             <li><a href="#solutions">Solutions</a></li>
             <li><a href="#catalogue">Products</a></li>
             <li><a href="#calculator">Energy Calculator</a></li>
+            <li><a href="#solar-packages">Solar Packages</a></li>
             <li><a href="#process">How it works</a></li>
             <li><a href="#projects">Projects</a></li>
             <li><a href="https://hardware.electrony.xyz/">Hardware</a></li>
@@ -192,6 +194,19 @@
                 <p class="energy-calculator__consultation" id="energy-recommendation-fallback" role="status"></p>
                 <a class="button energy-button energy-button--outline" href="#quote" data-quote-category="complete-systems" data-product-name="Energy calculator estimate — product and system consultation">Request a Quote for My Estimate <span aria-hidden="true">↗</span></a>
               </div>
+              <section class="energy-package-recommendations" aria-labelledby="energy-package-recommendations-title">
+                <div>
+                  <p class="energy-eyebrow">04 / Package comparison</p>
+                  <h3 id="energy-package-recommendations-title">Your Recommended Solar Packages</h3>
+                  <p id="energy-package-recommendation-intro" class="energy-calculator__helper"></p>
+                </div>
+                <div class="energy-package-grid" id="energy-recommended-packages"></div>
+                <div id="energy-packages-to-explore" hidden>
+                  <h4>Packages to Explore</h4>
+                  <div class="energy-package-grid" id="energy-explore-packages"></div>
+                </div>
+                <p class="energy-package-recommendation-empty" id="energy-package-recommendation-empty" role="status" hidden></p>
+              </section>
               <div class="energy-calculator__breakdown">
                 <div class="energy-calculator__breakdown-heading">
                   <h3>Appliance energy breakdown</h3>
@@ -354,6 +369,28 @@
         </div>
       </section>
 
+      <section class="energy-solar-packages energy-section" id="solar-packages" aria-labelledby="solar-packages-title">
+        <div class="container">
+          <div class="energy-section-heading">
+            <div>
+              <p class="energy-eyebrow">Solar packages</p>
+              <h2 id="solar-packages-title">Configured packages, grounded in the supplied inventory guide.</h2>
+            </div>
+            <p>Package names and components are transcribed from the supplied package guide. Prices are omitted because the figures in the source are obscured; confirm package details, compatibility and availability with Electrony.</p>
+          </div>
+          <div class="energy-package-grid energy-package-grid--catalogue" id="energy-package-catalogue"></div>
+          <p class="energy-package-source-note">Source: Solar_Power_Solution_Packages.pdf. No package prices, warranty terms or installation promises are displayed because they are not reliably stated in the source. The first package's battery model and capacity require confirmation.</p>
+          <details class="energy-package-guidelines">
+            <summary>Installation pairing notes from the source</summary>
+            <ul>
+              <li>Voltage matching: the source describes pairing 48V/51.2V lithium modules with low-voltage inverters, and high-voltage battery banks with 50kW+ inverters and matching control units.</li>
+              <li>Solar PV strings are described as sized for each inverter's MPPT voltage and current limits. Confirm string design with a qualified installer.</li>
+              <li>The source describes protection components as matched to peak operating amperage; final electrical protection requires project-specific design.</li>
+            </ul>
+          </details>
+        </div>
+      </section>
+
       <section class="energy-catalogue energy-section" id="catalogue" aria-labelledby="catalogue-title">
         <div class="container">
           <div class="energy-section-heading">
@@ -386,8 +423,15 @@
             </div>
             <p class="energy-discovery-help" id="energy-discovery-help">Search by brand, model or product name, then combine brand and category filters. Product protection equipment requires a project-specific electrical design assessment.</p>
           </div>
+          <div class="energy-active-filters" id="energy-active-filters" aria-live="polite"></div>
+          <button class="energy-filter-reset" id="energy-reset-filters" type="button" disabled>Reset filters</button>
           <p class="energy-results-status" id="energy-catalogue-status" role="status" aria-live="polite"></p>
           <div class="energy-product-grid" id="energy-products" aria-live="polite"></div>
+          <nav class="energy-catalogue-pagination" id="energy-catalogue-pagination" aria-label="Product catalogue pages" hidden>
+            <button class="energy-pagination-button" id="energy-page-previous" type="button" aria-label="Previous product page">Previous</button>
+            <span id="energy-page-status" aria-live="polite"></span>
+            <button class="energy-pagination-button" id="energy-page-next" type="button" aria-label="Next product page">Next</button>
+          </nav>
           <div class="energy-catalogue-empty" id="energy-catalogue-empty" hidden>
             <span class="energy-catalogue__mark" aria-hidden="true"><span></span><span></span><span></span></span>
             <div>

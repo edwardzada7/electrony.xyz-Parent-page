@@ -94,7 +94,59 @@ function recommendEnergyProducts(products, estimate) {
   return { inverters, batteries, panels };
 }
 
+function recommendSolarPackages(packages, estimate) {
+  const comparisons = packages.map((solarPackage) => {
+    const solarArrayW = solarPackage.panelCount * solarPackage.panelWatts;
+    const inverterMeets = solarPackage.inverterWatts >= estimate.inverterW;
+    const solarMeets = solarArrayW >= estimate.solarW;
+    const batteryStatus = estimate.batteryNominalWh === null
+      ? "not-required"
+      : solarPackage.batteryNominalWh === null
+        ? "undocumented"
+        : solarPackage.batteryNominalWh >= estimate.batteryNominalWh
+          ? "meets"
+          : "below";
+    return {
+      package: solarPackage,
+      solarArrayW,
+      inverterMeets,
+      solarMeets,
+      batteryStatus,
+      recommended: inverterMeets && solarMeets && ["not-required", "meets"].includes(batteryStatus)
+    };
+  });
+  const compareFit = (left, right) => {
+    const leftExcess = (left.package.inverterWatts - estimate.inverterW) / Math.max(estimate.inverterW, 1)
+      + (left.solarArrayW - estimate.solarW) / Math.max(estimate.solarW, 1)
+      + (estimate.batteryNominalWh === null || !left.package.batteryNominalWh
+        ? 0
+        : (left.package.batteryNominalWh - estimate.batteryNominalWh) / Math.max(estimate.batteryNominalWh, 1));
+    const rightExcess = (right.package.inverterWatts - estimate.inverterW) / Math.max(estimate.inverterW, 1)
+      + (right.solarArrayW - estimate.solarW) / Math.max(estimate.solarW, 1)
+      + (estimate.batteryNominalWh === null || !right.package.batteryNominalWh
+        ? 0
+        : (right.package.batteryNominalWh - estimate.batteryNominalWh) / Math.max(estimate.batteryNominalWh, 1));
+    return leftExcess - rightExcess || left.package.id.localeCompare(right.package.id);
+  };
+  const compareProximity = (left, right) => {
+    const distance = (entry) => Math.abs(entry.package.inverterWatts - estimate.inverterW) / Math.max(estimate.inverterW, 1)
+      + Math.abs(entry.solarArrayW - estimate.solarW) / Math.max(estimate.solarW, 1)
+      + (estimate.batteryNominalWh === null || !entry.package.batteryNominalWh
+        ? 0
+        : Math.abs(entry.package.batteryNominalWh - estimate.batteryNominalWh) / Math.max(estimate.batteryNominalWh, 1));
+    return distance(left) - distance(right) || left.package.id.localeCompare(right.package.id);
+  };
+  const recommended = comparisons.filter((entry) => entry.recommended).sort(compareFit);
+  const explore = comparisons.filter((entry) => !entry.recommended).sort((left, right) => {
+    const leftCovered = Number(left.inverterMeets) + Number(left.solarMeets) + Number(["not-required", "meets"].includes(left.batteryStatus));
+    const rightCovered = Number(right.inverterMeets) + Number(right.solarMeets) + Number(["not-required", "meets"].includes(right.batteryStatus));
+    return rightCovered - leftCovered || compareProximity(left, right);
+  });
+  return { recommended, explore };
+}
+
 window.ElectronyEnergyCalculations = Object.freeze({
   calculateEnergyEstimate,
-  recommendEnergyProducts
+  recommendEnergyProducts,
+  recommendSolarPackages
 });

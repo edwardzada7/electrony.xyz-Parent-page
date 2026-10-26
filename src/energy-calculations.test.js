@@ -8,21 +8,37 @@ const calculatorSource = fs.readFileSync(path.join(__dirname, "energy-calculatio
 const energySource = fs.readFileSync(path.join(__dirname, "energy.js"), "utf8");
 const energyCalculatorSource = fs.readFileSync(path.join(__dirname, "energy-calculator.js"), "utf8");
 const energyCalculationsSource = fs.readFileSync(path.join(__dirname, "energy-calculations.js"), "utf8");
+const energyPackageSource = fs.readFileSync(path.join(__dirname, "energy-packages.js"), "utf8");
+const energyCatalogueSource = fs.readFileSync(path.join(__dirname, "energy-catalogue.js"), "utf8");
 const calculatorContext = { window: {} };
 vm.runInNewContext(calculatorSource, calculatorContext);
-const { calculateEnergyEstimate } = calculatorContext.window.ElectronyEnergyCalculations;
+const {
+  calculateEnergyEstimate,
+  recommendSolarPackages
+} = calculatorContext.window.ElectronyEnergyCalculations;
 const catalogueContext = { window: {} };
-vm.runInNewContext(fs.readFileSync(path.join(__dirname, "energy-catalogue.js"), "utf8"), catalogueContext);
+vm.runInNewContext(energyCatalogueSource, catalogueContext);
 const catalogueProducts = catalogueContext.window.ElectronyEnergyProducts;
 const { recommendEnergyProducts } = calculatorContext.window.ElectronyEnergyCalculations;
+const solarPackageContext = { window: {} };
+vm.runInNewContext(energyPackageSource, solarPackageContext);
+const solarPackages = solarPackageContext.window.ElectronySolarPackages;
+const { filterEnergyProducts, getEnergyProductPage } = catalogueContext.window.ElectronyEnergyCatalogue;
 
 test("Energy page scripts do not redeclare page-level lexical bindings", () => {
   const declarations = (source) => [...source.matchAll(/^(const|let|class|function)\s+([A-Za-z_$][\w$]*)/gm)]
     .map((match) => ({ kind: match[1], name: match[2] }));
-  const priorDeclarations = [...declarations(energySource), ...declarations(energyCalculationsSource)];
-  const conflicts = declarations(energyCalculatorSource)
-    .filter(({ kind, name }) => priorDeclarations.some((prior) => prior.name === name
-      && (kind !== "function" || prior.kind !== "function")))
+  const pageScripts = [
+    energyCatalogueSource,
+    energyPackageSource,
+    energySource,
+    energyCalculationsSource,
+    energyCalculatorSource
+  ];
+  const allDeclarations = pageScripts.flatMap(declarations);
+  const conflicts = allDeclarations.filter((declaration, index) => allDeclarations.some((prior, priorIndex) =>
+    priorIndex < index && prior.name === declaration.name
+      && (declaration.kind !== "function" || prior.kind !== "function")))
     .map(({ name }) => name);
   assert.deepEqual(conflicts, []);
 });
@@ -137,4 +153,76 @@ test("does not fabricate catalogue matches when no supported rating is available
   assert.equal(recommendations.inverters.length, 0);
   assert.equal(recommendations.batteries.length, 0);
   assert.equal(recommendations.panels.length, 0);
+});
+
+test("package catalogue contains only the four source-backed packages and flags the ambiguous battery", () => {
+  assert.equal(solarPackages.length, 4);
+  assert.deepEqual(Array.from(solarPackages, (solarPackage) => solarPackage.name), [
+    "Basic / Small Home & Office (3.6 kW System)",
+    "Medium Home / Medium Office (6 kW System)",
+    "Premium Executive Home / Corporate Office (8 kW – 10 kW System)",
+    "Heavy Commercial / Industrial Setup (50 kW System)"
+  ]);
+  solarPackages.forEach((solarPackage) => {
+    assert.ok(solarPackage.components.length > 0);
+    assert.equal(solarPackage.source.document, "Solar_Power_Solution_Packages.pdf");
+    assert.equal("price" in solarPackage, false);
+  });
+  assert.match(solarPackages[0].reviewNote, /5\.12kWh\/5\.5kWh/);
+  assert.equal(solarPackages[0].batteryNominalWh, null);
+});
+
+test("package comparisons use only corresponding inverter, array and battery ratings", () => {
+  const withBackup = recommendSolarPackages(solarPackages, {
+    inverterW: 7000,
+    solarW: 8000,
+    batteryNominalWh: 10000
+  });
+  assert.deepEqual(Array.from(withBackup.recommended, ({ package: solarPackage }) => solarPackage.id), [
+    "premium-executive-corporate",
+    "heavy-commercial-industrial"
+  ]);
+  assert.ok(withBackup.explore.some(({ package: solarPackage, batteryStatus }) =>
+    solarPackage.id === "basic-small-home-office" && batteryStatus === "undocumented"));
+  assert.equal("dailyEnergyWh" in solarPackages[0], false);
+
+  const withoutBackup = recommendSolarPackages(solarPackages, {
+    inverterW: 5000,
+    solarW: 5000,
+    batteryNominalWh: null
+  });
+  assert.ok(withoutBackup.recommended.some(({ package: solarPackage }) => solarPackage.id === "medium-home-office"));
+});
+
+test("catalogue search, brand and category filters combine and find products beyond the first page", () => {
+  const product = catalogueProducts[catalogueProducts.length - 1];
+  const result = Array.from(filterEnergyProducts(catalogueProducts, {
+    query: product.model,
+    brand: product.brand,
+    category: product.category
+  }, catalogueContext.window.ElectronyEnergyCategories));
+  assert.deepEqual(result.map(({ id }) => id), [product.id]);
+  assert.deepEqual(Array.from(filterEnergyProducts(catalogueProducts, {
+    query: product.model,
+    brand: "not-a-real-brand",
+    category: "all"
+  }, catalogueContext.window.ElectronyEnergyCategories)), []);
+});
+
+test("catalogue pagination makes all original products available exactly once", () => {
+  const allProducts = Array.from(filterEnergyProducts(catalogueProducts, {
+    query: "",
+    brand: "all",
+    category: "all"
+  }, catalogueContext.window.ElectronyEnergyCategories));
+  const allPages = [];
+  for (let pageNumber = 1; pageNumber <= Math.ceil(allProducts.length / 12); pageNumber += 1) {
+    allPages.push(getEnergyProductPage(allProducts, pageNumber, 12));
+  }
+  const pagedProducts = allPages.flatMap(({ products }) => Array.from(products));
+  assert.equal(pagedProducts.length, catalogueProducts.length);
+  assert.equal(new Set(pagedProducts.map(({ id }) => id)).size, catalogueProducts.length);
+  assert.equal(allPages[0].products.length, 12);
+  assert.equal(allPages.at(-1).products.length, 3);
+  assert.equal(getEnergyProductPage(allProducts, 100, 12).page, allPages.length);
 });

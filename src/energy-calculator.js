@@ -9,6 +9,10 @@ const calculatorResults = document.querySelector("#energy-calculator-results");
 const breakdownBody = document.querySelector("#energy-appliance-breakdown");
 const recommendationProducts = document.querySelector("#energy-recommendation-products");
 const recommendationFallback = document.querySelector("#energy-recommendation-fallback");
+const calculatorRecommendedPackageGrid = document.querySelector("#energy-recommended-packages");
+const calculatorExplorePackageGrid = document.querySelector("#energy-explore-packages");
+const calculatorExplorePackageWrap = document.querySelector("#energy-packages-to-explore");
+const calculatorPackageRecommendationEmpty = document.querySelector("#energy-package-recommendation-empty");
 const catalogueProducts = window.ElectronyEnergyProducts;
 const runEnergyEstimate = window.ElectronyEnergyCalculations.calculateEnergyEstimate;
 const recommendEnergyCatalogItems = window.ElectronyEnergyCalculations.recommendEnergyProducts;
@@ -93,6 +97,10 @@ function clearResults() {
   });
   breakdownBody.replaceChildren();
   recommendationProducts.replaceChildren();
+  calculatorRecommendedPackageGrid.replaceChildren();
+  calculatorExplorePackageGrid.replaceChildren();
+  calculatorExplorePackageWrap.hidden = true;
+  calculatorPackageRecommendationEmpty.hidden = true;
   recommendationFallback.textContent = "";
   window.ElectronyEnergyCalculationSummary = "";
 }
@@ -325,6 +333,7 @@ function calculateEnergy() {
   resultElements.solarAssumption.textContent = `${formatEnergyNumber(dailyWh)} Wh/day ÷ (${formatEnergyNumber(assumptions.peakSunHours)} peak-sun-hours × ${formatEnergyNumber(100 - assumptions.solarLosses)}% system yield), rounded up to 100 W.`;
   updateBreakdown(appliances);
   renderRecommendations(result);
+  renderSolarPackageRecommendations(result);
   window.ElectronyEnergyCalculationSummary = createEnquirySummary(result);
   calculatorResults.hidden = false;
   setCalculatorStatus();
