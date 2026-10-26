@@ -312,6 +312,28 @@ function updateButtonState(selector, selectedButton) {
 }
 
 function attachFilters() {
+  document.querySelectorAll("[data-category-link]").forEach((link) => {
+    link.addEventListener("click", () => {
+      const category = link.dataset.categoryLink;
+      const categorySelect = document.querySelector("#vehicle-category");
+      const searchInput = document.querySelector("#vehicle-search");
+      if (!category || !categorySelect) return;
+
+      activeState.filter = "all";
+      activeState.brand = "all";
+      activeState.category = category;
+      activeState.search = "";
+      categorySelect.value = category;
+      if (searchInput) searchInput.value = "";
+      updateButtonState("[data-filter]", document.querySelector('[data-filter="all"]'));
+      updateButtonState(
+        ".automobile-brand-button[data-brand]",
+        document.querySelector('.automobile-brand-button[data-brand="all"]')
+      );
+      renderVehicleInventory();
+    });
+  });
+
   document.querySelectorAll("[data-filter]").forEach((button) => {
     button.addEventListener("click", () => {
       activeState.filter = button.dataset.filter || "all";
@@ -496,7 +518,7 @@ function renderVehicleDetail(vehicle) {
     </section>
     <aside class="automobile-detail-caveats">
       <h2>Source and qualifications</h2>
-      <p>Source: <cite>${escapeHtml(vehicle.source.brochure)}</cite>, identified in the brochure as supplied by ${escapeHtml(vehicle.source.publisher)} (PDF page ${vehicle.source.pdfPage}; model page ${vehicle.source.modelPage} of 13).</p>
+      <p>Source: <cite>${escapeHtml(vehicle.source.brochure)}</cite>, identified in the brochure as supplied by ${escapeHtml(vehicle.source.publisher)} (PDF page ${vehicle.source.pdfPage}; model page ${vehicle.source.modelPage} of ${vehicle.source.modelPageCount || 13}).</p>
       <p>Equipment marked with an asterisk may vary by trim and market. Specifications may change. CLTC is a test-cycle figure and may differ from real-world range.</p>
       <p>Electrony Automobile presents this information for enquiry; this listing does not claim vehicle ownership, confirmed stock, authorized-dealer status or a manufacturer partnership.</p>
     </aside>
@@ -757,7 +779,7 @@ function initializeNavigation() {
   if (toggle) toggle.dataset.navigationInitialized = "true";
   const links = document.querySelectorAll(".automobile-nav-link");
   const mobileMenuViewport = window.matchMedia("(max-width: 64rem)");
-  const sections = ["home", "vehicles", "brands", "powertrain", "rox", "contact"].map((id) => document.getElementById(id)).filter(Boolean);
+  const sections = ["home", "vehicles", "vehicle-inventory", "brands", "powertrain", "rox", "contact"].map((id) => document.getElementById(id)).filter(Boolean);
 
   const closeMenu = (restoreFocus = false) => {
     if (!toggle || !navigation) return;

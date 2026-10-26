@@ -44,7 +44,7 @@ Product status labels are maintained in `src/products.js`; product destinations 
 
 ## Electrony Automobile
 
-The public Electrony Automobile page is available at `/automobile/`. Its 13 source-documented vehicle records are maintained in [`src/automobile-catalogue.js`](./src/automobile-catalogue.js), separately from the page renderer. Brochure specifications and availability are presented for enquiry, not as confirmation of stock, ownership, authorized-dealer status or manufacturer partnership. The source brochure is kept locally at `.sources/automobile/Dongfeng Range - Fouani Nigeria (no contacts).pdf` and is not included in public builds. The internal landing-page link is maintained in `src/config.js` and the product record in `src/products.js`.
+The public Electrony Automobile page is available at `/automobile/`. Its 17 source-documented vehicle records (13 original models and four Dongfeng pickups) are maintained in [`src/automobile-catalogue.js`](./src/automobile-catalogue.js), separately from the page renderer. Brochure specifications and availability are presented for enquiry, not as confirmation of stock, ownership, authorized-dealer status or manufacturer partnership. Source PDFs are local reference material and are excluded from public builds. The internal landing-page link is maintained in `src/config.js` and the product record in `src/products.js`.
 
 ## Electrony Hardware
 

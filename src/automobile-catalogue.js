@@ -1,4 +1,5 @@
 const dongfengBrochure = "Dongfeng Range - Fouani Nigeria (no contacts).pdf";
+const dongfengPickupBrochure = "Dongfeng_Pickups_-_Fouani_Nigeria_(with_prices).pdf";
 
 const automobileVehicles = [
   {
@@ -377,6 +378,102 @@ const automobileVehicles = [
       { title: "Safety & technology", items: ["Advanced driver assistance", "Off-road terrain management (M-ATS)", "Intelligent parking assist", "360-degree camera", "Full premium safety package"] }
     ],
     source: { brochure: dongfengBrochure, publisher: "Fouani Nigeria Ltd", pdfPage: 16, modelPage: 13 }
+  },
+  {
+    id: "dongfeng-rich-6t",
+    brand: "Dongfeng",
+    name: "RICH 6T",
+    category: "Pickup",
+    vehicleType: "Double-cab petrol pickup",
+    powertrain: "Petrol",
+    powertrainKey: "petrol",
+    seats: "5",
+    priceLabel: "Brochure-listed price: NGN 29,400,000",
+    statusLabel: "Confirm current price and availability",
+    imageAlt: "Dongfeng RICH 6T pickup pictured in the Fouani Nigeria pickup brochure",
+    images: ["../assets/automobile/vehicles/dongfeng-rich-6t/01-exterior.jpg"],
+    videos: [],
+    youtubeVideo: null,
+    headlineSpecifications: ["Petrol engine", "Manual gearbox", "2WD / 4WD versions", "490 kg payload", "5 seats"],
+    specificationGroups: [
+      { title: "Performance & powertrain", items: ["Petrol engine*", "Manual gearbox", "2WD and 4WD versions*", "BorgWarner 4WD system on 4WD versions", "150 km/h top speed*"] },
+      { title: "Chassis & cargo", items: ["3,150 mm wheelbase", "Cargo box 1,510 x 1,562 x 475 mm*", "490 kg payload", "207 mm ground clearance", "Front double-wishbone independent suspension", "Rear leaf springs", "Front disc / rear drum brakes", "255/70R16 tyres"] },
+      { title: "Cabin & dimensions", items: ["Double cab, 5 seats", "Zero-gravity seats with 7-point support*", "Black interior", "73 L fuel tank", "Overall dimensions 5,290 x 1,850 x 1,810 mm*"] },
+      { title: "Available colours", items: ["White", "Silver", "Black"] }
+    ],
+    source: { brochure: dongfengPickupBrochure, publisher: "Fouani Nigeria Ltd", pdfPage: 4, modelPage: 1, modelPageCount: 4 }
+  },
+  {
+    id: "dongfeng-rich-6",
+    brand: "Dongfeng",
+    name: "RICH 6",
+    category: "Pickup",
+    vehicleType: "Double-cab petrol pickup",
+    powertrain: "Petrol",
+    powertrainKey: "petrol",
+    seats: "5",
+    priceLabel: "Brochure-listed price: NGN 30,240,000",
+    statusLabel: "Confirm current price and availability",
+    imageAlt: "Dongfeng RICH 6 pickup pictured in the Fouani Nigeria pickup brochure",
+    images: ["../assets/automobile/vehicles/dongfeng-rich-6/01-exterior.jpg"],
+    videos: [],
+    youtubeVideo: null,
+    headlineSpecifications: ["2.4 L petrol engine", "116 kW · 230 Nm", "5-speed manual gearbox", "2WD / 4WD versions"],
+    specificationGroups: [
+      { title: "Performance & powertrain", items: ["2.4 L petrol engine (2TZD)", "116 kW · 230 Nm", "5-speed manual gearbox (5MT)", "2WD and 4WD versions", "BorgWarner 4WD system on 4WD versions", "150 km/h top speed"] },
+      { title: "Chassis & cargo", items: ["3,150 mm wheelbase", "Cargo box 1,510 x 1,562 x 475 mm*", "490 kg payload", "207 mm ground clearance", "Front double-wishbone independent suspension", "Rear leaf springs", "Front disc / rear drum brakes", "255/70R16 tyres"] },
+      { title: "Cabin & dimensions", items: ["Double cab, 5 seats", "Zero-gravity seats with 7-point support*", "Black interior", "73 L fuel tank", "Overall dimensions 5,290 x 1,850 x 1,810 mm*"] },
+      { title: "Available colours", items: ["White", "Silver", "Black"] }
+    ],
+    source: { brochure: dongfengPickupBrochure, publisher: "Fouani Nigeria Ltd", pdfPage: 5, modelPage: 2, modelPageCount: 4 }
+  },
+  {
+    id: "dongfeng-rich-7",
+    brand: "Dongfeng",
+    name: "RICH 7",
+    category: "Pickup",
+    vehicleType: "Double-cab petrol pickup",
+    powertrain: "Petrol",
+    powertrainKey: "petrol",
+    seats: "5",
+    priceLabel: "Brochure-listed price: NGN 35,700,000",
+    statusLabel: "Confirm current price and availability",
+    imageAlt: "Dongfeng RICH 7 pickup pictured in the Fouani Nigeria pickup brochure",
+    images: ["../assets/automobile/vehicles/dongfeng-rich-7/01-exterior.jpg"],
+    videos: [],
+    youtubeVideo: null,
+    headlineSpecifications: ["2.0 L petrol engine", "168 kW · 360 Nm", "5-speed manual gearbox", "2WD / 4WD versions"],
+    specificationGroups: [
+      { title: "Performance & powertrain", items: ["2.0 L petrol engine (4K31)", "168 kW · 360 Nm", "5-speed manual gearbox (5MT)", "2WD and 4WD versions", "170 km/h top speed", "Four-wheel disc brakes"] },
+      { title: "Safety & technology", items: ["Dual front airbags · ABS + EBD", "Stability (VDC) and traction control (TCS)", "Hill hold control", "Rear camera and rear parking sensors", "360-degree camera on UPR trim", "Cruise control"] },
+      { title: "Cabin & cargo", items: ["10-inch touchscreen with smartphone integration", "Smart entry and push-button start", "Double cab, 5 seats", "490 kg payload", "73 L fuel tank", "Cargo box 1,510 x 1,562 x 475 mm"] },
+      { title: "Available colours", items: ["White", "Grey", "Silver", "Black"] }
+    ],
+    source: { brochure: dongfengPickupBrochure, publisher: "Fouani Nigeria Ltd", pdfPage: 6, modelPage: 3, modelPageCount: 4 }
+  },
+  {
+    id: "dongfeng-z9",
+    brand: "Dongfeng",
+    name: "Z9",
+    category: "Pickup",
+    vehicleType: "Commercial off-road petrol pickup",
+    powertrain: "Petrol",
+    powertrainKey: "petrol",
+    seats: "5",
+    priceLabel: "Brochure-listed price: NGN 47,250,000",
+    statusLabel: "Confirm current price and availability",
+    imageAlt: "Dongfeng Z9 pickup pictured in the Fouani Nigeria pickup brochure",
+    images: ["../assets/automobile/vehicles/dongfeng-z9/01-exterior.jpg"],
+    videos: [],
+    youtubeVideo: null,
+    headlineSpecifications: ["Commercial version", "2.0 L petrol engine · 400 Nm", "8-speed automatic gearbox", "865 kg payload"],
+    specificationGroups: [
+      { title: "Performance & powertrain", items: ["Commercial version", "2.0 L petrol engine (4K31) · 400 Nm", "8-speed automatic gearbox (8AT)", "2WD and 4WD versions", "160 km/h top speed"] },
+      { title: "Off-road capability", items: ["Electronic 4WD with part-time 4WD on 4WD versions", "31° / 26° approach / departure angles", "100 percent gradeability", "209–240 mm ground clearance", "6.75 m turning radius", "265/65R18 tyres"] },
+      { title: "Chassis & cabin", items: ["3,300 mm wheelbase", "Cargo box 1,520 x 1,600 x 550 mm", "865 kg payload", "Double-wishbone front suspension and leaf-spring rear", "Four-wheel disc brakes", "Electronic handbrake with auto hold", "5 seats", "73 L fuel tank"] },
+      { title: "Available colours", items: ["White", "Grey", "Black", "Orange", "Dark gold"] }
+    ],
+    source: { brochure: dongfengPickupBrochure, publisher: "Fouani Nigeria Ltd", pdfPage: 7, modelPage: 4, modelPageCount: 4 }
   }
 ];
 

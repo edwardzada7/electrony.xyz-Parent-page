@@ -11,6 +11,8 @@ const browserContext = { window: {}, URL };
 vm.runInNewContext(catalogueSource, browserContext, { filename: "automobile-catalogue.js" });
 
 const { vehicles, legacyShowcaseVehicles, featuredVideos, getYouTubeVideoId } = browserContext.window.ElectronyAutomobileData;
+const originalVehicles = vehicles.filter((vehicle) => vehicle.category !== "Pickup");
+const pickupVehicles = vehicles.filter((vehicle) => vehicle.category === "Pickup");
 const expectedModels = [
   "NAMMI BOX",
   "NAMMI 06 VIGO",
@@ -35,17 +37,17 @@ test("catalogue and renderer do not redeclare page-level lexical bindings", () =
   assert.deepEqual(conflicts, []);
 });
 
-test("contains each of the 13 brochure vehicles exactly once", () => {
-  assert.equal(vehicles.length, 13);
-  assert.deepEqual(Array.from(vehicles, (vehicle) => vehicle.name), expectedModels);
-  assert.equal(new Set(vehicles.map((vehicle) => vehicle.id)).size, 13);
-  for (const vehicle of vehicles) {
-    assert.equal(vehicles.filter((candidate) => candidate.name === vehicle.name).length, 1);
+test("contains each of the 13 original brochure vehicles exactly once", () => {
+  assert.equal(originalVehicles.length, 13);
+  assert.deepEqual(Array.from(originalVehicles, (vehicle) => vehicle.name), expectedModels);
+  assert.equal(new Set(vehicles.map((vehicle) => vehicle.id)).size, 17);
+  for (const vehicle of originalVehicles) {
+    assert.equal(originalVehicles.filter((candidate) => candidate.name === vehicle.name).length, 1);
   }
 });
 
-test("each brochure vehicle has sourced specs, source-page mapping and resolvable images", () => {
-  for (const [index, vehicle] of vehicles.entries()) {
+test("each original brochure vehicle retains its sourced specs, source pages and images", () => {
+  for (const [index, vehicle] of originalVehicles.entries()) {
     assert.equal(vehicle.source.publisher, "Fouani Nigeria Ltd");
     assert.equal(vehicle.source.pdfPage, index + 4);
     assert.equal(vehicle.source.modelPage, index + 1);
@@ -67,6 +69,40 @@ test("each brochure vehicle has sourced specs, source-page mapping and resolvabl
       assert.ok(fs.existsSync(videoPath), `${vehicle.name} video missing: ${video.src}`);
     }
   }
+});
+
+test("pickup models preserve brochure-specific variants, specs, prices and images", () => {
+  assert.equal(pickupVehicles.length, 4);
+  assert.deepEqual(Array.from(pickupVehicles, (vehicle) => vehicle.name), ["RICH 6T", "RICH 6", "RICH 7", "Z9"]);
+  for (const [index, vehicle] of pickupVehicles.entries()) {
+    assert.equal(vehicle.brand, "Dongfeng");
+    assert.equal(vehicle.category, "Pickup");
+    assert.equal(vehicle.source.brochure, "Dongfeng_Pickups_-_Fouani_Nigeria_(with_prices).pdf");
+    assert.equal(vehicle.source.pdfPage, index + 4);
+    assert.equal(vehicle.source.modelPage, index + 1);
+    assert.equal(vehicle.source.modelPageCount, 4);
+    assert.match(vehicle.priceLabel, /^Brochure-listed price: NGN /);
+    assert.equal(vehicle.statusLabel, "Confirm current price and availability");
+    assert.ok(vehicle.images.length);
+    assert.ok(vehicle.headlineSpecifications.length);
+    assert.ok(vehicle.specificationGroups.length);
+    for (const image of vehicle.images) {
+      const imagePath = path.resolve(repositoryRoot, "automobile", image);
+      assert.ok(fs.existsSync(imagePath), `${vehicle.name} image missing: ${image}`);
+    }
+  }
+  assert.ok(pickupVehicles[0].specificationGroups.some((group) => group.items.includes("2WD and 4WD versions*")));
+  assert.ok(pickupVehicles[2].specificationGroups.some((group) => group.items.includes("360-degree camera on UPR trim")));
+  assert.ok(pickupVehicles[3].specificationGroups.some((group) => group.items.includes("Commercial version")));
+});
+
+test("pickup navigation, filter option and requested Automobile copy are present", () => {
+  const html = fs.readFileSync(path.join(repositoryRoot, "automobile", "index.html"), "utf8");
+  assert.match(html, /href="#vehicle-inventory" data-category-link="Pickup">Pickup<\/a>/);
+  assert.match(html, /<option value="Pickup">Pickup<\/option>/);
+  assert.doesNotMatch(html, /data-brand="pickup"/);
+  assert.ok(html.includes("Vehicle specifications and photographs are attributed to the Dongfeng range brochure. Equipment may vary by trim and market."));
+  assert.ok(html.includes("<p>ROX Motor is presented as a selected brand and its model is shown as a current candidate for enquiry and purchase</p>"));
 });
 
 test("optional YouTube data is empty until verified media is supplied", () => {

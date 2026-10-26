@@ -1,6 +1,6 @@
 # Automobile asset sources
 
-The supplied Automobile brochure is kept locally at `.sources/automobile/Dongfeng Range - Fouani Nigeria (no contacts).pdf`. It is source material, not a public asset; do not add `.sources/` or the PDF to a release commit.
+The Dongfeng range and pickup PDFs are local source material, not public assets. The pickup source is `automobile/Dongfeng_Pickups_-_Fouani_Nigeria_(with_prices).pdf`; the static build excludes PDFs. Do not copy source PDFs into public assets or a release build.
 
 ## Vehicle photos
 
@@ -26,7 +26,16 @@ The following existing JPEGs are currently registered in the centralized data:
 - `../assets/automobile/vehicles/m-hero-817.jpg` — M-HERO II 817
 - `../assets/automobile/vehicles/m-hero-917.jpg` — M-HERO I (917)
 
-The ROX 01 and VOYAH FREE promotional images are also registered centrally for their existing page sections. All 13 brochure models currently have at least one registered JPEG. The Dongfeng pickup JPEG is not assigned to a brochure model.
+The ROX 01 and VOYAH FREE promotional images are also registered centrally for their existing page sections. All 13 brochure models currently have at least one registered JPEG. The following brochure-derived pickup photographs are registered:
+
+- `../assets/automobile/vehicles/dongfeng-rich-6t/01-exterior.jpg` — RICH 6T
+- `../assets/automobile/vehicles/dongfeng-rich-6/01-exterior.jpg` — RICH 6
+- `../assets/automobile/vehicles/dongfeng-rich-7/01-exterior.jpg` — RICH 7
+- `../assets/automobile/vehicles/dongfeng-z9/01-exterior.jpg` — Z9
+
+These images are extracted from the pickup brochure. The repository does not establish publication rights; confirm usage rights before release.
+
+The existing `../assets/automobile/vehicles/dongfeng-pickup.jpg` is not assigned to a brochure model.
 
 The repository does not record a source or license for these JPEG files. Confirm usage rights before publication.
 
