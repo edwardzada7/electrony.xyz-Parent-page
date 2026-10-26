@@ -10,7 +10,7 @@ const breakdownBody = document.querySelector("#energy-appliance-breakdown");
 const recommendationProducts = document.querySelector("#energy-recommendation-products");
 const recommendationFallback = document.querySelector("#energy-recommendation-fallback");
 const catalogueProducts = window.ElectronyEnergyProducts;
-const calculateEnergyEstimate = window.ElectronyEnergyCalculations.calculateEnergyEstimate;
+const runEnergyEstimate = window.ElectronyEnergyCalculations.calculateEnergyEstimate;
 const recommendEnergyCatalogItems = window.ElectronyEnergyCalculations.recommendEnergyProducts;
 const calculatorAssumptions = {
   days: document.querySelector("#energy-month-days"),
@@ -272,7 +272,7 @@ function calculateEnergy() {
     return null;
   }
 
-  const estimate = calculateEnergyEstimate({ appliances, assumptions });
+  const estimate = runEnergyEstimate({ appliances, assumptions });
   const {
     connectedLoadW,
     dailyWh,

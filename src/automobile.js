@@ -1,8 +1,8 @@
 const automobileInventory = window.ElectronyAutomobileData.vehicles;
-const legacyShowcaseVehicles = window.ElectronyAutomobileData.legacyShowcaseVehicles;
+const legacyAutomobileShowcaseVehicles = window.ElectronyAutomobileData.legacyShowcaseVehicles;
 const featuredAutomobileVideos = window.ElectronyAutomobileData.featuredVideos;
-const getYouTubeVideoId = window.ElectronyAutomobileData.getYouTubeVideoId;
-const allAutomobileVehicles = [...automobileInventory, ...legacyShowcaseVehicles];
+const parseAutomobileYouTubeVideoId = window.ElectronyAutomobileData.getYouTubeVideoId;
+const allAutomobileVehicles = [...automobileInventory, ...legacyAutomobileShowcaseVehicles];
 
 const powertrainCategories = [
   { number: "01", label: "Petrol", key: "petrol", description: "Petrol-powered models from sedans to family SUVs." },
@@ -141,7 +141,7 @@ function renderPowertrainCards() {
 
 function configuredYouTubeVideo(video, fallbackTitle) {
   const source = typeof video === "string" ? video : video?.url || video?.id || video?.video;
-  const id = getYouTubeVideoId(source);
+  const id = parseAutomobileYouTubeVideoId(source);
   if (!id) return null;
   const title = typeof video === "object" && typeof video.title === "string" && video.title.trim()
     ? video.title.trim()

@@ -5,6 +5,9 @@ const test = require("node:test");
 const vm = require("node:vm");
 
 const calculatorSource = fs.readFileSync(path.join(__dirname, "energy-calculations.js"), "utf8");
+const energySource = fs.readFileSync(path.join(__dirname, "energy.js"), "utf8");
+const energyCalculatorSource = fs.readFileSync(path.join(__dirname, "energy-calculator.js"), "utf8");
+const energyCalculationsSource = fs.readFileSync(path.join(__dirname, "energy-calculations.js"), "utf8");
 const calculatorContext = { window: {} };
 vm.runInNewContext(calculatorSource, calculatorContext);
 const { calculateEnergyEstimate } = calculatorContext.window.ElectronyEnergyCalculations;
@@ -12,6 +15,17 @@ const catalogueContext = { window: {} };
 vm.runInNewContext(fs.readFileSync(path.join(__dirname, "energy-catalogue.js"), "utf8"), catalogueContext);
 const catalogueProducts = catalogueContext.window.ElectronyEnergyProducts;
 const { recommendEnergyProducts } = calculatorContext.window.ElectronyEnergyCalculations;
+
+test("Energy page scripts do not redeclare page-level lexical bindings", () => {
+  const declarations = (source) => [...source.matchAll(/^(const|let|class|function)\s+([A-Za-z_$][\w$]*)/gm)]
+    .map((match) => ({ kind: match[1], name: match[2] }));
+  const priorDeclarations = [...declarations(energySource), ...declarations(energyCalculationsSource)];
+  const conflicts = declarations(energyCalculatorSource)
+    .filter(({ kind, name }) => priorDeclarations.some((prior) => prior.name === name
+      && (kind !== "function" || prior.kind !== "function")))
+    .map(({ name }) => name);
+  assert.deepEqual(conflicts, []);
+});
 
 test("calculates multiple appliance loads and rounds system capacity upward", () => {
   const result = calculateEnergyEstimate({
@@ -38,6 +52,28 @@ test("calculates multiple appliance loads and rounds system capacity upward", ()
   assert.equal(result.batteryUsableWh, 1100 / 0.9);
   assert.equal(result.batteryNominalWh, 2000);
   assert.equal(result.solarW, 400);
+});
+
+test("calculates the requested two-appliance example", () => {
+  const result = calculateEnergyEstimate({
+    appliances: [
+      { quantity: 2, watts: 100, hours: 5 },
+      { quantity: 1, watts: 200, hours: 3 }
+    ],
+    assumptions: {
+      days: 30,
+      backupHours: null,
+      designMargin: 25,
+      batteryUsable: 80,
+      efficiency: 90,
+      peakSunHours: 5,
+      solarLosses: 20
+    }
+  });
+
+  assert.equal(result.connectedLoadW, 400);
+  assert.equal(result.dailyWh, 1600);
+  assert.equal(result.monthlyWh / 1000, 48);
 });
 
 test("skips battery sizing when backup duration is not supplied", () => {

@@ -6,6 +6,7 @@ const vm = require("node:vm");
 
 const repositoryRoot = path.resolve(__dirname, "..");
 const catalogueSource = fs.readFileSync(path.join(__dirname, "automobile-catalogue.js"), "utf8");
+const automobileSource = fs.readFileSync(path.join(__dirname, "automobile.js"), "utf8");
 const browserContext = { window: {}, URL };
 vm.runInNewContext(catalogueSource, browserContext, { filename: "automobile-catalogue.js" });
 
@@ -25,6 +26,14 @@ const expectedModels = [
   "M-HERO II 817",
   "M-HERO I"
 ];
+
+test("catalogue and renderer do not redeclare page-level lexical bindings", () => {
+  const declarations = (source) => [...source.matchAll(/^(?:const|let|class|function)\s+([A-Za-z_$][\w$]*)/gm)]
+    .map((match) => match[1]);
+  const catalogueBindings = new Set(declarations(catalogueSource));
+  const conflicts = declarations(automobileSource).filter((name) => catalogueBindings.has(name));
+  assert.deepEqual(conflicts, []);
+});
 
 test("contains each of the 13 brochure vehicles exactly once", () => {
   assert.equal(vehicles.length, 13);
