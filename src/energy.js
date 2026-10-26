@@ -314,8 +314,8 @@ function renderSolarPackageRecommendations(estimate) {
     packageResultsExploreGrid.appendChild(createPackageCard(comparison.package, comparison));
   });
   packageResultsExploreWrap.hidden = exploreCandidates.length === 0;
-  packageResultsEmpty.hidden = recommendedCandidates.length > 0;
-  packageResultsEmpty.textContent = recommendedCandidates.length
+  packageResultsEmpty.hidden = recommendationCandidates.length > 0;
+  packageResultsEmpty.textContent = recommendationCandidates.length
     ? ""
     : "No package meets all comparable calculator ratings. The package source also lacks daily energy capacity and other design details, so request a tailored assessment.";
   packageResultsIntro.textContent = "Ordered by closest documented inverter, panel-array and (when supplied) battery ratings. These are preliminary comparisons, not confirmed system matches; phase, MPPT/string design, operating conditions and compatibility still require assessment.";
