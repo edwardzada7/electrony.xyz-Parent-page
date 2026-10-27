@@ -71,7 +71,7 @@ test("each original brochure vehicle retains its sourced specs, source pages and
   }
 });
 
-test("pickup models preserve brochure-specific variants, specs, prices and images", () => {
+test("pickup models preserve brochure-specific variants, specs and images while requesting prices by enquiry", () => {
   assert.equal(pickupVehicles.length, 4);
   assert.deepEqual(Array.from(pickupVehicles, (vehicle) => vehicle.name), ["RICH 6T", "RICH 6", "RICH 7", "Z9"]);
   for (const [index, vehicle] of pickupVehicles.entries()) {
@@ -81,7 +81,7 @@ test("pickup models preserve brochure-specific variants, specs, prices and image
     assert.equal(vehicle.source.pdfPage, index + 4);
     assert.equal(vehicle.source.modelPage, index + 1);
     assert.equal(vehicle.source.modelPageCount, 4);
-    assert.match(vehicle.priceLabel, /^Brochure-listed price: NGN /);
+    assert.equal(vehicle.priceLabel, "Price on Request");
     assert.equal(vehicle.statusLabel, "Confirm current price and availability");
     assert.ok(vehicle.images.length);
     assert.ok(vehicle.headlineSpecifications.length);
@@ -94,6 +94,9 @@ test("pickup models preserve brochure-specific variants, specs, prices and image
   assert.ok(pickupVehicles[0].specificationGroups.some((group) => group.items.includes("2WD and 4WD versions*")));
   assert.ok(pickupVehicles[2].specificationGroups.some((group) => group.items.includes("360-degree camera on UPR trim")));
   assert.ok(pickupVehicles[3].specificationGroups.some((group) => group.items.includes("Commercial version")));
+  assert.doesNotMatch(catalogueSource, /(?:29,400,000|30,240,000|35,700,000|47,250,000)/);
+  assert.match(automobileSource, /requestPrice \? "Enquire for Price"/);
+  assert.match(automobileSource, /href="#automobile-vehicle-enquiry">Enquire for Price/);
 });
 
 test("pickup navigation, filter option and requested Automobile copy are present", () => {

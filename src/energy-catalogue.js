@@ -74,10 +74,14 @@ const categoryImages = Object.freeze({
 });
 
 function makeProduct(brand, details) {
-  const image = categoryImages[details.category] || [
+  const categoryImage = categoryImages[details.category] || [
     "energy-cables.svg",
     "Illustrative electrical equipment category artwork; not a product photograph."
   ];
+  const image = details.image || {
+    url: `../assets/catalogue/${categoryImage[0]}`,
+    alt: categoryImage[1]
+  };
   const slug = `${brand}-${details.model || details.name}`.toLocaleLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
   return Object.freeze({
     id: slug,
@@ -94,10 +98,7 @@ function makeProduct(brand, details) {
     ...(details.sourceNote ? { sourceNote: details.sourceNote } : {}),
     ...(details.reviewNote ? { reviewNote: details.reviewNote } : {}),
     ...(details.video ? { video: details.video } : {}),
-    image: Object.freeze({
-      url: `../assets/catalogue/${image[0]}`,
-      alt: image[1]
-    })
+    image: Object.freeze({ url: image.url, alt: image.alt })
   });
 }
 

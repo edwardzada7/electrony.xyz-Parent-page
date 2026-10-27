@@ -4,6 +4,7 @@ const path = require("node:path");
 const test = require("node:test");
 const vm = require("node:vm");
 
+const projectRoot = path.resolve(__dirname, "..");
 const calculatorSource = fs.readFileSync(path.join(__dirname, "energy-calculations.js"), "utf8");
 const energySource = fs.readFileSync(path.join(__dirname, "energy.js"), "utf8");
 const energyCalculatorSource = fs.readFileSync(path.join(__dirname, "energy-calculator.js"), "utf8");
@@ -210,6 +211,14 @@ test("catalogue search, brand and category filters combine and find products bey
 });
 
 test("catalogue pagination makes all original products available exactly once", () => {
+  assert.equal(catalogueProducts.length, 123);
+  assert.equal(new Set(catalogueProducts.map(({ id }) => id)).size, 123);
+  catalogueProducts.forEach((product) => {
+    assert.ok(product.image?.url, `${product.id} should retain its product or category image`);
+    assert.ok(product.image?.alt, `${product.id} should have meaningful image alternative text`);
+    assert.ok(fs.existsSync(path.resolve(projectRoot, "energy", product.image.url)), `${product.id} image should be present in public assets`);
+  });
+
   const allProducts = Array.from(filterEnergyProducts(catalogueProducts, {
     query: "",
     brand: "all",

@@ -4,6 +4,13 @@ const path = require("path");
 const projectRoot = path.resolve(__dirname, "..");
 const outputDirectory = path.join(projectRoot, "dist");
 const publicDirectories = ["assets", "automobile", "bills", "energy", "hardware", "src", "styles"];
+const publicOrigins = Object.freeze({
+  parent: "https://electrony.xyz",
+  automobile: "https://auto.electrony.xyz",
+  energy: "https://energy.electrony.xyz",
+  hardware: "https://hardware.electrony.xyz",
+  bills: "https://bills.electrony.xyz"
+});
 const billsFrontendFiles = [
   "assets/brand/electrony-e-logo.png",
   "assets/brand/electrony-xyz-logo .png",
@@ -114,6 +121,17 @@ function copyBillsFrontend() {
   fs.writeFileSync(path.join(outputDirectory, "index.html"), prepareBillsEntrypoint());
 }
 
+function writeCrawlFiles(site) {
+  const origin = publicOrigins[site];
+  if (!origin) throw new Error(`No public origin is configured for the ${site} site.`);
+
+  const pages = site === "parent" ? ["/", "/bills/"] : ["/"];
+  const entries = pages.map((page) => `  <url><loc>${origin}${page}</loc></url>`).join("\n");
+  const sitemap = `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${entries}\n</urlset>\n`;
+  fs.writeFileSync(path.join(outputDirectory, "robots.txt"), `User-agent: *\nAllow: /\nSitemap: ${origin}/sitemap.xml\n`);
+  fs.writeFileSync(path.join(outputDirectory, "sitemap.xml"), sitemap);
+}
+
 function prepareAutomobileEntrypoint() {
   const htmlPath = path.join(projectRoot, "automobile", "index.html");
   let html = fs.readFileSync(htmlPath, "utf8");
@@ -150,6 +168,8 @@ function buildStaticSite(site) {
       fs.writeFileSync(automobileScriptPath, automobileScript);
     }
   }
+
+  writeCrawlFiles(site);
 
   const configPath = path.join(outputDirectory, "src", "config.js");
   let config = fs.readFileSync(configPath, "utf8");

@@ -36,7 +36,9 @@ The parent site and the Automobile, Energy, Hardware, and Bills projects use thi
 
 Parent, Automobile, Energy, and Hardware builds copy the existing pages and shared runtime assets into `dist`, and select the requested page as the deployment's `/` entry point. Non-runtime Markdown documents, PDFs, hidden files, and `*.test.js` files are excluded. The Automobile brochure and the Energy source PDF are private source material and are not published. A new build does not remove files from an older deployment: after redeploying, verify that direct requests for both source-PDF paths return `404`. The Bills build instead uses `bills/app/index.html` as `/` and copies only the CSS, JavaScript, and brand images needed by that frontend. The parent site's Bills marketing page and app remain available at `/bills/` and `/bills/app/`.
 
-The source canonical URLs for the two catalogues are `https://auto.electrony.xyz/` and `https://energy.electrony.xyz/`. These are the intended public URLs recorded in their HTML, not evidence that the Vercel projects or custom domains are configured or deployed; confirm the dashboard settings before launch. For Parent Electrony.xyz and the separate Bills Vercel project, configure `BILLS_API_BASE_URL` with the actual Railway API's HTTPS origin (no path, credentials, query, or fragment). The build injects it into `dist/src/config.js` for those two builds, which include the Bills app. Automobile, Energy, and Hardware builds use their same-origin `/api/contact` enquiry endpoint and do not require `BILLS_API_BASE_URL`. The Bills API remains a separate Railway service, and `bills-api/` must not be deployed as a static site.
+The canonical origins recorded in the page metadata and configured product links are `https://electrony.xyz/`, `https://auto.electrony.xyz/`, `https://energy.electrony.xyz/`, `https://hardware.electrony.xyz/`, and `https://bills.electrony.xyz/`. They are the intended public URLs, not evidence that the Vercel projects or custom domains are configured or deployed; confirm the dashboard settings before launch. For Parent Electrony.xyz and the separate Bills Vercel project, configure `BILLS_API_BASE_URL` with the actual Railway API's HTTPS origin (no path, credentials, query, or fragment). The build injects it into `dist/src/config.js` for those two builds, which include the Bills app. Automobile, Energy, and Hardware builds use their same-origin `/api/contact` enquiry endpoint and do not require `BILLS_API_BASE_URL`. The Bills API remains a separate Railway service, and `bills-api/` must not be deployed as a static site.
+
+Each static site build writes its own `robots.txt` and `sitemap.xml` for its configured canonical origin without `lastmod` values. The parent sitemap lists its home page and the Electrony Bills introduction at `/bills/`; the standalone Hardware, Automobile, Energy, and Bills builds list their actual root page. The parent copies of the Hardware page and Bills checkout app point to their respective standalone canonical URLs and are not listed as additional parent URLs. Hash-based vehicle details, catalogue filters, pagination states, and Energy product dialogs are not separate sitemap URLs.
 
 The `buildCommand` is intentionally project-specific and is not fixed in `vercel.json`; configure the exact command above in each Vercel project's **Build & Development Settings**. Keep the Output Directory as `dist`. See [the Bills API deployment notes](./bills-api/README.md#vercel-frontend-and-railway-api) for CORS and Railway configuration. Vercel project Root Directory, framework, build command, environment variables, and custom domains are dashboard settings and must be checked or updated there.
 
@@ -56,11 +58,45 @@ A future verified catalogue integration can still provide `window.ElectronyHardw
 
 The Energy catalogue is available at `/energy/`. Its product data is maintained separately from the page renderer in [`src/energy-catalogue.js`](./src/energy-catalogue.js). Each record includes its brand, product category, model where supplied, source-supported description/specifications, source page, and warranty only when stated. The public records contain no price field. The five-page source PDF is kept locally at `.sources/energy/POWER-SOLAR PL.pdf`; `.sources/` is ignored by Git and Vercel builds do not copy it, so the source price column is not published.
 
-No secure Energy catalogue CMS or upload workflow exists. Until an authenticated administration system with server-side file validation and persistent storage is implemented, an authorized developer should add or update catalogue records and media through a reviewed repository change. Use descriptive filenames in `assets/catalogue/energy/`, retain original aspect ratios, use only approved matching product photographs, and keep the current clearly labelled category illustrations when an exact product image is unavailable. Do not add a public upload endpoint. The logos under `assets/catalogue/energy/brands/` were extracted from the supplied catalogue and are used only as brand marks.
+No Energy catalogue CMS or upload workflow exists. Until an authenticated administration system with server-side file validation and persistent storage is implemented, add or update catalogue records and media through a reviewed repository change. Do not add a public upload endpoint.
+
+### Adding genuine Energy product images
+
+1. Put each approved, correctly identified product image in `assets/catalogue/energy/products/<brand>/`. Create the lowercase brand directory if needed. This directory is copied into the Energy public build under `/assets/catalogue/energy/products/`.
+2. Name image files with lowercase letters, numbers, and hyphens. Use the catalogue brand and model, for example `huawei/esm-48200a1.webp`; avoid spaces, punctuation, and ambiguous filenames.
+3. Match the image to the existing catalogue record by its `id`, brand, and exact model in `src/energy-catalogue.js`. The generated product ID is a lowercase brand-model slug; do not rename, duplicate, or reorder records to add an image.
+4. Add the optional `image` object to that product's existing `makeProduct` details. For example, the real catalogue record `huawei-esm-48200a1` (`HUAWEI`, model `ESM-48200A1`) can use this field when a genuine image is available:
+
+   ```js
+   image: {
+     url: "../assets/catalogue/energy/products/huawei/esm-48200a1.webp",
+     alt: "Huawei ESM-48200A1 10 kWh lithium battery"
+   }
+   ```
+
+   The path is relative to the Energy page, as with the existing catalogue image paths. Only add the field after placing an appropriately licensed image at that exact path. This example does not add or claim a product photograph.
+5. WebP is recommended; the existing `<img>` renderer also supports browser-readable JPEG, PNG, and SVG assets, and the static build copies these formats without image conversion. The card reserves a 4:3 image area and sets 1200×900 intrinsic dimensions; prepare product images near 1200×900 pixels to avoid upscaling or cropping. There is no enforced file-size limit; aim for 300 KB or less per WebP to keep catalogue loading efficient.
+6. Products without a product-specific image continue to use the existing category illustration. An absent or failed product image also falls back to the labelled category-artwork placeholder; do not use an unrelated product image.
+7. Build the Energy site with `npm run build:vercel -- --site energy`, then serve `dist/` locally (for example, `python3 -m http.server 4173 --directory dist`) and inspect the product card at `http://localhost:4173/`. Confirm that the photograph matches the displayed brand/model, its alt text is meaningful, the fallback remains for other products, and the browser console shows no missing asset requests. The static build excludes source PDFs and Markdown files.
 
 Product videos are optional. To add one, set the product's `video` property in `src/energy-catalogue.js` to a verified 11-character YouTube video ID or HTTPS URL on `youtube.com`, `youtu.be`, or `youtube-nocookie.com`; no video is configured by default. A featured video can be configured with `window.ElectronyEnergyFeaturedVideo = { title: "…", video: "…" }` in that data file. The renderer validates each value and omits invalid or missing videos. Do not label a video as official without evidence.
 
 Customers can request a quote for an individual catalogue item, complete installation or customised project. Product enquiries include the selected brand, model, source description, available specifications, warranty and page reference. The catalogue and calculator are not a system design or technical recommendation; suitability, electrical protection, compatibility and availability must be confirmed for each project.
+
+The current catalogue is client-rendered from one static page: product cards and a details dialog do not have individual public URLs. Consequently, the Energy sitemap lists only the genuine Energy page; the site does not generate hundreds of product URLs or product/offer structured data. Adding independently indexable product pages would require a future static-page generation or routing change.
+
+## SEO and search-engine setup
+
+The static pages have unique titles and descriptions, absolute canonical and social-sharing URLs, language and viewport declarations, existing brand favicons, social image alternatives, and JSON-LD only for the Organization, WebSite, and WebPage information actually supported by the pages. Vehicle hash routes retain the Automobile page as their canonical URL; product filters and dialogs are not treated as pages. Product schema and price/availability offers are not emitted.
+
+After deploying the matching build to each production origin:
+
+1. Verify the parent `electrony.xyz` property and each deployed subdomain property (`auto`, `energy`, and, if deployed, `hardware` and `bills`) in Google Search Console using the available DNS or URL-prefix verification method.
+2. Submit that origin's `https://<domain>/sitemap.xml` in Search Console. Check the deployed `robots.txt`, sitemap URLs, page indexability, and canonical URLs with URL Inspection.
+3. Monitor indexing reports, crawl errors, canonical selection, and structured-data reports. Validate JSON-LD with Google's Rich Results Test or Schema Markup Validator when useful; valid markup does not guarantee a rich result.
+4. Add the same properties and sitemap URLs to Bing Webmaster Tools if Bing visibility is desired.
+
+The repository does not submit or verify any property. Metadata and sitemaps help crawlers discover and interpret pages, but do not guarantee indexing, rankings, or search-result presentation.
 
 ## Contact enquiry delivery
 

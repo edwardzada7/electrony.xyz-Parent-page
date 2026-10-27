@@ -44,7 +44,13 @@ function safeImageUrl(value) {
   if (typeof value !== "string" || !value.trim()) return null;
   try {
     const imageUrl = new URL(value, document.baseURI);
-    return ["http:", "https:"].includes(imageUrl.protocol) ? imageUrl.href : null;
+    if (imageUrl.origin !== window.location.origin
+      || !imageUrl.pathname.startsWith("/assets/")
+      || imageUrl.search
+      || imageUrl.hash) {
+      return null;
+    }
+    return imageUrl.href;
   } catch {
     return null;
   }
@@ -126,7 +132,10 @@ function createEnergyProductCard(product) {
     const image = createElement("img");
     image.src = imageUrl;
     image.alt = product.image.alt;
+    image.width = 1200;
+    image.height = 900;
     image.loading = "lazy";
+    image.decoding = "async";
     image.addEventListener("error", () => {
       image.remove();
       visual.appendChild(createElement("span", "energy-product-card__fallback", "ILLUSTRATIVE CATEGORY ARTWORK"));

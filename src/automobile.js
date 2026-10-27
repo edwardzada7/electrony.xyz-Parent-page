@@ -88,6 +88,11 @@ function createFeaturedVehicleMarkup(vehicle) {
 
 function createVehicleMarkup(vehicle) {
   const hasMedia = vehicle.images.length > 0 || vehicle.fallbackImage || vehicle.videos.length > 0;
+  const requestPrice = vehicle.priceLabel === "Price on Request";
+  const actionLabel = requestPrice ? "Enquire for Price" : "View details & enquire";
+  const actionDescription = requestPrice
+    ? `Enquire for price about ${vehicle.brand} ${vehicle.name}`
+    : `View ${vehicle.brand} ${vehicle.name} details and enquire`;
   const galleryButton = hasMedia
     ? `<button class="automobile-gallery-trigger" type="button" data-gallery-open="${escapeHtml(vehicle.id)}" aria-label="Open media gallery for ${escapeHtml(vehicle.name)}">View ${vehicle.videos.length ? "media" : "photos"} <span aria-hidden="true">↗</span></button>`
     : "";
@@ -100,7 +105,7 @@ function createVehicleMarkup(vehicle) {
         <p class="automobile-vehicle-card__specs">${vehicle.headlineSpecifications.map(escapeHtml).join(" · ")}</p>
         <div class="automobile-vehicle-card__details"><span>${escapeHtml(vehicle.priceLabel)}</span>${createStatusMarkup(vehicle)}</div>
         ${galleryButton}
-        <a href="#vehicle/${escapeHtml(vehicle.id)}" class="automobile-vehicle-card__cta" aria-label="View ${escapeHtml(vehicle.brand)} ${escapeHtml(vehicle.name)} details and enquire">View details &amp; enquire <span aria-hidden="true">↗</span></a>
+        <a href="#vehicle/${escapeHtml(vehicle.id)}" class="automobile-vehicle-card__cta" aria-label="${escapeHtml(actionDescription)}">${escapeHtml(actionLabel)} <span aria-hidden="true">↗</span></a>
       </div>
     </article>`;
 }
@@ -496,6 +501,7 @@ function renderVehicleDetail(vehicle) {
   }
   const sourceUrl = new URL(window.location.href);
   sourceUrl.hash = `vehicle/${vehicle.id}`;
+  const canonicalUrl = "https://auto.electrony.xyz/";
   const sourceModel = vehicle.brand === "Dongfeng" ? `${vehicle.brand} ${vehicle.name}` : vehicle.name;
 
   content.innerHTML = `
@@ -504,7 +510,7 @@ function renderVehicleDetail(vehicle) {
       <p class="automobile-kicker automobile-kicker--dark"><span></span>${escapeHtml(vehicle.brand)} · ${escapeHtml(vehicle.category)}</p>
       <h1 id="automobile-detail-title" tabindex="-1">${escapeHtml(vehicle.name)}</h1>
       <p class="automobile-detail-heading__type">${escapeHtml(vehicle.vehicleType)} · ${escapeHtml(vehicle.powertrain)}</p>
-      <div class="automobile-detail-heading__status"><span>${escapeHtml(vehicle.priceLabel)}</span>${createStatusMarkup(vehicle)}</div>
+      <div class="automobile-detail-heading__status"><span>${escapeHtml(vehicle.priceLabel)}</span>${createStatusMarkup(vehicle)}${vehicle.priceLabel === "Price on Request" ? '<a class="automobile-button automobile-button--red" href="#automobile-vehicle-enquiry">Enquire for Price</a>' : ""}</div>
     </header>
     <div class="automobile-detail-gallery" aria-label="${escapeHtml(vehicle.name)} image gallery">${gallery}</div>
     <section class="automobile-detail-highlights" aria-labelledby="automobile-detail-highlights-title">
@@ -548,8 +554,8 @@ function renderVehicleDetail(vehicle) {
   document.querySelector('meta[property="og:description"]')?.setAttribute("content", configuredDescription);
   document.querySelector('meta[name="twitter:title"]')?.setAttribute("content", document.title);
   document.querySelector('meta[name="twitter:description"]')?.setAttribute("content", configuredDescription);
-  document.querySelector('meta[property="og:url"]')?.setAttribute("content", sourceUrl.href);
-  document.querySelector('link[rel="canonical"]')?.setAttribute("href", sourceUrl.href);
+  document.querySelector('meta[property="og:url"]')?.setAttribute("content", canonicalUrl);
+  document.querySelector('link[rel="canonical"]')?.setAttribute("href", canonicalUrl);
 }
 
 function renderVehicleDetailGalleryErrors(vehicle) {
@@ -578,11 +584,11 @@ function renderVehicleRoute() {
   if (!showDetail) {
     const canonical = document.querySelector('link[rel="canonical"]');
     document.title = "Electrony Automobile | Source-documented vehicle catalogue";
-    document.querySelector('meta[name="description"]')?.setAttribute("content", "Explore 13 source-documented NAMMI, Dongfeng, VOYAH and M-HERO vehicles. Compare powertrains, brochure specifications and request current details.");
+    document.querySelector('meta[name="description"]')?.setAttribute("content", "Explore 17 source-documented NAMMI, Dongfeng, VOYAH and M-HERO vehicles, including Dongfeng pickups. Compare powertrains, brochure specifications and request current details.");
     document.querySelector('meta[property="og:title"]')?.setAttribute("content", document.title);
-    document.querySelector('meta[property="og:description"]')?.setAttribute("content", "Explore 13 source-documented NAMMI, Dongfeng, VOYAH and M-HERO vehicles. Compare powertrains, brochure specifications and request current details.");
+    document.querySelector('meta[property="og:description"]')?.setAttribute("content", "Explore 17 source-documented NAMMI, Dongfeng, VOYAH and M-HERO vehicles, including Dongfeng pickups. Compare powertrains, brochure specifications and request current details.");
     document.querySelector('meta[name="twitter:title"]')?.setAttribute("content", document.title);
-    document.querySelector('meta[name="twitter:description"]')?.setAttribute("content", "Explore 13 source-documented NAMMI, Dongfeng, VOYAH and M-HERO vehicles. Compare powertrains, brochure specifications and request current details.");
+    document.querySelector('meta[name="twitter:description"]')?.setAttribute("content", "Explore 17 source-documented NAMMI, Dongfeng, VOYAH and M-HERO vehicles, including Dongfeng pickups. Compare powertrains, brochure specifications and request current details.");
     document.querySelector('meta[property="og:url"]')?.setAttribute("content", "https://auto.electrony.xyz/");
     canonical?.setAttribute("href", "https://auto.electrony.xyz/");
     return;
