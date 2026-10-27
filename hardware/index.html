@@ -4,12 +4,12 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="theme-color" content="#111214">
-    <meta name="description" content="Explore electronics, appliances, electrical equipment and mobility solutions for everyday life and business with Electrony Hardware.">
+    <meta name="description" content="Browse source-documented Hisense, LG and MAXI product models across electronics and appliances. Request a quote and confirm current prices, warranties and availability.">
     <link rel="canonical" href="https://hardware.electrony.xyz/">
     <meta property="og:type" content="website">
     <meta property="og:site_name" content="Electrony Hardware">
-    <meta property="og:title" content="Electrony Hardware — Technology for Every Space">
-    <meta property="og:description" content="Explore electronics, appliances, electrical equipment and mobility solutions for everyday life and business.">
+    <meta property="og:title" content="Electrony Hardware — Product Catalogue">
+    <meta property="og:description" content="Browse source-documented Hisense, LG and MAXI product models. Request a quote and confirm current prices, warranties and availability.">
     <meta property="og:url" content="https://hardware.electrony.xyz/">
     <meta property="og:image" content="https://hardware.electrony.xyz/assets/brand/electrony-e-logo.png">
     <meta property="og:image:alt" content="Electrony E logo">
@@ -17,11 +17,11 @@
     <meta property="og:image:width" content="1254">
     <meta property="og:image:height" content="1254">
     <meta name="twitter:card" content="summary">
-    <meta name="twitter:title" content="Electrony Hardware — Technology for Every Space">
-    <meta name="twitter:description" content="Explore electronics, appliances, electrical equipment and mobility solutions for everyday life and business.">
+    <meta name="twitter:title" content="Electrony Hardware — Product Catalogue">
+    <meta name="twitter:description" content="Browse source-documented Hisense, LG and MAXI product models. Request a quote and confirm current prices, warranties and availability.">
     <meta name="twitter:image" content="https://hardware.electrony.xyz/assets/brand/electrony-e-logo.png">
     <meta name="twitter:image:alt" content="Electrony E logo">
-    <title>Electrony Hardware — Technology for Every Space</title>
+    <title>Electrony Hardware — Product Catalogue</title>
     <script type="application/ld+json">
       {
         "@context": "https://schema.org",
@@ -37,8 +37,8 @@
             "@type": "WebPage",
             "@id": "https://hardware.electrony.xyz/#webpage",
             "url": "https://hardware.electrony.xyz/",
-            "name": "Electrony Hardware — Technology for Every Space",
-            "description": "Explore electronics, appliances, electrical equipment and mobility solutions for everyday life and business with Electrony Hardware.",
+            "name": "Electrony Hardware — Product Catalogue",
+            "description": "Browse source-documented Hisense, LG and MAXI product models across electronics and appliances. Request a quote and confirm current prices, warranties and availability.",
             "isPartOf": { "@id": "https://hardware.electrony.xyz/#website" }
           }
         ]
@@ -61,6 +61,7 @@
     <script src="../src/products.js" defer></script>
     <script src="../src/main.js" defer></script>
     <script src="../src/hardware-catalogue.js" defer></script>
+    <script src="../src/hardware-products.js" defer></script>
     <script src="../src/hardware.js" defer></script>
     <script src="../src/contact-form.js" defer></script>
   </head>
@@ -124,7 +125,7 @@
             </div>
             <p>Discover the equipment and systems that support homes, businesses and the spaces between them.</p>
           </div>
-          <p class="hardware-catalogue-note">Illustrative enquiry categories only — these cards do not confirm inventory, models, specifications, prices or availability.</p>
+          <p class="hardware-catalogue-note">Category artwork is illustrative. Product entries below are transcribed from local supplier catalogues; listings do not confirm current inventory or availability.</p>
 
           <div class="hardware-category-grid">
             <article class="hardware-category-card">
@@ -221,7 +222,7 @@
               <p class="hardware-eyebrow">Product discovery</p>
               <h2 id="catalogue-title">Find the right equipment.</h2>
             </div>
-            <p>Browse illustrative enquiry categories and tell us what you are looking for. Specific products, specifications and availability are confirmed individually.</p>
+            <p>Search source-documented product models and request a quote. Current prices, warranty terms, specifications and availability must be confirmed individually.</p>
           </div>
           <div class="hardware-discovery">
             <label class="visually-hidden" for="hardware-search">Search products by name, model, SKU, brand or category</label>
@@ -230,16 +231,27 @@
               <input id="hardware-search" type="search" autocomplete="off" placeholder="Search products or categories…" aria-describedby="discovery-help">
               <button class="hardware-search-clear" id="clear-search" type="button" disabled>Clear</button>
             </div>
-            <div class="hardware-filter-group" id="hardware-filter-group" role="group" aria-label="Filter products by category" aria-describedby="discovery-help">
-              <button type="button" class="hardware-filter is-selected" data-filter-category="all" aria-pressed="true">All categories</button>
-              <button type="button" class="hardware-filter" data-filter-category="consumer-electronics" aria-pressed="false">Electronics</button>
-              <button type="button" class="hardware-filter" data-filter-category="appliances" aria-pressed="false">Appliances</button>
-              <button type="button" class="hardware-filter" data-filter-category="electrical-power" aria-pressed="false">Electrical</button>
-              <button type="button" class="hardware-filter" data-filter-category="computers" aria-pressed="false">Computers</button>
-              <button type="button" class="hardware-filter" data-filter-category="cars-mobility" aria-pressed="false">Cars &amp; EVs</button>
-              <button type="button" class="hardware-filter" data-filter-category="solar-energy" aria-pressed="false">Solar &amp; energy</button>
+            <div class="hardware-filter-toolbar">
+              <div class="hardware-filter-group" id="hardware-filter-group" role="group" aria-label="Filter products by category" aria-describedby="discovery-help">
+                <button type="button" class="hardware-filter is-selected" data-filter-category="all" aria-pressed="true">All categories</button>
+                <button type="button" class="hardware-filter" data-filter-category="consumer-electronics" aria-pressed="false">Electronics</button>
+                <button type="button" class="hardware-filter" data-filter-category="appliances" aria-pressed="false">Appliances</button>
+                <button type="button" class="hardware-filter" data-filter-category="electrical-power" aria-pressed="false">Electrical</button>
+                <button type="button" class="hardware-filter" data-filter-category="computers" aria-pressed="false">Computers</button>
+                <button type="button" class="hardware-filter" data-filter-category="cars-mobility" aria-pressed="false">Cars &amp; EVs</button>
+                <button type="button" class="hardware-filter" data-filter-category="solar-energy" aria-pressed="false">Solar &amp; energy</button>
+              </div>
+              <label class="hardware-brand-filter" for="hardware-brand-filter">Brand
+                <select id="hardware-brand-filter" aria-label="Filter products by brand">
+                  <option value="all">All brands</option>
+                </select>
+              </label>
             </div>
-            <p class="hardware-discovery-help" id="discovery-help">These illustrative entries help you start an enquiry; product details and availability are confirmed directly.</p>
+            <div class="hardware-active-filter-row">
+              <div class="hardware-active-filters" id="hardware-active-filters" aria-label="Active filters" hidden></div>
+              <button class="hardware-filter-reset" id="hardware-reset-filters" type="button" hidden>Reset filters</button>
+            </div>
+            <p class="hardware-discovery-help" id="discovery-help">Search product names, models, item codes, brands or source descriptions. Source PDFs are not published; confirm current product details and availability on enquiry.</p>
           </div>
           <p class="hardware-results-status" id="catalogue-status" role="status" aria-live="polite"></p>
           <div class="hardware-product-grid" id="hardware-products" aria-live="polite"></div>
@@ -252,7 +264,12 @@
               <a class="button button-dark" href="#quote">Request a Quote <span aria-hidden="true">↗</span></a>
             </div>
           </div>
-          <p class="hardware-data-note">Catalogue cards are illustrative enquiry prompts, not confirmed stock. Specifications, prices, availability and supply terms must be confirmed. Shopping cart and checkout are not available.</p>
+          <nav class="hardware-pagination" id="hardware-pagination" aria-label="Product catalogue pages" hidden>
+            <button type="button" class="hardware-filter" id="hardware-page-previous">Previous</button>
+            <span id="hardware-page-status" aria-live="polite"></span>
+            <button type="button" class="hardware-filter" id="hardware-page-next">Next</button>
+          </nav>
+          <p class="hardware-data-note">Source price columns and undated bundle offers are not published as current selling prices. Confirm current prices, warranty terms, availability and supply details on enquiry. Category artwork is illustrative, and no cart or checkout is available.</p>
         </div>
       </section>
 

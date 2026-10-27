@@ -140,13 +140,22 @@ const products = [
     ["650N-66QL6-BD", "650W", "3.0 SOLAR PANEL BIFACIAL (36)"],
     ["720N-66HL5-BD", "720W", "Solar Panel Half Cut BIFACIAL(33)"],
     ["725N-66HL5-BD", "725W", "Solar Panel Half Cut BIFACIAL(33)"]
-  ].map(([model, rating, description]) => makeProduct("JINKO", {
+  ].map(([model, rating, description], index) => makeProduct("JINKO", {
     name: "Solar panel",
     model,
     category: "solar-panels",
     description,
     specifications: [rating, ...(description.includes("Half Cut") ? ["Half cut"] : []), description.match(/BIFACIAL ?\(\d+\)/i)?.[0] || "Bifacial"],
     warranty: "25 Years Linear Warranty + 10 Years Product Warranty",
+    image: index < 3
+      ? {
+        url: "../assets/catalogue/energy/products/jinko/image (2).webp",
+        alt: "Jinko solar panel product photograph; wattage-specific model is not identified."
+      }
+      : {
+        url: "../assets/catalogue/energy/products/jinko/images (3).jpeg",
+        alt: "Jinko solar panels product photograph; wattage-specific model is not identified."
+      },
     page: 1
   })),
 
@@ -155,6 +164,10 @@ const products = [
     model: "POWER CABINET",
     category: "energy-storage-components",
     description: "1*Power Cabinet (indoor, including 4*4kW Battery Charger, 1*36kVA Bypass module, 1*D.G. interface module, Integrated cable, installation auxiliary material package, and software etc)",
+    image: {
+      url: "../assets/catalogue/energy/products/huawei/POWER CABINET.jpeg",
+      alt: "Huawei Power-S cabinet with integrated power and battery modules."
+    },
     warranty: "5 Years",
     page: 1
   }),
@@ -163,6 +176,10 @@ const products = [
     model: "BATTERY CABINET",
     category: "energy-storage-components",
     description: "1*Battery Cabinet (indoor, including Integrated cable, installation auxiliary material package, and software etc)",
+    image: {
+      url: "../assets/catalogue/energy/products/huawei/BATTERY CABINET.jpeg",
+      alt: "Huawei battery cabinet with rack-mounted lithium battery modules."
+    },
     warranty: "5 Years",
     page: 1
   }),
@@ -172,6 +189,10 @@ const products = [
     category: "batteries-storage",
     description: "Energy Storage Module, 48V, 200Ah, 442mm (W) * 560mm (D) * 218mm (H)",
     specifications: ["10 kWh", "48V", "200Ah", "442mm (W) * 560mm (D) * 218mm (H)"],
+    image: {
+      url: "../assets/catalogue/energy/products/huawei/LITHIUM BATTERY.jpeg",
+      alt: "Huawei lithium battery modules; image is generic to the battery family."
+    },
     warranty: "5 Years",
     page: 1
   }),
@@ -181,6 +202,10 @@ const products = [
     category: "batteries-storage",
     description: "Energy Storage Module, 48V, 100Ah, 442mm (W) * 396mm (D) * 130mm (H)",
     specifications: ["5 kWh", "48V", "100Ah", "442mm (W) * 396mm (D) * 130mm (H)"],
+    image: {
+      url: "../assets/catalogue/energy/products/huawei/LITHIUM BATTERY.jpeg",
+      alt: "Huawei lithium battery modules; image is generic to the battery family."
+    },
     warranty: "5 Years",
     page: 1
   }),
@@ -199,6 +224,10 @@ const products = [
     category: "energy-storage-components",
     description: "PV Distribution Unit, PVDU, DC Input, 150A, Front Cabling, 1U, 8kW",
     specifications: ["DC Input", "150A", "1U", "8kW"],
+    image: {
+      url: "../assets/catalogue/energy/products/huawei/PVDU-8kW.jpg",
+      alt: "Huawei PVDU-8kW PV distribution unit."
+    },
     warranty: "5 Years",
     page: 1
   }),
@@ -208,6 +237,10 @@ const products = [
     category: "solar-panels",
     description: "Solar Module, 1U, 4kW, High Efficiency",
     specifications: ["1U", "4kW"],
+    image: {
+      url: "../assets/catalogue/energy/products/huawei/HIGH EFFICIECNY SOLAR Module.jpg",
+      alt: "Huawei high-efficiency solar module."
+    },
     warranty: "5 Years",
     page: 1
   }),
@@ -217,6 +250,10 @@ const products = [
     category: "solar-inverters",
     description: "Smart PV Controller, 150 KW",
     specifications: ["150 KW"],
+    image: {
+      url: "../assets/catalogue/energy/products/huawei/HUWINV100KTL-M2.png",
+      alt: "Huawei HUWINV100KTL-M2 smart PV controller."
+    },
     warranty: "5 Years",
     reviewNote: "The source associates model HUWINV100KTL-M2 with a 150 KW description; retain both as printed and verify before advising.",
     page: 1
@@ -227,6 +264,10 @@ const products = [
     category: "solar-inverters",
     description: "Smart PV Controller, 100 KW",
     specifications: ["100 KW"],
+    image: {
+      url: "../assets/catalogue/energy/products/huawei/HUWINV150K-MG0.jpg",
+      alt: "Huawei HUWINV150K-MG0 smart PV controller."
+    },
     warranty: "5 Years",
     reviewNote: "The source associates model HUWINV150K-MG0 with a 100 KW description; retain both as printed and verify before advising.",
     page: 1
@@ -242,6 +283,18 @@ const products = [
     category: "energy-storage-systems",
     description,
     specifications: [capacity],
+    ...(model === "LUNA 2000-97KWH" ? {
+      image: {
+        url: "../assets/catalogue/energy/products/huawei/LUNA 2000-97KWH.webp",
+        alt: "Huawei LUNA 2000 97 kWh battery energy storage system."
+      }
+    } : {}),
+    ...(model === "LUNA 2000-215KWH" ? {
+      image: {
+        url: "../assets/catalogue/energy/products/huawei/LUNA 2000-215KWH.webp",
+        alt: "Huawei LUNA 2000 215 kWh battery energy storage system."
+      }
+    } : {}),
     warranty: "5 Years",
     page: 1
   })),
@@ -250,6 +303,10 @@ const products = [
     model: "INSTALLATION TRAY",
     category: "energy-storage-components",
     description: "LUNA BESS BATTERY INSTALLATION TRAY",
+    image: {
+      url: "../assets/catalogue/energy/products/huawei/INSTALLATION TRAY.webp",
+      alt: "Installation tray for a Huawei LUNA battery energy storage system."
+    },
     page: 1
   }),
   makeProduct("HUAWEI", {
@@ -276,6 +333,10 @@ const products = [
     category: "energy-storage-components",
     description: "Two Wire 4-20mA, Measuring Range 2m, Cable Length 25m, With Flange Plate",
     specifications: ["Two Wire 4-20mA", "Measuring Range 2m", "Cable Length 25m", "With Flange Plate"],
+    image: {
+      url: "../assets/catalogue/energy/products/huawei/LQUID LEVEL SENSOR.webp",
+      alt: "Huawei liquid-level sensor probe with cable."
+    },
     warranty: "5 Years",
     page: 1
   }),
@@ -293,6 +354,10 @@ const products = [
     category: "power-optimizers",
     description: "Smart Optimizer 1300W",
     specifications: ["1300W"],
+    image: {
+      url: "../assets/catalogue/energy/products/huawei/MERC-1300WP.jpg",
+      alt: "Huawei MERC-1300WP smart power optimizer."
+    },
     warranty: "5 Years",
     page: 1
   }),
@@ -301,6 +366,10 @@ const products = [
     model: "DTSU666-HW",
     category: "power-meters",
     description: "SMART POWER METER DTSU666-HW",
+    image: {
+      url: "../assets/catalogue/energy/products/huawei/DTSU666-HW.jpg",
+      alt: "Huawei DTSU666-HW smart power meter."
+    },
     page: 1
   }),
   makeProduct("HUAWEI", {
@@ -309,6 +378,10 @@ const products = [
     category: "monitoring-communications",
     description: "Smart Module/data logger 1000A",
     specifications: ["1000A"],
+    image: {
+      url: "../assets/catalogue/energy/products/huawei/HUWSMARTMODUL1000A01.webp",
+      alt: "Huawei SmartModule for PV system monitoring."
+    },
     page: 1
   }),
   makeProduct("HUAWEI", {

@@ -9,6 +9,7 @@ const hardwareCategories = Object.freeze({
 
 const searchInput = document.querySelector("#hardware-search");
 const clearSearchButton = document.querySelector("#clear-search");
+const brandFilter = document.querySelector("#hardware-brand-filter");
 const productGrid = document.querySelector("#hardware-products");
 const catalogueEmpty = document.querySelector("#catalogue-empty");
 const catalogueStatus = document.querySelector("#catalogue-status");
@@ -16,6 +17,12 @@ const catalogueStateLabel = document.querySelector("#catalogue-state-label");
 const catalogueStateTitle = document.querySelector("#catalogue-state-title");
 const catalogueStateCopy = document.querySelector("#catalogue-state-copy");
 const categoryFilters = document.querySelectorAll("[data-filter-category]");
+const activeFilters = document.querySelector("#hardware-active-filters");
+const resetFiltersButton = document.querySelector("#hardware-reset-filters");
+const pagination = document.querySelector("#hardware-pagination");
+const previousPageButton = document.querySelector("#hardware-page-previous");
+const nextPageButton = document.querySelector("#hardware-page-next");
+const pageStatus = document.querySelector("#hardware-page-status");
 const quoteForm = document.querySelector("#hardware-quote-form");
 const productInput = document.querySelector("#quote-product");
 const quoteCategory = document.querySelector("#quote-category");
@@ -23,6 +30,9 @@ const quoteCategory = document.querySelector("#quote-category");
 let catalogueProducts = [];
 let catalogueState = "ready";
 let selectedCategory = "all";
+let selectedBrand = "all";
+let currentPage = 1;
+const pageSize = 12;
 
 function setCatalogueMessage(label, title, copy) {
   catalogueStateLabel.textContent = label;
@@ -42,9 +52,46 @@ function matchesProductSearch(product, query) {
     product.model,
     product.sku,
     product.brand,
+    product.sourceCategory,
     hardwareCategories[product.category]
   ].filter(Boolean).join(" ").toLocaleLowerCase();
   return searchable.includes(query);
+}
+
+function updateBrandOptions() {
+  const brands = [...new Set(catalogueProducts.map((product) => product.brand).filter(Boolean))]
+    .sort((left, right) => left.localeCompare(right));
+  const allBrandsOption = document.createElement("option");
+  allBrandsOption.value = "all";
+  allBrandsOption.textContent = "All brands";
+  brandFilter.replaceChildren(allBrandsOption);
+  brands.forEach((brand) => {
+    const option = document.createElement("option");
+    option.value = brand;
+    option.textContent = brand;
+    brandFilter.appendChild(option);
+  });
+  if (!brands.includes(selectedBrand)) selectedBrand = "all";
+  brandFilter.value = selectedBrand;
+}
+
+function renderActiveFilters(query) {
+  const filters = [];
+  if (query) filters.push(`Search: ${query}`);
+  if (selectedCategory !== "all") filters.push(`Category: ${hardwareCategories[selectedCategory]}`);
+  if (selectedBrand !== "all") filters.push(`Brand: ${selectedBrand}`);
+  activeFilters.replaceChildren();
+  filters.forEach((filter) => appendText(activeFilters, "span", "hardware-active-filter", filter));
+  activeFilters.hidden = filters.length === 0;
+  resetFiltersButton.hidden = filters.length === 0;
+}
+
+function renderPagination(resultCount) {
+  const pageCount = Math.ceil(resultCount / pageSize);
+  pagination.hidden = pageCount < 2;
+  previousPageButton.disabled = currentPage <= 1;
+  nextPageButton.disabled = currentPage >= pageCount;
+  pageStatus.textContent = `Page ${currentPage} of ${pageCount}`;
 }
 
 function safeHttpUrl(value) {
@@ -94,9 +141,16 @@ function createProductCard(product) {
   appendText(body, "h3", "hardware-product-card__title", product.name);
   if (product.description) appendText(body, "p", "hardware-product-card__description", product.description);
 
-  const brandModel = [product.brand, product.model].filter(Boolean).join(" · ");
+  const brandModel = [
+    product.brand && !product.name.includes(product.brand) ? product.brand : "",
+    product.model && !product.name.includes(product.model) ? product.model : ""
+  ].filter(Boolean).join(" · ");
   if (brandModel) appendText(body, "p", "hardware-product-card__meta", brandModel);
-  if (product.sku) appendText(body, "p", "hardware-product-card__meta", `SKU: ${product.sku}`);
+  if (product.sku && product.sku !== product.model) appendText(body, "p", "hardware-product-card__meta", `Item code: ${product.sku}`);
+  if (product.warranty) appendText(body, "p", "hardware-product-card__meta", `Source-listed warranty: ${product.warranty}`);
+  if (product.source?.document && Number.isInteger(product.source.page)) {
+    appendText(body, "p", "hardware-product-card__meta", `Source: ${product.source.document} · page ${product.source.page}`);
+  }
   if (product.price && Number.isFinite(product.price.amount)) {
     let formattedPrice;
     try {
@@ -143,8 +197,14 @@ function createProductCard(product) {
 function renderCatalogue() {
   const query = searchInput.value.trim().toLocaleLowerCase();
   const filteredProducts = catalogueProducts.filter((product) =>
-    matchesProductCategory(product, selectedCategory) && matchesProductSearch(product, query)
+    matchesProductCategory(product, selectedCategory)
+    && (selectedBrand === "all" || product.brand === selectedBrand)
+    && matchesProductSearch(product, query)
   );
+  const pageCount = Math.max(1, Math.ceil(filteredProducts.length / pageSize));
+  currentPage = Math.min(Math.max(1, currentPage), pageCount);
+  const startIndex = (currentPage - 1) * pageSize;
+  const pageProducts = filteredProducts.slice(startIndex, startIndex + pageSize);
   const availableCategories = new Set(catalogueProducts.map((product) => product.category));
   document.querySelector("#discovery-help").hidden = catalogueProducts.length > 0;
   categoryFilters.forEach((control) => {
@@ -161,9 +221,12 @@ function renderCatalogue() {
   catalogueEmpty.hidden = true;
   catalogueStatus.textContent = "";
   clearSearchButton.disabled = !searchInput.value;
+  renderActiveFilters(query);
+  renderPagination(filteredProducts.length);
 
   if (catalogueState === "error") {
     catalogueEmpty.hidden = false;
+    pagination.hidden = true;
     catalogueStatus.textContent = "The product catalogue is temporarily unavailable.";
     setCatalogueMessage("Catalogue unavailable", "We could not load product information.", "Please try again later or enquire about the equipment you need.");
     return;
@@ -171,6 +234,7 @@ function renderCatalogue() {
 
   if (!filteredProducts.length) {
     catalogueEmpty.hidden = false;
+    pagination.hidden = true;
     catalogueStatus.textContent = catalogueProducts.length
       ? "No products match your search and category."
       : "There are no catalogue entries to display.";
@@ -182,8 +246,9 @@ function renderCatalogue() {
     return;
   }
 
-  filteredProducts.forEach((product) => productGrid.appendChild(createProductCard(product)));
-  catalogueStatus.textContent = `${filteredProducts.length} ${filteredProducts.length === 1 ? "product" : "products"} shown.`;
+  pageProducts.forEach((product) => productGrid.appendChild(createProductCard(product)));
+  const endIndex = Math.min(startIndex + pageSize, filteredProducts.length);
+  catalogueStatus.textContent = `Showing ${startIndex + 1}–${endIndex} of ${filteredProducts.length} ${filteredProducts.length === 1 ? "product" : "products"}.`;
 }
 
 function validateCatalogueProduct(product) {
@@ -226,14 +291,18 @@ function validateCatalogueProduct(product) {
 async function loadCatalogue() {
   const adapter = window.ElectronyHardwareCatalogue;
   if (!adapter || typeof adapter.load !== "function") {
-    catalogueProducts = (window.ElectronyHardwareProducts || []).map((product) => ({
+    catalogueProducts = [
+      ...(window.ElectronyHardwareProducts || []),
+      ...(window.ElectronyHardwareSourceProducts || [])
+    ].map((product) => ({
       ...product,
-      illustrative: true
+      illustrative: product.illustrative ?? !product.source
     }));
+    updateBrandOptions();
     setCatalogueMessage(
-      "Illustrative enquiry catalogue",
+      "Source-documented product catalogue",
       "Start with a product category.",
-      "These examples are enquiry prompts, not confirmed stock. Ask us to confirm product details and availability."
+      "Supplier-PDF listings are shown for enquiry; confirm current product details, pricing, warranty and availability directly."
     );
     renderCatalogue();
     return;
@@ -245,6 +314,7 @@ async function loadCatalogue() {
       throw new Error("The catalogue adapter returned an invalid product list.");
     }
     catalogueProducts = result.products;
+    updateBrandOptions();
     renderCatalogue();
   } catch {
     catalogueState = "error";
@@ -265,6 +335,7 @@ function updateEnergyDestination() {
 categoryFilters.forEach((control) => {
   control.addEventListener("click", () => {
     selectedCategory = control.dataset.filterCategory;
+    currentPage = 1;
     renderCatalogue();
     document.querySelector("#catalogue").scrollIntoView({
       behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth",
@@ -273,11 +344,37 @@ categoryFilters.forEach((control) => {
   });
 });
 
-searchInput.addEventListener("input", renderCatalogue);
+searchInput.addEventListener("input", () => {
+  currentPage = 1;
+  renderCatalogue();
+});
 clearSearchButton.addEventListener("click", () => {
   searchInput.value = "";
+  currentPage = 1;
   renderCatalogue();
   searchInput.focus();
+});
+brandFilter.addEventListener("change", () => {
+  selectedBrand = brandFilter.value || "all";
+  currentPage = 1;
+  renderCatalogue();
+});
+resetFiltersButton.addEventListener("click", () => {
+  searchInput.value = "";
+  selectedCategory = "all";
+  selectedBrand = "all";
+  currentPage = 1;
+  brandFilter.value = "all";
+  renderCatalogue();
+  searchInput.focus();
+});
+previousPageButton.addEventListener("click", () => {
+  currentPage -= 1;
+  renderCatalogue();
+});
+nextPageButton.addEventListener("click", () => {
+  currentPage += 1;
+  renderCatalogue();
 });
 
 productGrid.addEventListener("click", (event) => {

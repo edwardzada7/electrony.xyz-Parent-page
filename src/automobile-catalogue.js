@@ -464,7 +464,16 @@ const automobileVehicles = [
     statusLabel: "Confirm current price and availability",
     imageAlt: "Dongfeng Z9 pickup pictured in the Fouani Nigeria pickup brochure",
     images: ["../assets/automobile/vehicles/dongfeng-z9/01-exterior.jpg"],
-    videos: [],
+    videos: [
+      {
+        src: "../assets/automobile/vehicles/dongfeng-z9/VID-20261027-WA0038.mp4",
+        title: "Vehicle video"
+      },
+      {
+        src: "../assets/automobile/vehicles/dongfeng-z9/VID-20261027-WA0039.mp4",
+        title: "Vehicle video"
+      }
+    ],
     youtubeVideo: null,
     headlineSpecifications: ["Commercial version", "2.0 L petrol engine · 400 Nm", "8-speed automatic gearbox", "865 kg payload"],
     specificationGroups: [
@@ -482,7 +491,40 @@ const legacyShowcaseVehicles = [
     id: "rox-01",
     brand: "ROX Motor",
     name: "ROX 01 SUV",
-    images: ["../assets/automobile/vehicles/rox-01.jpg"],
+    galleryTitle: "ROX Motor media",
+    images: [
+      "../assets/automobile/vehicles/rox-01.jpg",
+      "../assets/automobile/vehicles/roxmotor1/IMG-20260918-WA0049.jpg",
+      "../assets/automobile/vehicles/roxmotor1/IMG-20260918-WA0050.jpg",
+      "../assets/automobile/vehicles/roxmotor1/IMG-20260918-WA0052.jpg",
+      "../assets/automobile/vehicles/roxmotor1/IMG-20260918-WA0056.jpg",
+      "../assets/automobile/vehicles/roxmotor1/IMG-20260918-WA0060.jpg"
+    ],
+    imageAlts: [
+      "Existing ROX 01 SUV showcase photograph.",
+      "ROX Motor SUV shown from the side.",
+      "ROX Motor SUV shown from a front three-quarter angle.",
+      "ROX Motor SUV front passenger-side cabin and center console.",
+      "ROX Motor SUV steering wheel and driver display.",
+      "ROX Motor SUV front lighting detail."
+    ],
+    videos: [
+      {
+        src: "../assets/automobile/vehicles/roxmotor1/VID-20260918-WA0048.mp4",
+        title: "ROX Motor video 1",
+        poster: "../assets/automobile/vehicles/roxmotor1/IMG-20260918-WA0049.jpg"
+      },
+      {
+        src: "../assets/automobile/vehicles/roxmotor1/VID-20260918-WA0054.mp4",
+        title: "ROX Motor video 2",
+        poster: "../assets/automobile/vehicles/roxmotor1/IMG-20260918-WA0049.jpg"
+      },
+      {
+        src: "../assets/automobile/vehicles/roxmotor1/VID-20260918-WA0063.mp4",
+        title: "ROX Motor video 3",
+        poster: "../assets/automobile/vehicles/roxmotor1/IMG-20260918-WA0049.jpg"
+      }
+    ],
     fallbackImage: "../assets/automobile/vehicles/rox-01.svg"
   },
   {

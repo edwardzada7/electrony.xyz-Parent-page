@@ -25,6 +25,7 @@ function normalizeBrandName(value) {
 }
 
 function vehicleAlt(vehicle, index = 0) {
+  if (vehicle.imageAlts?.[index]) return vehicle.imageAlts[index];
   if (vehicle.imageAlt && index === 0) return vehicle.imageAlt;
   if (!vehicle.source) return `${vehicle.brand} ${vehicle.name} image in the Electrony Automobile selection`;
   return `${vehicle.name} interior detail from the Fouani Nigeria brochure`;
@@ -634,7 +635,8 @@ function renderGallery() {
   else image.removeAttribute("src");
   image.onload = () => window.requestAnimationFrame(() => image.classList.remove("is-changing"));
   image.hidden = !source;
-  dialog.querySelector("[data-gallery-title]").textContent = vehicle.name;
+  const mediaTitle = vehicle.galleryTitle || vehicle.name;
+  dialog.querySelector("[data-gallery-title]").textContent = mediaTitle;
   previous.hidden = !multiple;
   next.hidden = !multiple;
   if (lightboxPrevious) lightboxPrevious.hidden = !multiple;
@@ -662,12 +664,13 @@ function renderGallery() {
     const youtubeVideo = configuredYouTubeVideo(vehicle.youtubeVideo, `${vehicle.name} video`);
     videos.hidden = vehicle.videos.length === 0 && !youtubeVideo;
     videoList.innerHTML = vehicle.videos.map((video, index) => {
-      const title = video.title || `${vehicle.name} video ${index + 1}`;
-      const poster = vehicle.images[0] ? ` poster="${escapeHtml(vehicle.images[0])}"` : "";
+      const title = video.title || `${mediaTitle} video ${index + 1}`;
+      const posterImage = video.poster || vehicle.images[0];
+      const poster = posterImage ? ` poster="${escapeHtml(posterImage)}"` : "";
       return `
         <article class="automobile-gallery__video">
           <h4>${escapeHtml(title)}</h4>
-          <video controls preload="none" aria-label="${escapeHtml(`${vehicle.name}: ${title}`)}"${poster}>
+          <video controls playsinline preload="none" aria-label="${escapeHtml(`${mediaTitle}: ${title}`)}"${poster}>
             <source src="${escapeHtml(video.src)}" type="video/mp4">
           </video>
           <p class="automobile-gallery__video-error" role="status" hidden>Video unavailable. Please try again later or enquire about this vehicle.</p>
