@@ -1,0 +1,34 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="theme-color" content="#111110">
+    <title>Authorize application | Electrony Account</title>
+    <link rel="icon" href="/assets/favicons/electrony/favicon.svg" type="image/svg+xml">
+    <link rel="stylesheet" href="/styles/tokens.css">
+    <link rel="stylesheet" href="/styles/accounts.css">
+  </head>
+  <body>
+    <a class="skip-link" href="#main">Skip to content</a>
+    <main class="consent-shell" id="main">
+      <section class="consent-card" aria-live="polite">
+        <img class="consent-logo" src="/assets/brand/electrony-xyz-logo%20.png" alt="Electrony.xyz">
+        <div id="consent-status" class="status-banner" role="status">Checking authorization request...</div>
+        <div id="consent-content" hidden>
+          <p class="accounts-kicker">Authorization request</p>
+          <h1><span id="client-name">Application</span> wants to use your Electrony account</h1>
+          <p class="consent-copy">This registered application is requesting the following information:</p>
+          <ul id="scope-list" class="scope-list"></ul>
+          <div class="consent-actions">
+            <button id="deny-button" class="button button-secondary" type="button">Deny</button>
+            <button id="approve-button" class="button button-primary" type="button">Allow</button>
+          </div>
+        </div>
+      </section>
+    </main>
+    <script src="/src/config.js" defer></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js" defer></script>
+    <script src="/src/accounts-app.js" defer></script>
+  </body>
+</html>

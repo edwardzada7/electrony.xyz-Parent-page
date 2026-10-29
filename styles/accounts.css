@@ -1,0 +1,50 @@
+* { box-sizing: border-box; }
+html { background: var(--color-ink); }
+body { margin: 0; min-width: 20rem; color: var(--color-ink); font-family: var(--font-body); }
+.skip-link { position: fixed; left: 1rem; top: -4rem; z-index: 20; padding: .75rem 1rem; background: var(--color-white); color: var(--color-ink); }
+.skip-link:focus { top: 1rem; }
+.accounts-shell { min-height: 100dvh; display: grid; grid-template-columns: minmax(0, 1fr); background: var(--color-paper); }
+.accounts-brand { display: none; }
+.accounts-panel { min-height: 100dvh; display: grid; align-items: start; padding: 1rem; background: var(--color-white); }
+.accounts-panel-inner { width: min(100%, 28rem); margin: 0 auto; padding-top: clamp(2rem, 8vh, 6rem); }
+.mobile-logo { margin-bottom: 2rem; }
+.mobile-logo img, .accounts-logo img, .consent-logo { width: min(11rem, 55vw); height: auto; }
+.accounts-kicker { margin: 0 0 1rem; color: #a92b2b; font: 500 .75rem/1 var(--font-label); text-transform: uppercase; letter-spacing: .12em; }
+.view-tabs { display: grid; grid-template-columns: 1fr 1fr; border-bottom: 1px solid var(--color-border); margin-bottom: 1.75rem; }
+.view-tab { border: 0; border-bottom: 2px solid transparent; padding: 1rem .25rem; background: transparent; color: var(--color-muted); cursor: pointer; font-weight: 700; }
+.view-tab.is-active { border-bottom-color: var(--color-ink); color: var(--color-ink); }
+.field { margin-bottom: 1rem; }
+.field label { display: block; margin-bottom: .45rem; font-size: .875rem; font-weight: 700; }
+.field input { width: 100%; min-height: 3.25rem; border: 1px solid var(--color-gray-300); border-radius: .25rem; background: var(--color-white); padding: .75rem .9rem; color: var(--color-ink); font: 400 1rem var(--font-body); }
+.field input:focus { outline: 3px solid var(--color-focus); outline-offset: 1px; border-color: var(--color-ink); }
+.button { width: 100%; min-height: 3.25rem; border-radius: .25rem; border: 1px solid var(--color-ink); padding: .75rem 1rem; cursor: pointer; font: 700 .875rem var(--font-body); }
+.button:disabled { cursor: wait; opacity: .55; }
+.button-primary { margin-top: .25rem; background: var(--color-ink); color: var(--color-white); }
+.button-secondary { background: var(--color-white); color: var(--color-ink); }
+.text-button { border: 0; margin-top: 1rem; padding: .35rem 0; background: transparent; color: var(--color-ink); cursor: pointer; text-decoration: underline; text-underline-offset: .2em; }
+.status-banner { margin-bottom: 1rem; border-left: 3px solid var(--color-gray-500); background: var(--color-surface); padding: .85rem 1rem; font-size: .875rem; }
+.status-banner[data-tone="error"] { border-color: #b42318; background: #fff1ef; color: #791b15; }
+.status-banner[data-tone="success"] { border-color: #247a4b; background: #edf8f1; }
+.status-banner[data-tone="warning"] { border-color: #a66a00; background: #fff8e8; }
+[hidden] { display: none !important; }
+#recovery-form h2, #update-form h2 { margin: 0 0 .75rem; font-size: 2rem; }
+.back-button { margin-bottom: 1.25rem; }
+.consent-shell { min-height: 100dvh; display: grid; place-items: center; padding: 1rem; background: var(--color-ink); }
+.consent-card { width: min(100%, 32rem); border-radius: .5rem; background: var(--color-white); padding: clamp(1.25rem, 6vw, 2.5rem); }
+.consent-card h1 { margin: 0 0 1rem; font-size: clamp(1.75rem, 7vw, 2.75rem); line-height: 1.05; }
+.consent-logo { margin-bottom: clamp(2rem, 8vh, 4rem); }
+.consent-copy { color: var(--color-muted); }
+.scope-list { margin: 1rem 0 2rem; padding-left: 1.25rem; }
+.scope-list li { margin: .5rem 0; }
+.consent-actions { display: grid; grid-template-columns: 1fr 1fr; gap: .75rem; }
+@media (min-width: 48rem) {
+  .accounts-shell { grid-template-columns: minmax(18rem, 44%) minmax(0, 56%); }
+  .accounts-brand { display: flex; min-height: 100dvh; flex-direction: column; justify-content: space-between; padding: clamp(2rem, 5vw, 5rem); background: var(--color-ink); color: var(--color-white); }
+  .accounts-logo { align-self: flex-start; }
+  .accounts-logo img { filter: invert(1); }
+  .accounts-brand h1 { max-width: 12ch; margin: auto 0 1rem; font-size: clamp(3rem, 6vw, 6.5rem); line-height: .95; letter-spacing: -.05em; }
+  .accounts-brand-copy { max-width: 30rem; color: var(--color-gray-300); }
+  .accounts-panel { align-items: center; }
+  .accounts-panel-inner { padding-top: 0; }
+  .mobile-logo { display: none; }
+}

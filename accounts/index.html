@@ -1,0 +1,89 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="theme-color" content="#111110">
+    <meta name="description" content="Sign in or create your Electrony account.">
+    <link rel="canonical" href="https://accounts.electrony.xyz/">
+    <link rel="icon" href="/assets/favicons/electrony/favicon.svg" type="image/svg+xml">
+    <link rel="apple-touch-icon" href="/assets/favicons/electrony/apple-touch-icon.png">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/styles/tokens.css">
+    <link rel="stylesheet" href="/styles/accounts.css">
+    <title>Electrony Account</title>
+  </head>
+  <body>
+    <a class="skip-link" href="#main">Skip to content</a>
+    <main class="accounts-shell" id="main">
+      <section class="accounts-brand" aria-label="Electrony">
+        <a class="accounts-logo" href="https://electrony.xyz/" aria-label="Electrony home">
+          <img src="/assets/brand/electrony-xyz-logo%20.png" alt="Electrony.xyz">
+        </a>
+        <p class="accounts-kicker">Electrony identity</p>
+        <h1>One account.<br>Built for what's next.</h1>
+        <p class="accounts-brand-copy">Use your Electrony account to access registered Electrony services.</p>
+      </section>
+
+      <section class="accounts-panel" aria-live="polite">
+        <div class="accounts-panel-inner">
+          <div class="mobile-logo">
+            <img src="/assets/brand/electrony-xyz-logo%20.png" alt="Electrony.xyz">
+          </div>
+          <div id="app-status" class="status-banner" role="status" hidden></div>
+
+          <nav class="view-tabs" aria-label="Account views">
+            <button type="button" data-view="signin" class="view-tab is-active">Sign in</button>
+            <button type="button" data-view="signup" class="view-tab">Create account</button>
+          </nav>
+
+          <form id="auth-form" novalidate>
+            <div id="name-field" class="field" hidden>
+              <label for="full-name">Full name</label>
+              <input id="full-name" name="fullName" autocomplete="name" maxlength="120">
+            </div>
+            <div class="field">
+              <label for="email">Email address</label>
+              <input id="email" name="email" type="email" autocomplete="email" inputmode="email" required>
+            </div>
+            <div class="field" id="password-field">
+              <label for="password">Password</label>
+              <input id="password" name="password" type="password" autocomplete="current-password" minlength="8" required>
+            </div>
+            <button id="submit-button" class="button button-primary" type="submit">Sign in</button>
+          </form>
+
+          <button id="recover-button" class="text-button" type="button">Forgot your password?</button>
+          <button id="resend-button" class="text-button" type="button" hidden>Resend confirmation email</button>
+          <button id="signout-button" class="button button-secondary" type="button" hidden>Sign out</button>
+
+          <form id="recovery-form" hidden novalidate>
+            <button class="text-button back-button" type="button" data-view="signin">← Back to sign in</button>
+            <h2>Reset your password</h2>
+            <p>Enter your email address and we’ll send you a secure reset link.</p>
+            <div class="field">
+              <label for="recovery-email">Email address</label>
+              <input id="recovery-email" name="email" type="email" autocomplete="email" required>
+            </div>
+            <button class="button button-primary" type="submit">Send reset link</button>
+          </form>
+
+          <form id="update-form" hidden novalidate>
+            <h2>Choose a new password</h2>
+            <div class="field">
+              <label for="new-password">New password</label>
+              <input id="new-password" name="password" type="password" autocomplete="new-password" minlength="8" required>
+            </div>
+            <button class="button button-primary" type="submit">Update password</button>
+          </form>
+        </div>
+      </section>
+    </main>
+
+    <script src="/src/config.js" defer></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js" defer></script>
+    <script src="/src/accounts-app.js" defer></script>
+  </body>
+</html>

@@ -9,7 +9,8 @@ const publicOrigins = Object.freeze({
   automobile: "https://auto.electrony.xyz",
   energy: "https://energy.electrony.xyz",
   hardware: "https://hardware.electrony.xyz",
-  bills: "https://bills.electrony.xyz"
+  bills: "https://bills.electrony.xyz",
+  accounts: "https://accounts.electrony.xyz"
 });
 const billsFrontendFiles = [
   "assets/brand/electrony-e-logo.png",
@@ -28,7 +29,7 @@ const billsFrontendFiles = [
   "styles/site.css",
   "styles/tokens.css"
 ];
-const sites = new Set(["parent", "automobile", "energy", "hardware", "bills"]);
+const sites = new Set(["parent", "automobile", "energy", "hardware", "bills", "accounts"]);
 
 function copyPublicDirectory(directory) {
   const sourceDirectory = path.join(projectRoot, directory);
@@ -121,6 +122,77 @@ function copyBillsFrontend() {
   fs.writeFileSync(path.join(outputDirectory, "index.html"), prepareBillsEntrypoint());
 }
 
+function prepareIdentityConfig(config) {
+  const projectUrl = String(process.env.ELECTRONY_IDENTITY_SUPABASE_URL || "").trim();
+  const publishableKey = String(process.env.ELECTRONY_IDENTITY_SUPABASE_PUBLISHABLE_KEY || "").trim();
+
+  const nullUrl = "identityProjectUrl: null";
+  const nullKey = "identityPublishableKey: null";
+  if (!config.includes(nullUrl) || !config.includes(nullKey)) {
+    throw new Error("Unable to locate identity placeholders in src/config.js.");
+  }
+
+  if (!projectUrl && !publishableKey) {
+    return config.replace(nullUrl, "identityProjectUrl: null").replace(nullKey, "identityPublishableKey: null");
+  }
+  if (!projectUrl || !publishableKey) {
+    throw new Error("Set both ELECTRONY_IDENTITY_SUPABASE_URL and ELECTRONY_IDENTITY_SUPABASE_PUBLISHABLE_KEY.");
+  }
+
+  let url;
+  try {
+    url = new URL(projectUrl);
+  } catch (error) {
+    throw new Error("ELECTRONY_IDENTITY_SUPABASE_URL must be an absolute HTTPS origin.");
+  }
+  if (url.protocol !== "https:" || url.pathname !== "/" || url.search || url.hash || url.username || url.password) {
+    throw new Error("ELECTRONY_IDENTITY_SUPABASE_URL must be an HTTPS origin with no path, credentials, query, or fragment.");
+  }
+  if (publishableKey.includes("replace_with") || publishableKey.length < 20) {
+    throw new Error("ELECTRONY_IDENTITY_SUPABASE_PUBLISHABLE_KEY is missing or looks like a placeholder.");
+  }
+  if (/service_role|secret_key/i.test(publishableKey)) {
+    throw new Error("Refusing to place a service-role or secret key in the browser build.");
+  }
+
+  return config.replace(nullUrl, `identityProjectUrl: ${JSON.stringify(url.href.replace(/\/+$/, ""))}`)
+    .replace(nullKey, `identityPublishableKey: ${JSON.stringify(publishableKey)}`);
+}
+
+function copyAccountsFrontend() {
+  const files = [
+    "assets/brand/electrony-e-logo.png",
+    "assets/brand/electrony-xyz-logo .png",
+    "assets/favicons/electrony/favicon.ico",
+    "assets/favicons/electrony/favicon.svg",
+    "assets/favicons/electrony/favicon-16x16.png",
+    "assets/favicons/electrony/favicon-32x32.png",
+    "assets/favicons/electrony/apple-touch-icon.png",
+    "src/config.js",
+    "src/accounts-app.js",
+    "styles/tokens.css",
+    "styles/accounts.css"
+  ];
+  for (const file of files) {
+    const source = path.join(projectRoot, file);
+    const destination = path.join(outputDirectory, file);
+    fs.mkdirSync(path.dirname(destination), { recursive: true });
+    fs.copyFileSync(source, destination);
+  }
+
+  const html = fs.readFileSync(path.join(projectRoot, "accounts", "index.html"), "utf8");
+  fs.writeFileSync(path.join(outputDirectory, "index.html"), html.replaceAll("../../", "/"));
+
+  const consentSource = path.join(projectRoot, "accounts", "oauth", "consent", "index.html");
+  if (fs.existsSync(consentSource)) {
+    fs.mkdirSync(path.join(outputDirectory, "oauth", "consent"), { recursive: true });
+    fs.writeFileSync(
+      path.join(outputDirectory, "oauth", "consent", "index.html"),
+      fs.readFileSync(consentSource, "utf8").replaceAll("../../../../", "/").replaceAll("../../../", "/")
+    );
+  }
+}
+
 function writeCrawlFiles(site) {
   const origin = publicOrigins[site];
   if (!origin) throw new Error(`No public origin is configured for the ${site} site.`);
@@ -148,6 +220,8 @@ function buildStaticSite(site) {
 
   if (site === "bills") {
     copyBillsFrontend();
+  } else if (site === "accounts") {
+    copyAccountsFrontend();
   } else {
     for (const directory of publicDirectories) {
       copyPublicDirectory(directory);
@@ -178,6 +252,9 @@ function buildStaticSite(site) {
     throw new Error("Unable to locate the local Bills API setting in src/config.js.");
   }
   config = config.replace(localApiSetting, `billsApiBaseUrl: ${apiUrl ? JSON.stringify(apiUrl) : "null"}`);
+  if (site === "accounts") {
+    config = prepareIdentityConfig(config);
+  }
   fs.writeFileSync(configPath, config);
 }
 

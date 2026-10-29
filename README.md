@@ -33,6 +33,7 @@ The parent site and the Automobile, Energy, Hardware, and Bills projects use thi
 | Energy | `npm run build:vercel -- --site energy` | `dist` |
 | Hardware | `npm run build:vercel -- --site hardware` | `dist` |
 | Bills purchasing app | `npm run build:vercel -- --site bills` | `dist` |
+| Electrony Account | `npm run build:vercel -- --site accounts` | `dist` |
 
 Parent, Automobile, Energy, and Hardware builds copy the existing pages and shared runtime assets into `dist`, and select the requested page as the deployment's `/` entry point. Non-runtime Markdown documents, PDFs, hidden files, and `*.test.js` files are excluded. The Automobile brochure and the Energy source PDF are private source material and are not published. A new build does not remove files from an older deployment: after redeploying, verify that direct requests for both source-PDF paths return `404`. The Bills build instead uses `bills/app/index.html` as `/` and copies only the CSS, JavaScript, and brand images needed by that frontend. The parent site's Bills marketing page and app remain available at `/bills/` and `/bills/app/`.
 
@@ -43,6 +44,71 @@ Each static site build writes its own `robots.txt` and `sitemap.xml` for its con
 The `buildCommand` is intentionally project-specific and is not fixed in `vercel.json`; configure the exact command above in each Vercel project's **Build & Development Settings**. Keep the Output Directory as `dist`. See [the Bills API deployment notes](./bills-api/README.md#vercel-frontend-and-railway-api) for CORS and Railway configuration. Vercel project Root Directory, framework, build command, environment variables, and custom domains are dashboard settings and must be checked or updated there.
 
 Product status labels are maintained in `src/products.js`; product destinations are maintained in `src/config.js`.
+
+## Electrony Account
+
+The independent Electrony Account frontend is available in `accounts/` and is built with:
+
+```text
+npm run build:vercel -- --site accounts
+```
+
+The standalone Vercel deployment uses `dist` as its output directory and serves the sign-in page at `/` and the registered OAuth consent UI at `/oauth/consent/`. This is a browser-only frontend using Supabase Auth. No service-role key or other server secret belongs in this repository or in Vercel's browser build variables.
+
+### Identity project configuration
+
+Create or confirm a dedicated Electrony identity Supabase project; do not copy credentials from ElectronyOS, iStylist, or Bills. Configure these public build variables in the `accounts.electrony.xyz` Vercel project:
+
+- `ELECTRONY_IDENTITY_SUPABASE_URL`: the identity project's HTTPS Supabase project URL.
+- `ELECTRONY_IDENTITY_SUPABASE_PUBLISHABLE_KEY`: the identity project's public publishable key only.
+
+Both variables are optional in the first UI-only build. If either real value is missing, the page deliberately displays configuration unavailable and does not attempt authentication. The build rejects placeholder publishable keys, missing pairs, non-HTTPS project origins, credential-bearing URLs, and strings that appear to be service-role or secret keys.
+
+In the Supabase identity project dashboard:
+
+1. Enable Email provider and choose email confirmation/password settings that match the deployed redirect URLs.
+2. Keep Google and LinkedIn social providers disabled. The account UI intentionally does not show either provider button.
+3. Under Authentication > URL Configuration, set **Site URL** to `https://accounts.electrony.xyz/`.
+4. Add these exact HTTPS redirect URLs before testing:
+   - `https://accounts.electrony.xyz/` for sign-up confirmation and ordinary sign-in callback processing.
+   - `https://accounts.electrony.xyz/?view=update-password` for password recovery.
+   - `https://accounts.electrony.xyz/oauth/consent/` only when the Supabase OAuth Server has an active, registered authorization request.
+5. Enable **Confirm email** for sign-up if production registration should require email verification. Keep the Confirm signup and Reset password email templates pointed at `{{ .ConfirmationURL }}` so Supabase performs its documented verification/recovery redirect.
+6. Use PKCE-compatible code links. Confirmation links and recovery links redirect to the two URLs above and the browser client exchanges the returned `code` with `exchangeCodeForSession()`.
+7. Configure custom SMTP and sender identity only if the Supabase default mail service or sender domain is not approved for production.
+8. Add exact DNS records and HTTPS custom-domain configuration in Vercel for `accounts.electrony.xyz`. Do not add HTTP production redirects or broad wildcard redirect URLs.
+
+Official Supabase configuration references:
+
+- [Redirect URLs](https://supabase.com/docs/guides/auth/redirect-urls)
+- [Password-based and recovery authentication](https://supabase.com/docs/guides/auth/passwords)
+- [Email templates and confirmation URLs](https://supabase.com/docs/guides/auth/auth-email-templates)
+- [OAuth 2.1 Server](https://supabase.com/docs/guides/auth/oauth-server)
+
+The account frontend loads the official Supabase browser client and uses PKCE, password registration/sign-in, confirmation/resend, recovery, password update, session sign-out, and `getUser()` session validation. Email/password authentication is the only visible provider. The frontend does not mint tokens, share cookies or storage across domains, or accept arbitrary post-login return URLs.
+
+### OAuth 2.1 server setup
+
+Only complete this section after the identity project dashboard exposes a working OAuth Server configuration and registered clients.
+
+1. Open Authentication > OAuth Server, enable the feature if it is available on the project, and set Site URL to the accounts site.
+2. Set Authorization Path to `/oauth/consent`.
+3. Register each Electrony product client in the dashboard. Record only its public client configuration and exact callback/redirect URIs. Never fabricate a client.
+4. Do not grant product-admin, vendor, wallet, finance, KYC, BNPL, or credit permissions merely by enabling authentication or by approving an OAuth request.
+5. Keep custom OAuth token claims and Row Level Security in scope; no product dashboards or permissions are implemented in this phase.
+
+The consent route extracts the single Supabase `authorization_id` query parameter, preserves it in session storage during sign-in only, calls `getAuthorizationDetails()`, and renders the registered client's name and returned scopes. `approveAuthorization()` and `denyAuthorization()` handle the user's decision. Supabase generates and redirects authorization codes/tokens through its own documented flow; this frontend does not implement a token issuer or token exchange. If `authorization_id` is missing, the page fails closed.
+
+### Later Bills pilot
+
+Bills remains independently authenticated and guest checkout is unchanged. A later pilot may use a registered Electrony OAuth client only after:
+
+- A real Bills client and exact callback URI are registered in the identity project.
+- The Bills callback is tested in a browser and returns to Bills by a Supabase-supported OAuth authorization-code/PKCE flow.
+- The Bills application validates the account server-side and maps explicit product permissions separately.
+- No Bills JSON account, JWT, database record, vending, payment, or guest-checkout migration is performed.
+
+Do not claim cross-domain SSO until the dashboard client, redirect allowlist, account callback, and end-to-end browser flow all pass.
 
 ## Electrony Automobile
 
