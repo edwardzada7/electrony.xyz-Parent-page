@@ -29,6 +29,37 @@ body { margin: 0; min-width: 20rem; color: var(--color-ink); font-family: var(--
 [hidden] { display: none !important; }
 #recovery-form h2, #update-form h2 { margin: 0 0 .75rem; font-size: 2rem; }
 .back-button { margin-bottom: 1.25rem; }
+.dashboard { width: 100%; }
+.dashboard-header { display: flex; align-items: flex-start; justify-content: space-between; gap: 1rem; }
+.dashboard-header h1 { margin: 0; font-size: clamp(2rem, 7vw, 3rem); line-height: 1; letter-spacing: -.04em; }
+.verification-status { flex: 0 0 auto; border-radius: 999px; background: var(--color-surface); padding: .45rem .65rem; font-size: .75rem; font-weight: 700; }
+.verification-status.is-verified { background: #edf8f1; color: #247a4b; }
+.dashboard-email { margin: .75rem 0 2rem; overflow-wrap: anywhere; color: var(--color-muted); }
+.services-section h2 { margin: 0 0 1rem; font-size: 1.25rem; }
+.services-grid { display: grid; gap: .75rem; }
+.service-card { display: grid; grid-template-columns: 2.75rem minmax(0, 1fr); gap: .75rem; border: 1px solid var(--color-border); border-radius: .375rem; padding: 1rem; }
+.service-icon { width: 2.75rem; height: 2.75rem; display: grid; place-items: center; border-radius: 50%; background: var(--color-ink); color: var(--color-white); font: 700 .65rem var(--font-label); }
+.service-card h3 { margin: 0 0 .35rem; font-size: 1rem; }
+.service-card p { margin: 0; color: var(--color-muted); font-size: .875rem; line-height: 1.45; }
+.service-link { grid-column: 2; width: fit-content; margin-top: .35rem; color: var(--color-ink); font-size: .875rem; font-weight: 700; text-decoration: none; }
+.service-link:hover { text-decoration: underline; text-underline-offset: .2em; }
+.dashboard-actions { display: grid; gap: .75rem; margin-top: 1.25rem; }
+.accounts-panel-inner.is-dashboard { width: min(100%, 44rem); }
+.dashboard-module { margin-top: 1.25rem; border-top: 1px solid var(--color-border); padding-top: 1.25rem; }
+.module-heading { display: flex; align-items: flex-start; justify-content: space-between; gap: 1rem; margin-bottom: .75rem; }
+.module-heading h2 { margin: 0; font-size: 1.25rem; }
+.module-heading .accounts-kicker { margin-bottom: .5rem; }
+.module-link { flex: 0 0 auto; color: var(--color-ink); font-size: .875rem; font-weight: 700; text-decoration: none; }
+.module-link:hover { text-decoration: underline; text-underline-offset: .2em; }
+.provider-status { flex: 0 0 auto; border-radius: 999px; background: var(--color-surface); padding: .45rem .65rem; color: var(--color-muted); font-size: .75rem; font-weight: 700; }
+.utility-grid { display: grid; gap: .75rem; }
+.utility-grid a { display: grid; border: 1px solid var(--color-border); border-radius: .375rem; padding: 1rem; color: var(--color-ink); text-decoration: none; }
+.utility-grid a:hover { border-color: var(--color-ink); }
+.utility-grid span { margin-top: .25rem; color: var(--color-muted); font-size: .825rem; }
+.module-empty-state { display: grid; grid-template-columns: 2.75rem minmax(0, 1fr); gap: .75rem; border: 1px solid var(--color-border); border-radius: .375rem; padding: 1rem; }
+.module-empty-state h3 { margin: 0 0 .35rem; font-size: 1rem; }
+.module-empty-state p { margin: 0; color: var(--color-muted); font-size: .875rem; line-height: 1.45; }
+.module-empty-state .button { grid-column: 2; margin-top: .75rem; }
 .consent-shell { min-height: 100dvh; display: grid; place-items: center; padding: 1rem; background: var(--color-ink); }
 .consent-card { width: min(100%, 32rem); border-radius: .5rem; background: var(--color-white); padding: clamp(1.25rem, 6vw, 2.5rem); }
 .consent-card h1 { margin: 0 0 1rem; font-size: clamp(1.75rem, 7vw, 2.75rem); line-height: 1.05; }
@@ -47,4 +78,9 @@ body { margin: 0; min-width: 20rem; color: var(--color-ink); font-family: var(--
   .accounts-panel { align-items: center; }
   .accounts-panel-inner { padding-top: 0; }
   .mobile-logo { display: none; }
+  .services-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .utility-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .module-empty-state { grid-template-columns: 2.75rem minmax(0, 1fr) 12rem; align-items: center; }
+  .module-empty-state .button { grid-column: 3; margin-top: 0; }
+  .dashboard-actions { grid-template-columns: 1fr 1fr; }
 }

@@ -48,6 +48,20 @@ The example Monnify values are for local sandbox development only. When `NODE_EN
 
 Payment routes are blocked by default and remain blocked even if `PAYMENTS_BLOCKED=false`; a code-level contract-verification gate is intentionally false. The server contains transaction-query and webhook-processing code, but their complete Monnify contract and sandbox behavior have not been verified. Configuration alone does not make payments available.
 
+### Electrony identity and provider migration
+
+The migration [`migrations/20261030_electrony_identity_financial_services.sql`](./migrations/20261030_electrony_identity_financial_services.sql) adds customer/provider mapping tables and financial-service audit/ownership structures. It has not been applied automatically and must be reviewed and applied by the database owner.
+
+Migration impact:
+- Adds only new tables; it does not recreate or alter existing Bills tables.
+- Uses the Supabase Auth UUID as the customer key and no longer creates Bills-local password accounts.
+- Does not add `auth.uid()` policies because the Railway runtime role uses direct PostgreSQL authentication and may not receive Supabase JWT request context. Server-side ownership checks remain mandatory; Supabase RLS is a separate future migration to verify.
+- Requires the database owner to verify extensions, runtime role grants, policy behavior, and all existing Bills migrations before production use.
+
+Bills accepts verified Supabase Auth access tokens from the configured Electrony identity project for central registered routes. It also retains the legacy Bills JWT path temporarily for existing customers and their existing records. Guest utility routes do not require a token. Legacy `/api/auth/register` and `/api/auth/login` routes remain available only as transition compatibility endpoints and must not be used for new Electrony Accounts identity creation.
+
+Marplerad and Teloadly adapters are intentionally provider-independent and fail closed. Official API contracts, sandbox credentials, webhook verification rules, and approved payment flows are still required before live operations.
+
 ### Monnify sandbox variables
 
 - `MONNIFY_API_KEY`
@@ -98,7 +112,7 @@ The UI uses backend-returned biller codes as identifiers, not labels, and presen
 
 The Bills app presents six distinct services: Electricity, Airtime, Data, Pay Bills, Virtual Cards, and Gift Cards. The first four retain the existing guest-service architecture. Virtual Cards and Gift Cards are marked account-required and remain unavailable while their separate provider integrations are pending. The app does not show provider products or pricing, start payments, issue cards, or deliver gift cards.
 
-The backend exposes standalone Bills account registration and login routes (`POST /api/auth/register` and `POST /api/auth/login`) that issue short-lived signed tokens when `BILLS_JWT_SECRET` is configured. This is not a shared site authentication session, and the Bills frontend does not currently connect to these routes; it must not be treated as an account sign-in flow for the card services. The card-service catalogue responses remain unavailable, eligibility does not report a result without a provider, and authenticated purchase requests fail closed without creating a payment or contacting a provider. No card-specific provider adapter or request configuration is implemented. Credentials for any future card provider must be kept server-side.
+The backend retains standalone Bills account registration and login compatibility routes (`POST /api/auth/register` and `POST /api/auth/login`) that issue short-lived signed tokens when `BILLS_JWT_SECRET` is configured. They are deliberately transitional and do not establish a shared Supabase identity. Existing Bills user IDs and transaction records are not deleted or merged. New central identity should use Electrony Accounts and a Supabase access token; any explicit legacy-to-Supabase account-linking flow must be reviewed separately and must not merge by email alone. Card-service catalogue responses remain unavailable, eligibility does not report a result without a provider, and authenticated purchase requests fail closed without creating a payment or contacting a provider. No card-specific provider adapter or request configuration is implemented. Credentials for any future card provider must be kept server-side.
 
 Local development continues to use JSON files beside the configured `BILLS_DATABASE_URL` file. By default, they are stored under `~/.electrony-bills/`; the previous `bills-api/data/` files remain legacy migration sources. `BILLS_DATABASE_URL` is a file path, not a database URL, and its local JSON and legacy migration behavior are unchanged.
 
@@ -151,3 +165,43 @@ The backend currently:
 `PAYMENTS_BLOCKED=false` cannot override the hard payment-contract block in the code. The payment reference is not yet guaranteed to be generated server-side, and the current checkout flow has not been verified to provide durable idempotency before external initialization. Do not test a real or sandbox checkout or vending operation, or treat a callback as fulfillment. Obtain the Monnify Bills API reference, confirm Bills Payment activation and sandbox availability for this merchant account, and obtain the applicable fee, validation-reference, webhook (including sandbox signature), vend-reference, and reconciliation rules before implementing or enabling those operations.
 
 Official documentation consulted: [Bills Payment workflow](https://developers.monnify.com/docs/bills-payment/process-a-bill), [settlement and merchant payable](https://developers.monnify.com/docs/bills-payment/settlement-process), [collection transaction verification](https://developers.monnify.com/docs/collections/manage-payments/verify-transactions), [checkout API](https://developers.monnify.com/docs/collections/one-time-payments/checkout-api), and [webhooks](https://developers.monnify.com/docs/webhooks). The accessible documentation names the Bills operations but the linked API reference did not provide verifiable endpoint paths or full schemas in this integration environment.
+
+## Electrony Accounts OAuth 2.1 integration
+
+Supabase Auth is being used as an OAuth 2.1 authorization server according to the official authorization-code, PKCE, token, and consent documentation. The implementation is server-mediated for Bills and does not expose refresh tokens to JavaScript.
+
+### Routes
+
+- Accounts sign-in: `https://accounts.electrony.xyz/`
+- Accounts consent: `https://accounts.electrony.xyz/oauth/consent/?authorization_id=<authorization_id>`
+- Bills app: `https://bills.electrony.xyz/bills/app/`
+- Bills OAuth initiation: `GET https://<deployed-bills-api>/api/auth/oauth/start`
+- Bills OAuth callback: `GET https://<deployed-bills-api>/api/auth/oauth/callback`
+- Current identity: `GET /api/auth/me`
+- Refresh: `POST /api/auth/refresh`
+- Logout: `POST /api/auth/logout`
+- Customer history: `GET /api/customer/transactions`
+- Legacy account compatibility: `POST /api/auth/register`, `POST /api/auth/login`
+
+The callback URL registered in Supabase must exactly equal `BILLS_OAUTH_CALLBACK_URL`. For production this is the Railway API origin plus `/api/auth/oauth/callback`; it is not a Bills frontend page URL. Dynamic client registration is intentionally disabled.
+
+### Dashboard and environment requirements
+
+- Enable OAuth Server in the Supabase Identity project.
+- Set the OAuth authorization path to `/oauth/consent`.
+- Keep the Accounts URL Configuration Site URL set to `https://accounts.electrony.xyz`.
+- Register Electrony Bills as a separate public OAuth client with the exact Railway callback URL.
+- The Authorization Code flow, PKCE S256, and exact redirect URI validation are required.
+- Use scopes `openid email profile`; the `nonce` is included in the authorization request.
+- Configure `ELECTRONY_IDENTITY_SUPABASE_URL`, `ELECTRONY_IDENTITY_SUPABASE_PUBLISHABLE_KEY`, `ELECTRONY_IDENTITY_OAUTH_CLIENT_ID`, and `BILLS_OAUTH_CALLBACK_URL` in Railway.
+- `ELECTRONY_IDENTITY_SUPABASE_PUBLISHABLE_KEY` is public; never configure or expose a service-role/secret key in Bills or its frontend.
+
+The OAuth start endpoint signs and HttpOnly-stores a ten-minute verifier/state/nonce cookie. The callback verifies state, exchanges the authorization code with PKCE S256, and validates the access token through the configured Supabase Auth server. Access and refresh tokens are stored only as Secure, HttpOnly, SameSite=None cookies on the Railway API origin. State-changing logout and refresh operations require a CSRF token and exact allowed-origin/CORS checks.
+
+### Identity and legacy compatibility
+
+The verified Supabase UUID is the immutable registered-customer key. `customer_id` and transaction ownership are always derived from the server-verified session, never from browser JSON. Legacy `/api/auth/register` and `/api/auth/login` remain available but do not create Accounts identities. No automatic email merge is performed.
+
+The migration provides an `electrony_customer_mappings` table. Linking is not yet enabled: `/api/auth/link` intentionally returns `501` rather than accepting an insecure email-only merge. A future verified linker must require a current verified Supabase session, prove possession of the legacy Bills account through legacy password authentication or an equivalent challenge, and record the UUID-to-legacy-customer mapping. Guest orders remain `customer_id = null` and are accessible only with their secret cookie; they are never automatically converted into registered ownership.
+
+Registered transaction history is fail-closed. `/api/customer/transactions` returns `503` until a customer-owned query authorization and migration-backed mapping have been verified, and the frontend displays an unavailable state rather than fabricated records.

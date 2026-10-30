@@ -23,8 +23,8 @@
           <img src="/assets/brand/electrony-xyz-logo%20.png" alt="Electrony.xyz">
         </a>
         <p class="accounts-kicker">Electrony identity</p>
-        <h1>One account.<br>Built for what's next.</h1>
-        <p class="accounts-brand-copy">Use your Electrony account to access registered Electrony services.</p>
+        <h1>One account.<br>More ways to do more.</h1>
+        <p class="accounts-brand-copy">Use your Electrony account across the Electrony ecosystem, or continue as a guest where supported.</p>
       </section>
 
       <section class="accounts-panel" aria-live="polite">
@@ -33,6 +33,110 @@
             <img src="/assets/brand/electrony-xyz-logo%20.png" alt="Electrony.xyz">
           </div>
           <div id="app-status" class="status-banner" role="status" hidden></div>
+
+          <section id="dashboard" class="dashboard" aria-labelledby="dashboard-title" hidden>
+            <header class="dashboard-header">
+              <div>
+                <p class="accounts-kicker">Electrony Accounts</p>
+                <h1 id="dashboard-title">Welcome to your account</h1>
+              </div>
+              <span id="verification-status" class="verification-status"></span>
+            </header>
+            <p class="dashboard-email" id="dashboard-email"></p>
+
+            <section class="services-section" aria-labelledby="services-title">
+              <h2 id="services-title">Your Electrony services</h2>
+              <div id="services-grid" class="services-grid">
+                <article class="service-card">
+                  <span class="service-icon" aria-hidden="true">OS</span>
+                  <div><h3>ElectronyOS</h3><p>Explore the Electrony operating system experience.</p></div>
+                  <a class="service-link" href="https://os.electrony.xyz" rel="noopener">Open ElectronyOS <span aria-hidden="true">→</span></a>
+                </article>
+                <article class="service-card">
+                  <span class="service-icon" aria-hidden="true">B</span>
+                  <div><h3>Electrony Bills</h3><p>Manage bill payments and quick purchases.</p></div>
+                  <a class="service-link" href="https://bills.electrony.xyz" rel="noopener">Open Bills <span aria-hidden="true">→</span></a>
+                </article>
+                <article class="service-card">
+                  <span class="service-icon" aria-hidden="true">HW</span>
+                  <div><h3>Hardware</h3><p>Browse the Electrony hardware catalogue.</p></div>
+                  <a class="service-link" href="https://hardware.electrony.xyz" rel="noopener">Open Hardware <span aria-hidden="true">→</span></a>
+                </article>
+                <article class="service-card">
+                  <span class="service-icon" aria-hidden="true">AUTO</span>
+                  <div><h3>Automobile</h3><p>Discover vehicles and automobile products.</p></div>
+                  <a class="service-link" href="https://auto.electrony.xyz" rel="noopener">Open Automobile <span aria-hidden="true">→</span></a>
+                </article>
+                <article class="service-card">
+                  <span class="service-icon" aria-hidden="true">E</span>
+                  <div><h3>Energy</h3><p>Explore available energy products and services.</p></div>
+                  <a class="service-link" href="https://energy.electrony.xyz" rel="noopener">Open Energy <span aria-hidden="true">→</span></a>
+                </article>
+                <article class="service-card">
+                  <span class="service-icon" aria-hidden="true">IS</span>
+                  <div><h3>iStylist</h3><p>Visit the iStylist online styling service.</p></div>
+                  <a class="service-link" href="https://istylist.online" rel="noopener">Open iStylist <span aria-hidden="true">→</span></a>
+                </article>
+              </div>
+            </section>
+
+            <section class="dashboard-module" aria-labelledby="bills-title">
+              <div class="module-heading">
+                <div>
+                  <p class="accounts-kicker">Bills and utilities</p>
+                  <h2 id="bills-title">Make everyday payments</h2>
+                </div>
+                <a class="module-link" href="https://bills.electrony.xyz/?service=electricity" rel="noopener">Open Bills <span aria-hidden="true">→</span></a>
+              </div>
+              <div class="utility-grid">
+                <a href="https://bills.electrony.xyz/?service=electricity" rel="noopener"><strong>Electricity</strong><span>Guest or registered purchase</span></a>
+                <a href="https://bills.electrony.xyz/?service=airtime" rel="noopener"><strong>Airtime</strong><span>Guest or registered purchase</span></a>
+                <a href="https://bills.electrony.xyz/?service=data" rel="noopener"><strong>Data</strong><span>Guest or registered purchase</span></a>
+                <a href="https://bills.electrony.xyz/?service=bills" rel="noopener"><strong>Cable TV</strong><span>Guest or registered purchase</span></a>
+              </div>
+            </section>
+
+            <section class="dashboard-module" aria-labelledby="cards-title">
+              <div class="module-heading">
+                <div>
+                  <p class="accounts-kicker">Virtual cards</p>
+                  <h2 id="cards-title">Card workspace</h2>
+                </div>
+                <span class="provider-status">Provider not configured</span>
+              </div>
+              <div class="module-empty-state">
+                <span class="service-icon" aria-hidden="true">VC</span>
+                <div>
+                  <h3>No virtual cards yet</h3>
+                  <p>Marplerad onboarding is not available until official documentation, sandbox access and credentials are supplied.</p>
+                </div>
+                <button class="button button-secondary" type="button" disabled>Application unavailable</button>
+              </div>
+            </section>
+
+            <section class="dashboard-module" aria-labelledby="gift-cards-title">
+              <div class="module-heading">
+                <div>
+                  <p class="accounts-kicker">Gift cards</p>
+                  <h2 id="gift-cards-title">Marketplace</h2>
+                </div>
+                <span class="provider-status">Provider not configured</span>
+              </div>
+              <div class="module-empty-state">
+                <span class="service-icon" aria-hidden="true">GC</span>
+                <div>
+                  <h3>No live gift-card catalogue</h3>
+                  <p>Products, denominations and prices will come from Teloadly only after the provider integration is verified.</p>
+                </div>
+                <button class="button button-secondary" type="button" disabled>Marketplace unavailable</button>
+              </div>
+            </section>
+
+            <div class="dashboard-actions">
+              <button id="dashboard-update-button" class="button button-secondary" type="button">Update password</button>
+              <button id="dashboard-signout-button" class="button button-primary" type="button">Sign out</button>
+            </div>
+          </section>
 
           <nav class="view-tabs" aria-label="Account views">
             <button type="button" data-view="signin" class="view-tab is-active">Sign in</button>

@@ -9,6 +9,8 @@ const { buildProviderAdapter, readEnv } = require("./provider-adapter");
 const { createMonnifyBillsAdapter } = require("./monnify-bills-adapter");
 const { createPostgresPersistence } = require("./postgres-persistence");
 const { PLATFORM_FEE_RULES, createPlatformFeeQuote, parseMoneyToMinor } = require("./platform-fees");
+const { createMarpleradAdapter } = require("./adapters/marplerad-adapter");
+const { createTeloadlyAdapter } = require("./adapters/teloadly-adapter");
 const {
   CONTACT_BODY_LIMIT,
   ContactEnquiryError,
@@ -21,9 +23,15 @@ const AUTH_RATE_LIMITS = new Map();
 const FEE_QUOTES = new Map();
 const TOKEN_LIFETIME_SECONDS = 60 * 60;
 const GUEST_ORDER_SECRET_BYTES = 32;
+const BILLS_ACCESS_SESSION_COOKIE = "__Secure-electrony-bills-session";
+const BILLS_REFRESH_SESSION_COOKIE = "__Secure-electrony-bills-refresh";
+const BILLS_CSRF_COOKIE = "__Secure-electrony-bills-csrf";
+const BILLS_OAUTH_COOKIE = "__Secure-electrony-bills-oauth";
 const MONNIFY_PAYMENT_CONTRACT_VERIFIED = false;
 const BILL_FULFILLMENT_ENABLED = false;
 const monnifyBillsAdapter = createMonnifyBillsAdapter();
+const marpleradAdapter = createMarpleradAdapter(readEnv);
+const teloadlyAdapter = createTeloadlyAdapter(readEnv);
 const scrypt = promisify(crypto.scrypt);
 
 function paymentsBlocked() {
@@ -44,6 +52,141 @@ function getAuthSecret() {
   return secret;
 }
 
+function readRequestCookie(request, name) {
+  if (typeof request.headers.cookie !== "string") return "";
+  for (const part of request.headers.cookie.split(";")) {
+    const separator = part.indexOf("=");
+    if (separator < 0 || part.slice(0, separator).trim() !== name) continue;
+    return decodeURIComponent(part.slice(separator + 1).trim());
+  }
+  return "";
+}
+
+function appendSetCookie(response, cookie) {
+  const existing = response.getHeader("Set-Cookie");
+  response.setHeader("Set-Cookie", existing ? [...existing, cookie] : [cookie]);
+}
+
+function setSecureCookie(response, name, value, maxAge) {
+  appendSetCookie(response, `${name}=${encodeURIComponent(value)}; Path=/; HttpOnly; Secure; SameSite=None${maxAge ? `; Max-Age=${maxAge}` : ""}`);
+}
+
+function clearSecureCookie(response, name) {
+  appendSetCookie(response, `${name}=; Path=/; HttpOnly; Secure; SameSite=None; Max-Age=0`);
+}
+
+function setCsrfCookie(response, token, maxAge) {
+  appendSetCookie(response, `${BILLS_CSRF_COOKIE}=${encodeURIComponent(token)}; Path=/; Secure; SameSite=None${maxAge ? `; Max-Age=${maxAge}` : ""}`);
+}
+
+function clearCsrfCookie(response) {
+  appendSetCookie(response, `${BILLS_CSRF_COOKIE}=; Path=/; Secure; SameSite=None; Max-Age=0`);
+}
+
+function getIdentityProjectConfig() {
+  const projectUrl = readEnv("ELECTRONY_IDENTITY_SUPABASE_URL").trim().replace(/\/+$/, "");
+  const publishableKey = readEnv("ELECTRONY_IDENTITY_SUPABASE_PUBLISHABLE_KEY").trim();
+  if (!projectUrl || !publishableKey || /replace_with/i.test(publishableKey)) return null;
+  try {
+    const url = new URL(projectUrl);
+    if (url.protocol !== "https:" || url.pathname !== "/" || url.search || url.hash || url.username || url.password) return null;
+    return { projectUrl, publishableKey };
+  } catch {
+    return null;
+  }
+}
+
+async function verifySupabaseAccessToken(accessToken) {
+  const identity = getIdentityProjectConfig();
+  if (!identity || typeof accessToken !== "string" || !accessToken.trim()) return null;
+  try {
+    const response = await fetch(`${identity.projectUrl}/auth/v1/user`, {
+      method: "GET",
+      headers: {
+        apikey: identity.publishableKey,
+        Authorization: `Bearer ${accessToken.trim()}`
+      },
+      signal: AbortSignal.timeout(10000)
+    });
+    if (!response.ok) return null;
+    const user = await response.json();
+    if (typeof user?.id !== "string" || !/^[0-9a-f-]{36}$/i.test(user.id)) return null;
+    if (!user.email_confirmed_at && !user.confirmed_at) return null;
+    return {
+      id: user.id,
+      email: String(user.email || ""),
+      name: String(user.user_metadata?.full_name || "")
+    };
+  } catch {
+    return null;
+  }
+}
+
+async function exchangeSupabaseOAuthToken(form) {
+  const identity = getIdentityProjectConfig();
+  if (!identity) throw new Error("Electrony Accounts OAuth is not configured.");
+  const response = await fetch(`${identity.projectUrl}/auth/v1/oauth/token`, {
+    method: "POST",
+    headers: {
+      apikey: identity.publishableKey,
+      "Content-Type": "application/x-www-form-urlencoded"
+    },
+    body: new URLSearchParams(form),
+    signal: AbortSignal.timeout(10000)
+  });
+  const payload = await response.json().catch(() => null);
+  if (!response.ok || !payload?.access_token) {
+    throw Object.assign(
+      new Error(payload?.error_description || payload?.error || "OAuth token exchange failed."),
+      { statusCode: response.status >= 400 && response.status < 500 ? response.status : 502 }
+    );
+  }
+  return payload;
+}
+
+function encodeSignedOAuthCookie(payload) {
+  const body = Buffer.from(JSON.stringify(payload), "utf8").toString("base64url");
+  const signature = crypto.createHmac("sha256", getAuthSecret()).update(body).digest("base64url");
+  return `${body}.${signature}`;
+}
+
+function readSignedOAuthCookie(request) {
+  const value = readRequestCookie(request, BILLS_OAUTH_COOKIE);
+  const separator = value.lastIndexOf(".");
+  if (!value || separator < 1) return null;
+  const body = value.slice(0, separator);
+  const signature = value.slice(separator + 1);
+  const expected = crypto.createHmac("sha256", getAuthSecret()).update(body).digest("base64url");
+  const supplied = Buffer.from(signature, "base64url");
+  const expectedBuffer = Buffer.from(expected, "base64url");
+  if (supplied.length !== expectedBuffer.length || !crypto.timingSafeEqual(supplied, expectedBuffer)) return null;
+  try {
+    const payload = JSON.parse(Buffer.from(body, "base64url").toString("utf8"));
+    return payload?.expiresAt > Date.now() ? payload : null;
+  } catch {
+    return null;
+  }
+}
+
+function setIdentitySessionCookies(response, tokens, existingCsrfToken) {
+  const accessMaxAge = Number.isInteger(tokens.expires_in) && tokens.expires_in > 0 ? tokens.expires_in : 3600;
+  const refreshMaxAge = 30 * 24 * 60 * 60;
+  setSecureCookie(response, BILLS_ACCESS_SESSION_COOKIE, tokens.access_token, accessMaxAge);
+  if (tokens.refresh_token) setSecureCookie(response, BILLS_REFRESH_SESSION_COOKIE, tokens.refresh_token, refreshMaxAge);
+  const csrf = typeof existingCsrfToken === "string" && /^[A-Za-z0-9_-]{43}$/.test(existingCsrfToken)
+    ? existingCsrfToken
+    : crypto.randomBytes(32).toString("base64url");
+  setCsrfCookie(response, csrf, refreshMaxAge);
+  return csrf;
+}
+
+function clearIdentitySessionCookies(response) {
+  clearSecureCookie(response, BILLS_ACCESS_SESSION_COOKIE);
+  clearSecureCookie(response, BILLS_REFRESH_SESSION_COOKIE);
+  clearSecureCookie(response, BILLS_OAUTH_COOKIE);
+  clearCsrfCookie(response);
+}
+
 function signAuthToken(user) {
   const secret = getAuthSecret();
   const header = Buffer.from(JSON.stringify({ alg: "HS256", typ: "JWT" })).toString("base64url");
@@ -54,6 +197,39 @@ function signAuthToken(user) {
   const unsigned = `${header}.${payload}`;
   const signature = crypto.createHmac("sha256", secret).update(unsigned).digest("base64url");
   return `${unsigned}.${signature}`;
+}
+
+async function authenticateSupabaseRequest(request) {
+  const authorization = String(request.headers.authorization || "").trim();
+  const match = authorization.match(/^Bearer ([^\s]+)$/i);
+  if (!match) return null;
+
+  const projectUrl = readEnv("ELECTRONY_IDENTITY_SUPABASE_URL").trim().replace(/\/+$/, "");
+  const publishableKey = readEnv("ELECTRONY_IDENTITY_SUPABASE_PUBLISHABLE_KEY").trim();
+  if (!projectUrl || !publishableKey || /replace_with/i.test(publishableKey)) return null;
+
+  try {
+    const urlOrigin = new URL(projectUrl);
+    if (urlOrigin.protocol !== "https:" || urlOrigin.pathname !== "/" || urlOrigin.search || urlOrigin.hash
+      || urlOrigin.username || urlOrigin.password) return null;
+    const url = new URL(`${projectUrl}/auth/v1/user`);
+    const response = await fetch(url, {
+      method: "GET",
+      headers: { apikey: publishableKey, Authorization: `Bearer ${match[1]}` },
+      signal: AbortSignal.timeout(10000)
+    });
+    if (!response.ok) return null;
+    const user = await response.json();
+    if (typeof user?.id !== "string" || !/^[0-9a-f-]{36}$/i.test(user.id)) return null;
+    if (!user.email_confirmed_at && !user.confirmed_at) return null;
+    return {
+      id: user.id,
+      email: String(user.email || ""),
+      name: String(user.user_metadata?.full_name || "")
+    };
+  } catch {
+    return null;
+  }
 }
 
 function authenticateRequest(request) {
@@ -76,6 +252,32 @@ function authenticateRequest(request) {
   } catch {
     return null;
   }
+}
+
+async function authenticateBillsRequest(request, response) {
+  const sessionAccessToken = readRequestCookie(request, BILLS_ACCESS_SESSION_COOKIE);
+  if (sessionAccessToken) {
+    const sessionUser = await verifySupabaseAccessToken(sessionAccessToken);
+    if (sessionUser) return sessionUser;
+    const refreshToken = readRequestCookie(request, BILLS_REFRESH_SESSION_COOKIE);
+    if (refreshToken && response) {
+      const clientId = readEnv("ELECTRONY_IDENTITY_OAUTH_CLIENT_ID").trim();
+      if (clientId) {
+        try {
+          const tokens = await exchangeSupabaseOAuthToken({
+            grant_type: "refresh_token",
+            refresh_token: refreshToken,
+            client_id: clientId
+          });
+          setIdentitySessionCookies(response, tokens, readRequestCookie(request, BILLS_CSRF_COOKIE));
+          return await verifySupabaseAccessToken(tokens.access_token);
+        } catch {
+          clearIdentitySessionCookies(response);
+        }
+      }
+    }
+  }
+  return await authenticateSupabaseRequest(request) || authenticateRequest(request);
 }
 
 function createGuestOrderSecret() {
@@ -1290,7 +1492,7 @@ async function handleRequest(request, response) {
     }
     response.setHeader("Access-Control-Allow-Origin", origin);
     response.setHeader("Access-Control-Allow-Methods", "GET,POST,OPTIONS");
-    response.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization, X-Requested-With, monnify-signature");
+    response.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization, X-CSRF-Token, X-Requested-With, monnify-signature");
     response.setHeader("Access-Control-Allow-Credentials", "true");
     response.setHeader("Vary", "Origin");
   }
@@ -1485,8 +1687,8 @@ async function handleRequest(request, response) {
         postgresSecurityControlsVerified: databaseSecurityReady,
         postgresBusinessTablePersistence: false
       },
-      virtualCards: "provider_unconfigured",
-      giftCards: "provider_unconfigured"
+      virtualCards: marpleradAdapter.isConfigured() ? "provider_configured_api_review_required" : "provider_unconfigured",
+      giftCards: teloadlyAdapter.isConfigured() ? "provider_configured_api_review_required" : "provider_unconfigured"
     });
     return;
   }
@@ -1518,6 +1720,177 @@ async function handleRequest(request, response) {
     return;
   }
 
+  if (request.method === "GET" && url.pathname === "/api/auth/oauth/start") {
+    const identity = getIdentityProjectConfig();
+    const clientId = readEnv("ELECTRONY_IDENTITY_OAUTH_CLIENT_ID").trim();
+    const callbackUrl = readEnv("BILLS_OAUTH_CALLBACK_URL").trim();
+    let callback;
+    try {
+      callback = new URL(callbackUrl);
+    } catch {
+      callback = null;
+    }
+    if (!identity || !clientId || !callback || callback.protocol !== "https:" || callback.username || callback.password
+      || callback.search || callback.hash) {
+      sendJson(response, 503, { ok: false, error: "Electrony Accounts OAuth is not configured." });
+      return;
+    }
+    const verifier = crypto.randomBytes(32).toString("base64url");
+    const challenge = crypto.createHash("sha256").update(verifier).digest("base64url");
+    const state = crypto.randomBytes(32).toString("base64url");
+    const nonce = crypto.randomBytes(32).toString("base64url");
+    setSecureCookie(response, BILLS_OAUTH_COOKIE, encodeSignedOAuthCookie({
+      verifier,
+      state,
+      nonce,
+      callbackUrl: callback.href.replace(/\/+$/, ""),
+      expiresAt: Date.now() + 10 * 60 * 1000
+    }), 600);
+    response.setHeader("Cache-Control", "no-store");
+    const authorizeUrl = new URL(`${identity.projectUrl}/auth/v1/oauth/authorize`);
+    authorizeUrl.searchParams.set("response_type", "code");
+    authorizeUrl.searchParams.set("client_id", clientId);
+    authorizeUrl.searchParams.set("redirect_uri", callback.href.replace(/\/+$/, ""));
+    authorizeUrl.searchParams.set("state", state);
+    authorizeUrl.searchParams.set("nonce", nonce);
+    authorizeUrl.searchParams.set("scope", "openid email profile");
+    authorizeUrl.searchParams.set("code_challenge", challenge);
+    authorizeUrl.searchParams.set("code_challenge_method", "S256");
+    response.writeHead(302, { Location: authorizeUrl.href });
+    response.end();
+    return;
+  }
+
+  if (request.method === "GET" && url.pathname === "/api/auth/oauth/callback") {
+    const oauth = readSignedOAuthCookie(request);
+    const code = String(url.searchParams.get("code") || "").trim();
+    const state = String(url.searchParams.get("state") || "").trim();
+    const oauthError = String(url.searchParams.get("error_description") || url.searchParams.get("error") || "").trim();
+    if (oauthError) {
+      clearIdentitySessionCookies(response);
+      sendJson(response, 400, { ok: false, error: "Electrony Accounts authorization was denied or failed." });
+      return;
+    }
+    if (!oauth || !code || !state || state.length !== String(oauth.state || "").length || !crypto.timingSafeEqual(
+      Buffer.from(state),
+      Buffer.from(oauth.state || "")
+    )) {
+      clearIdentitySessionCookies(response);
+      sendJson(response, 400, { ok: false, error: "Invalid or expired OAuth callback state." });
+      return;
+    }
+    const clientId = readEnv("ELECTRONY_IDENTITY_OAUTH_CLIENT_ID").trim();
+    try {
+      const tokens = await exchangeSupabaseOAuthToken({
+        grant_type: "authorization_code",
+        client_id: clientId,
+        code,
+        code_verifier: oauth.verifier,
+        redirect_uri: oauth.callbackUrl
+      });
+      const user = await verifySupabaseAccessToken(tokens.access_token);
+      if (!user) {
+        clearIdentitySessionCookies(response);
+        sendJson(response, 401, { ok: false, error: "The OAuth access token could not be verified." });
+        return;
+      }
+      setIdentitySessionCookies(response, tokens);
+      clearSecureCookie(response, BILLS_OAUTH_COOKIE);
+      const returnUrl = new URL(readEnv("BILLS_APP_URL").trim() || "https://bills.electrony.xyz/bills/app/");
+      returnUrl.searchParams.set("signed_in", "1");
+      response.writeHead(302, {
+        Location: returnUrl.href,
+        "Cache-Control": "no-store"
+      });
+      response.end();
+    } catch (error) {
+      clearIdentitySessionCookies(response);
+      sendJson(response, error.statusCode || 502, { ok: false, error: error.message || "OAuth callback exchange failed." });
+    }
+    return;
+  }
+
+  if (request.method === "POST" && url.pathname === "/api/auth/refresh") {
+    const csrf = readRequestCookie(request, BILLS_CSRF_COOKIE);
+    const supplied = String(request.headers["x-csrf-token"] || "");
+    if (!csrf || !supplied || supplied.length !== csrf.length
+      || !crypto.timingSafeEqual(Buffer.from(supplied), Buffer.from(csrf))) {
+      sendJson(response, 403, { ok: false, error: "Invalid CSRF token." });
+      return;
+    }
+    const refreshToken = readRequestCookie(request, BILLS_REFRESH_SESSION_COOKIE);
+    const clientId = readEnv("ELECTRONY_IDENTITY_OAUTH_CLIENT_ID").trim();
+    if (!refreshToken || !clientId) {
+      clearIdentitySessionCookies(response);
+      sendJson(response, 401, { ok: false, error: "The session has expired. Sign in again." });
+      return;
+    }
+    try {
+      const tokens = await exchangeSupabaseOAuthToken({
+        grant_type: "refresh_token",
+        refresh_token: refreshToken,
+        client_id: clientId
+      });
+      const user = await verifySupabaseAccessToken(tokens.access_token);
+      if (!user) throw new Error("The refreshed access token could not be verified.");
+      const csrfToken = setIdentitySessionCookies(response, tokens, csrf);
+      sendJson(response, 200, { ok: true, user, csrfToken });
+    } catch (error) {
+      clearIdentitySessionCookies(response);
+      sendJson(response, error.statusCode || 401, { ok: false, error: error.message || "The session has expired. Sign in again." });
+    }
+    return;
+  }
+
+  if (request.method === "GET" && url.pathname === "/api/customer/transactions") {
+    const user = await authenticateBillsRequest(request, response);
+    if (!user) {
+      sendJson(response, 401, { ok: false, error: "Sign in with Electrony Accounts to view registered transaction history." });
+      return;
+    }
+    sendJson(response, 503, {
+      ok: false,
+      status: "unavailable",
+      error: "Registered transaction history is unavailable until customer-owned query authorization is verified.",
+      user: { id: user.id }
+    });
+    return;
+  }
+
+  if (request.method === "POST" && url.pathname === "/api/auth/link") {
+    sendJson(response, 501, {
+      ok: false,
+      error: "Explicit legacy-account linking is not enabled. Legacy credentials are preserved and no automatic email-based merge occurs."
+    });
+    return;
+  }
+
+  if (request.method === "POST" && url.pathname === "/api/auth/logout") {
+    const csrf = readRequestCookie(request, BILLS_CSRF_COOKIE);
+    const supplied = String(request.headers["x-csrf-token"] || "");
+    if (!csrf || !supplied || supplied.length !== csrf.length
+      || !crypto.timingSafeEqual(Buffer.from(supplied), Buffer.from(csrf))) {
+      sendJson(response, 403, { ok: false, error: "Invalid CSRF token." });
+      return;
+    }
+    const accessToken = readRequestCookie(request, BILLS_ACCESS_SESSION_COOKIE);
+    if (accessToken) {
+      const identity = getIdentityProjectConfig();
+      if (identity) {
+        try {
+          await fetch(`${identity.projectUrl}/auth/v1/logout`, {
+            method: "POST",
+            headers: { apikey: identity.publishableKey, Authorization: `Bearer ${accessToken}` },
+            signal: AbortSignal.timeout(10000)
+          });
+        } catch {}
+      }
+    }
+    clearIdentitySessionCookies(response);
+    sendJson(response, 200, { ok: true, signedOut: true });
+    return;
+  }
+
   if (request.method === "POST"
     && paymentsBlocked()
     && ["/api/payments/session", "/api/payments/verify", "/api/payments/webhook"].includes(url.pathname)) {
@@ -1531,6 +1904,20 @@ async function handleRequest(request, response) {
   if (process.env.NODE_ENV === "production"
     && !(request.method === "GET" && url.pathname === "/api/fees/quote")
     && !(request.method === "GET" && url.pathname === "/api/services/catalog")
+    && !(request.method === "GET" && url.pathname === "/api/services/virtual-cards/catalog")
+    && !(request.method === "GET" && url.pathname === "/api/services/gift-cards/catalog")
+    && !(request.method === "GET" && url.pathname === "/api/auth/me")
+    && !((request.method === "GET" || request.method === "POST") && (
+      url.pathname === "/api/auth/oauth/start"
+      || url.pathname === "/api/auth/oauth/callback"
+      || url.pathname === "/api/auth/logout"
+      || url.pathname === "/api/auth/refresh"
+      || url.pathname === "/api/auth/link"
+      || url.pathname === "/api/customer/transactions"
+    ))
+    && !(request.method === "POST" && (url.pathname === "/api/auth/register" || url.pathname === "/api/auth/login"))
+    && !(request.method === "GET" && url.pathname === "/api/services/virtual-cards/eligibility")
+    && !(request.method === "POST" && /^\/api\/services\/(virtual-cards|gift-cards)\/purchase$/.test(url.pathname))
     && (url.pathname === "/api" || url.pathname.startsWith("/api/"))) {
     sendJson(response, 503, {
       ok: false,
@@ -1550,11 +1937,14 @@ async function handleRequest(request, response) {
       const user = url.pathname.endsWith("/register")
         ? await createAccount(payload)
         : await verifyAccountCredentials(payload);
+      response.setHeader("Deprecation", "true");
+      response.setHeader("Link", "</>; rel=\"migration\"");
       sendJson(response, url.pathname.endsWith("/register") ? 201 : 200, {
         ok: true,
         user,
         token: signAuthToken(user),
-        expiresIn: TOKEN_LIFETIME_SECONDS
+        expiresIn: TOKEN_LIFETIME_SECONDS,
+        migrationRequired: "This legacy Bills login is retained only as a transition compatibility path. Link it to Electrony Accounts through an explicit verified flow."
       });
     } catch (error) {
       sendJson(response, error.message.includes("BILLS_JWT_SECRET") ? 503 : 400, { ok: false, error: error.message });
@@ -1563,9 +1953,10 @@ async function handleRequest(request, response) {
   }
 
   if (request.method === "GET" && url.pathname === "/api/auth/me") {
-    const user = authenticateRequest(request);
+    const user = await authenticateBillsRequest(request, response);
+    const csrfToken = user ? readRequestCookie(request, BILLS_CSRF_COOKIE) : "";
     sendJson(response, user ? 200 : 401, user
-      ? { ok: true, user }
+      ? { ok: true, user, csrfToken }
       : { ok: false, error: "Sign in to continue." });
     return;
   }
@@ -1600,7 +1991,7 @@ async function handleRequest(request, response) {
   }
 
   if (request.method === "GET" && url.pathname === "/api/services/virtual-cards/eligibility") {
-    if (!authenticateRequest(request)) {
+    if (!await authenticateBillsRequest(request)) {
       sendJson(response, 401, { ok: false, error: "Sign in to check virtual-card eligibility." });
       return;
     }
@@ -1613,7 +2004,7 @@ async function handleRequest(request, response) {
   }
 
   if (request.method === "POST" && /^\/api\/services\/(virtual-cards|gift-cards)\/purchase$/.test(url.pathname)) {
-    if (!authenticateRequest(request)) {
+    if (!await authenticateBillsRequest(request)) {
       sendJson(response, 401, { ok: false, error: "Sign in before purchasing this service." });
       return;
     }
@@ -1676,7 +2067,7 @@ async function handleRequest(request, response) {
         sendJson(response, 400, { ok: false, error: "Invalid transaction reference." });
         return;
       }
-      const user = authenticateRequest(request);
+      const user = await authenticateBillsRequest(request);
       const existingOrder = await postgresPersistence.getOrderByReference(reference, user
         ? { customerId: user.id }
         : { guestOrderSecret: getGuestOrderSecretFromRequest(request, reference) });
@@ -1863,7 +2254,7 @@ async function handleRequest(request, response) {
         return;
       }
 
-      const user = authenticateRequest(request);
+      const user = await authenticateBillsRequest(request);
       const order = await postgresPersistence.getOrderByReference(reference, user
         ? { customerId: user.id }
         : { guestOrderSecret: getGuestOrderSecretFromRequest(request, reference) });
@@ -1918,7 +2309,7 @@ async function handleRequest(request, response) {
       return;
     }
 
-    const user = authenticateRequest(request);
+    const user = await authenticateBillsRequest(request);
     let order;
     try {
       order = await postgresPersistence.getOrderByReference(reference, user

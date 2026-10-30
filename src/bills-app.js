@@ -825,6 +825,58 @@ function displayTransactionResult(message, details, status) {
   panel.appendChild(resultCard);
 }
 
+async function initializeIdentitySignIn() {
+  const button = document.querySelector("#accounts-sign-in-button");
+  if (!button) return;
+  try {
+    const apiUrl = new URL(getBillsApiBaseUrl());
+    button.href = `${apiUrl.href.replace(/\/+$/, "")}/api/auth/oauth/start`;
+    button.addEventListener("click", (event) => {
+      event.preventDefault();
+      window.location.assign(button.href);
+    });
+  } catch {
+    return;
+  }
+
+  try {
+    const response = await fetch(`${getBillsApiBaseUrl()}/api/auth/me`, { credentials: "include" });
+    const payload = await response.json().catch(() => null);
+    if (response.ok && payload?.ok) {
+      state.user = payload.user;
+      button.textContent = "Sign out of Electrony Accounts";
+      button.href = "#";
+      const csrfToken = String(payload.csrfToken || "");
+      const historyStatus = document.querySelector("#customer-history-status");
+      if (historyStatus) {
+        historyStatus.textContent = "Registered transaction history unavailable";
+        historyStatus.hidden = false;
+      }
+      button.addEventListener("click", async (event) => {
+        event.preventDefault();
+        try {
+          await fetch(`${getBillsApiBaseUrl()}/api/auth/logout`, {
+            method: "POST",
+            credentials: "include",
+            headers: {
+              "Content-Type": "application/json",
+              "X-CSRF-Token": csrfToken
+            },
+            body: "{}"
+          });
+        } finally {
+          state.user = null;
+          window.location.assign(window.location.pathname);
+        }
+      });
+    } else {
+      state.user = null;
+    }
+  } catch {
+    state.user = null;
+  }
+}
+
 document.addEventListener("DOMContentLoaded", () => {
   renderServiceList();
   if (serviceCatalog[state.activeService].guestCheckout) {
@@ -832,4 +884,5 @@ document.addEventListener("DOMContentLoaded", () => {
   }
   renderCheckoutPanel();
   verifyReturnedPayment();
+  void initializeIdentitySignIn();
 });

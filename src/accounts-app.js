@@ -72,8 +72,15 @@
     const signoutButton = document.getElementById("signout-button");
     const recoveryForm = document.getElementById("recovery-form");
     const updateForm = document.getElementById("update-form");
+    const dashboard = document.getElementById("dashboard");
+    const dashboardEmail = document.getElementById("dashboard-email");
+    const verificationStatus = document.getElementById("verification-status");
+    const dashboardUpdateButton = document.getElementById("dashboard-update-button");
+    const dashboardSignoutButton = document.getElementById("dashboard-signout-button");
     let currentView = params.get("view") === "signup" ? "signup" : "signin";
     let lastEmailForConfirmation = "";
+    let renderedUserId = "";
+    let authProcessing = false;
     const client = getClient();
 
     if (authorizationIdFromUrl) storeAuthorizationId(authorizationIdFromUrl);
@@ -86,6 +93,7 @@
 
     function showView(view) {
       currentView = view;
+      dashboard.hidden = true;
       recoveryForm.hidden = view !== "recovery";
       updateForm.hidden = view !== "update-password";
       form.hidden = view === "recovery" || view === "update-password";
@@ -100,6 +108,18 @@
       submitButton.textContent = view === "signup" ? "Create account" : "Sign in";
       tabs.forEach((tab) => tab.classList.toggle("is-active", tab.dataset.view === view));
       setStatus(status, "", null);
+    }
+
+    function showLoading() {
+      dashboard.hidden = true;
+      recoveryForm.hidden = true;
+      updateForm.hidden = true;
+      form.hidden = true;
+      document.querySelector(".view-tabs").hidden = true;
+      recoverButton.hidden = true;
+      resendButton.hidden = true;
+      signoutButton.hidden = true;
+      setStatus(status, "Checking your account...", "warning");
     }
 
     tabs.forEach((tab) => tab.addEventListener("click", () => {
@@ -179,7 +199,8 @@
         if (error) throw error;
         setStatus(status, "Your password has been updated.", "success");
         window.history.replaceState({}, "", window.location.pathname);
-        showView("signin");
+        await handleAuthenticated(client);
+        setStatus(status, "Your password has been updated.", "success");
       } catch (error) {
         setStatus(status, error.message || "The password could not be updated. The reset link may have expired.", "error");
       } finally {
@@ -211,14 +232,43 @@
         window.location.assign(`/oauth/consent/?authorization_id=${encodeURIComponent(authId)}`);
         return;
       }
-      setStatus(status, "You are signed in to Electrony.", "success");
-      signoutButton.hidden = false;
-      form.hidden = true;
-      recoverButton.hidden = true;
+
+      try {
+        const { data: userData, error: userError } = await activeClient.auth.getUser();
+        if (userError || !userData?.user) {
+          throw userError || new Error("The signed-in session could not be verified.");
+        }
+
+        const user = userData.user;
+        if (renderedUserId === user.id) return;
+        renderedUserId = user.id;
+
+        dashboardEmail.textContent = user.email || "Signed-in Electrony account";
+        const verified = Boolean(user.email_confirmed_at || user.confirmed_at);
+        verificationStatus.textContent = verified ? "Email verified" : "Email not verified";
+        verificationStatus.classList.toggle("is-verified", verified);
+
+        recoveryForm.hidden = true;
+        updateForm.hidden = true;
+        form.hidden = true;
+        document.querySelector(".view-tabs").hidden = true;
+        recoverButton.hidden = true;
+        resendButton.hidden = true;
+        signoutButton.hidden = true;
+        dashboard.hidden = false;
+        dashboard.closest(".accounts-panel-inner").classList.add("is-dashboard");
+        setStatus(status, "", null);
+      } catch (error) {
+        dashboard.hidden = true;
+        renderedUserId = "";
+        showView("signin");
+        setStatus(status, error.message || "Your session could not be verified. Please sign in again.", "error");
+      }
     }
 
-    signoutButton.addEventListener("click", async () => {
+    async function signOut() {
       disable(signoutButton, true);
+      disable(dashboardSignoutButton, true);
       const { error } = await client.auth.signOut();
       clearAuthorizationId();
       if (error) setStatus(status, error.message || "Sign-out could not be completed.", "error");
@@ -227,12 +277,26 @@
         window.location.assign("/");
       }
       disable(signoutButton, false);
-    });
+      disable(dashboardSignoutButton, false);
+    }
+
+    signoutButton.addEventListener("click", signOut);
+    dashboardSignoutButton.addEventListener("click", signOut);
+    dashboardUpdateButton.addEventListener("click", () => showView("update-password"));
 
     client.auth.onAuthStateChange(async (event) => {
-      if (event === "PASSWORD_RECOVERY") showView("update-password");
+      if (authProcessing) return;
+      if (event === "PASSWORD_RECOVERY") {
+        showView("update-password");
+        return;
+      }
       if (event === "SIGNED_IN" && params.get("view") !== "update-password" && !authError) {
         await handleAuthenticated(client);
+      }
+      if (event === "SIGNED_OUT") {
+        renderedUserId = "";
+        dashboard.hidden = true;
+        showView("signin");
       }
     });
 
@@ -241,25 +305,53 @@
       setStatus(status, expired ? "This confirmation or recovery link has expired. Request a new link." : "Authentication failed. Start again from the sign-in page.", expired ? "warning" : "error");
     }
 
-    const code = params.get("code");
-    if (code) {
-      client.auth.exchangeCodeForSession(code).then(({ error }) => {
-        if (error) setStatus(status, error.message || "This link is invalid or has expired.", "error");
-        else {
+    async function bootstrapSession() {
+      showLoading();
+      authProcessing = true;
+      const code = params.get("code");
+      try {
+        if (code) {
+          const { error } = await client.auth.exchangeCodeForSession(code);
+          if (error) throw error;
           if (params.get("view") === "update-password") {
             window.history.replaceState({}, "", "/?view=update-password");
             showView("update-password");
+            return;
+          }
+          window.history.replaceState({}, "", "/");
+        }
+
+        if (params.get("view") === "update-password") {
+          const { data } = await client.auth.getSession();
+          if (!data?.session) {
+            showView("recovery");
+            setStatus(status, "Your password recovery link is missing, invalid, or has expired. Request a new link.", "warning");
           } else {
-            window.history.replaceState({}, "", "/");
-            handleAuthenticated(client);
+            showView("update-password");
+          }
+          return;
+        }
+
+        const { data: sessionData, error: sessionError } = await client.auth.getSession();
+        if (sessionError) throw sessionError;
+        if (sessionData?.session) {
+          await handleAuthenticated(client);
+        } else {
+          showView(currentView);
+          if (authError) {
+            const expired = /expired|otp_expired/i.test(authError);
+            setStatus(status, expired ? "This confirmation or recovery link has expired. Request a new link." : "Authentication failed. Start again from the sign-in page.", expired ? "warning" : "error");
           }
         }
-      });
-    } else if (params.get("view") === "update-password") {
-      showView("update-password");
-    } else {
-      showView(currentView);
+      } catch (error) {
+        showView(currentView);
+        setStatus(status, error.message || "This confirmation or recovery link could not be completed.", "error");
+      } finally {
+        authProcessing = false;
+      }
     }
+
+    bootstrapSession();
   }
 
   async function initializeConsentApp() {

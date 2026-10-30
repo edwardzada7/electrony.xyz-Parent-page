@@ -252,7 +252,7 @@ function buildStaticSite(site) {
     throw new Error("Unable to locate the local Bills API setting in src/config.js.");
   }
   config = config.replace(localApiSetting, `billsApiBaseUrl: ${apiUrl ? JSON.stringify(apiUrl) : "null"}`);
-  if (site === "accounts") {
+  if (site === "accounts" || site === "bills") {
     config = prepareIdentityConfig(config);
   }
   fs.writeFileSync(configPath, config);
