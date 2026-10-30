@@ -183,12 +183,12 @@ Supabase Auth is being used as an OAuth 2.1 authorization server according to th
 - Customer history: `GET /api/customer/transactions`
 - Legacy account compatibility: `POST /api/auth/register`, `POST /api/auth/login`
 
-The callback URL registered in Supabase must exactly equal `BILLS_OAUTH_CALLBACK_URL`. For production this is the Railway API origin plus `/api/auth/oauth/callback`; it is not a Bills frontend page URL. Dynamic client registration is intentionally disabled.
+The callback URL registered in Supabase must exactly equal `BILLS_OAUTH_CALLBACK_URL`. For production this is `https://electronyxyz-parent-page-production.up.railway.app/api/auth/oauth/callback`; it is not a Bills frontend page URL. Dynamic client registration is intentionally disabled.
 
 ### Dashboard and environment requirements
 
 - Enable OAuth Server in the Supabase Identity project.
-- Set the OAuth authorization path to `/oauth/consent`.
+- Set the OAuth authorization path to `/oauth/consent/`.
 - Keep the Accounts URL Configuration Site URL set to `https://accounts.electrony.xyz`.
 - Register Electrony Bills as a separate public OAuth client with the exact Railway callback URL.
 - The Authorization Code flow, PKCE S256, and exact redirect URI validation are required.
@@ -196,7 +196,7 @@ The callback URL registered in Supabase must exactly equal `BILLS_OAUTH_CALLBACK
 - Configure `ELECTRONY_IDENTITY_SUPABASE_URL`, `ELECTRONY_IDENTITY_SUPABASE_PUBLISHABLE_KEY`, `ELECTRONY_IDENTITY_OAUTH_CLIENT_ID`, and `BILLS_OAUTH_CALLBACK_URL` in Railway.
 - `ELECTRONY_IDENTITY_SUPABASE_PUBLISHABLE_KEY` is public; never configure or expose a service-role/secret key in Bills or its frontend.
 
-The OAuth start endpoint signs and HttpOnly-stores a ten-minute verifier/state/nonce cookie. The callback verifies state, exchanges the authorization code with PKCE S256, and validates the access token through the configured Supabase Auth server. Access and refresh tokens are stored only as Secure, HttpOnly, SameSite=None cookies on the Railway API origin. State-changing logout and refresh operations require a CSRF token and exact allowed-origin/CORS checks.
+The OAuth start endpoint signs and HttpOnly-stores a ten-minute verifier/client/state/nonce/callback cookie. The callback verifies state, callback/client configuration, nonce, and exchanges the authorization code with PKCE S256 before validating the access token through the configured Supabase Auth server. Access and refresh tokens are stored only as Secure, HttpOnly, SameSite=None cookies on the Railway API origin. State-changing logout and refresh operations require a CSRF token and exact allowed-origin/CORS checks.
 
 ### Identity and legacy compatibility
 

@@ -16,6 +16,11 @@ const {
   ContactEnquiryError,
   submitContactEnquiry
 } = require("./contact-enquiries");
+const {
+  validateOAuthCallback,
+  getAllowedOrigins: getSecurityAllowedOrigins,
+  verifySupabaseIdToken
+} = require("./oauth-security");
 
 const APP_ROOT = path.resolve(__dirname, "..");
 const ALLOWED_SERVICES = ["electricity", "airtime", "data", "bills"];
@@ -33,6 +38,29 @@ const monnifyBillsAdapter = createMonnifyBillsAdapter();
 const marpleradAdapter = createMarpleradAdapter(readEnv);
 const teloadlyAdapter = createTeloadlyAdapter(readEnv);
 const scrypt = promisify(crypto.scrypt);
+const PRODUCTION_BILLS_OAUTH_CALLBACK_URL =
+  "https://electronyxyz-parent-page-production.up.railway.app/api/auth/oauth/callback";
+
+function getValidatedBillsOAuthCallback() {
+  return validateOAuthCallback(readEnv("BILLS_OAUTH_CALLBACK_URL"));
+}
+
+function getValidatedBillsAppUrl() {
+  const rawAppUrl = readEnv("BILLS_APP_URL").trim();
+  const fallback = "https://bills.electrony.xyz/bills/app/";
+  try {
+    const appUrl = new URL(rawAppUrl || fallback);
+    if (appUrl.username || appUrl.password || appUrl.search || appUrl.hash) return null;
+    if (process.env.NODE_ENV === "production"
+      && (!rawAppUrl || appUrl.protocol !== "https:" || appUrl.port)) return null;
+    if (!["http:", "https:"].includes(appUrl.protocol)) return null;
+    if (appUrl.protocol === "http:"
+      && !["localhost", "127.0.0.1"].includes(appUrl.hostname)) return null;
+    return appUrl;
+  } catch {
+    return null;
+  }
+}
 
 function paymentsBlocked() {
   return !MONNIFY_PAYMENT_CONTRACT_VERIFIED
@@ -698,23 +726,11 @@ function getMissingHealthConfiguration() {
 }
 
 function getAllowedOrigins() {
-  const configured = [
-    readEnv("BILLS_APP_URL"),
-    ...readEnv("BILLS_ALLOWED_ORIGINS").split(",")
-  ];
-  const origins = new Set(["http://localhost:4173", "http://127.0.0.1:4173"]);
-
-  for (const value of configured) {
-    if (!value) continue;
-    try {
-      const url = new URL(value);
-      if (url.protocol === "http:" || url.protocol === "https:") origins.add(url.origin);
-    } catch (error) {
-      throw new Error("BILLS_APP_URL and BILLS_ALLOWED_ORIGINS must contain valid HTTP(S) URLs.");
-    }
-  }
-
-  return origins;
+  return getSecurityAllowedOrigins({
+    nodeEnv: process.env.NODE_ENV,
+    billsAppUrl: readEnv("BILLS_APP_URL"),
+    allowedOrigins: readEnv("BILLS_ALLOWED_ORIGINS")
+  });
 }
 
 function sendJson(response, statusCode, payload) {
@@ -1723,15 +1739,8 @@ async function handleRequest(request, response) {
   if (request.method === "GET" && url.pathname === "/api/auth/oauth/start") {
     const identity = getIdentityProjectConfig();
     const clientId = readEnv("ELECTRONY_IDENTITY_OAUTH_CLIENT_ID").trim();
-    const callbackUrl = readEnv("BILLS_OAUTH_CALLBACK_URL").trim();
-    let callback;
-    try {
-      callback = new URL(callbackUrl);
-    } catch {
-      callback = null;
-    }
-    if (!identity || !clientId || !callback || callback.protocol !== "https:" || callback.username || callback.password
-      || callback.search || callback.hash) {
+    const callback = getValidatedBillsOAuthCallback();
+    if (!identity || !clientId || !callback) {
       sendJson(response, 503, { ok: false, error: "Electrony Accounts OAuth is not configured." });
       return;
     }
@@ -1743,14 +1752,15 @@ async function handleRequest(request, response) {
       verifier,
       state,
       nonce,
-      callbackUrl: callback.href.replace(/\/+$/, ""),
+      clientId,
+      callbackUrl: callback.href,
       expiresAt: Date.now() + 10 * 60 * 1000
     }), 600);
     response.setHeader("Cache-Control", "no-store");
     const authorizeUrl = new URL(`${identity.projectUrl}/auth/v1/oauth/authorize`);
     authorizeUrl.searchParams.set("response_type", "code");
     authorizeUrl.searchParams.set("client_id", clientId);
-    authorizeUrl.searchParams.set("redirect_uri", callback.href.replace(/\/+$/, ""));
+    authorizeUrl.searchParams.set("redirect_uri", callback.href);
     authorizeUrl.searchParams.set("state", state);
     authorizeUrl.searchParams.set("nonce", nonce);
     authorizeUrl.searchParams.set("scope", "openid email profile");
@@ -1780,13 +1790,36 @@ async function handleRequest(request, response) {
       return;
     }
     const clientId = readEnv("ELECTRONY_IDENTITY_OAUTH_CLIENT_ID").trim();
+    const callback = getValidatedBillsOAuthCallback();
+    if (!callback || !oauth.callbackUrl || oauth.callbackUrl !== callback.href
+      || !oauth.clientId || oauth.clientId !== clientId) {
+      clearIdentitySessionCookies(response);
+      sendJson(response, 400, { ok: false, error: "Invalid OAuth callback configuration." });
+      return;
+    }
     try {
       const tokens = await exchangeSupabaseOAuthToken({
         grant_type: "authorization_code",
-        client_id: clientId,
+        client_id: oauth.clientId,
         code,
         code_verifier: oauth.verifier,
         redirect_uri: oauth.callbackUrl
+      });
+      if (!tokens?.id_token) {
+        clearIdentitySessionCookies(response);
+        sendJson(response, 401, { ok: false, error: "The OAuth nonce could not be validated." });
+        return;
+      }
+      const identity = getIdentityProjectConfig();
+      if (!identity) {
+        clearIdentitySessionCookies(response);
+        sendJson(response, 503, { ok: false, error: "Electrony Accounts OAuth is not configured." });
+        return;
+      }
+      await verifySupabaseIdToken(tokens.id_token, {
+        projectUrl: identity.projectUrl,
+        clientId: oauth.clientId,
+        expectedNonce: oauth.nonce
       });
       const user = await verifySupabaseAccessToken(tokens.access_token);
       if (!user) {
@@ -1796,7 +1829,12 @@ async function handleRequest(request, response) {
       }
       setIdentitySessionCookies(response, tokens);
       clearSecureCookie(response, BILLS_OAUTH_COOKIE);
-      const returnUrl = new URL(readEnv("BILLS_APP_URL").trim() || "https://bills.electrony.xyz/bills/app/");
+      const returnUrl = getValidatedBillsAppUrl();
+      if (!returnUrl) {
+        clearIdentitySessionCookies(response);
+        sendJson(response, 503, { ok: false, error: "The Bills application redirect is not configured safely." });
+        return;
+      }
       returnUrl.searchParams.set("signed_in", "1");
       response.writeHead(302, {
         Location: returnUrl.href,

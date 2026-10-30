@@ -92,7 +92,7 @@ The account frontend loads the official Supabase browser client and uses PKCE, p
 Only complete this section after the identity project dashboard exposes a working OAuth Server configuration and registered clients.
 
 1. Open Authentication > OAuth Server, enable the feature if it is available on the project, and set Site URL to the accounts site.
-2. Set Authorization Path to `/oauth/consent`.
+2. Set Authorization Path to `/oauth/consent/`.
 3. Register each Electrony product client in the dashboard. Record only its public client configuration and exact callback/redirect URIs. Never fabricate a client.
 4. Do not grant product-admin, vendor, wallet, finance, KYC, BNPL, or credit permissions merely by enabling authentication or by approving an OAuth request.
 5. Keep custom OAuth token claims and Row Level Security in scope; no product dashboards or permissions are implemented in this phase.
