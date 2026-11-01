@@ -19,7 +19,10 @@ const {
 const {
   validateOAuthCallback,
   getAllowedOrigins: getSecurityAllowedOrigins,
-  verifySupabaseIdToken
+  verifySupabaseIdToken,
+  validateOAuthStartConfiguration,
+  createOAuthAuthorizationRequest,
+  getSafeOAuthProviderFailure
 } = require("./oauth-security");
 
 const APP_ROOT = path.resolve(__dirname, "..");
@@ -164,10 +167,10 @@ async function exchangeSupabaseOAuthToken(form) {
   });
   const payload = await response.json().catch(() => null);
   if (!response.ok || !payload?.access_token) {
-    throw Object.assign(
-      new Error(payload?.error_description || payload?.error || "OAuth token exchange failed."),
-      { statusCode: response.status >= 400 && response.status < 500 ? response.status : 502 }
-    );
+    const failure = getSafeOAuthProviderFailure(response.status);
+    throw Object.assign(new Error(failure.message), {
+      statusCode: failure.statusCode
+    });
   }
   return payload;
 }
@@ -1737,36 +1740,35 @@ async function handleRequest(request, response) {
   }
 
   if (request.method === "GET" && url.pathname === "/api/auth/oauth/start") {
-    const identity = getIdentityProjectConfig();
-    const clientId = readEnv("ELECTRONY_IDENTITY_OAUTH_CLIENT_ID").trim();
-    const callback = getValidatedBillsOAuthCallback();
-    if (!identity || !clientId || !callback) {
-      sendJson(response, 503, { ok: false, error: "Electrony Accounts OAuth is not configured." });
+    const oauthConfig = validateOAuthStartConfiguration({
+      projectUrl: readEnv("ELECTRONY_IDENTITY_SUPABASE_URL"),
+      publishableKey: readEnv("ELECTRONY_IDENTITY_SUPABASE_PUBLISHABLE_KEY"),
+      clientId: readEnv("ELECTRONY_IDENTITY_OAUTH_CLIENT_ID"),
+      callbackUrl: readEnv("BILLS_OAUTH_CALLBACK_URL"),
+      jwtSecret: readEnv("BILLS_JWT_SECRET"),
+      nodeEnv: process.env.NODE_ENV
+    });
+    if (!oauthConfig.ok) {
+      sendJson(response, 503, {
+        ok: false,
+        error: "Electrony Accounts OAuth is not configured.",
+        diagnosticCode: oauthConfig.diagnosticCode,
+        missingSettings: oauthConfig.missingSettings,
+        invalidSettings: oauthConfig.invalidSettings
+      });
       return;
     }
-    const verifier = crypto.randomBytes(32).toString("base64url");
-    const challenge = crypto.createHash("sha256").update(verifier).digest("base64url");
-    const state = crypto.randomBytes(32).toString("base64url");
-    const nonce = crypto.randomBytes(32).toString("base64url");
+    const oauthRequest = createOAuthAuthorizationRequest(oauthConfig);
     setSecureCookie(response, BILLS_OAUTH_COOKIE, encodeSignedOAuthCookie({
-      verifier,
-      state,
-      nonce,
-      clientId,
-      callbackUrl: callback.href,
+      verifier: oauthRequest.verifier,
+      state: oauthRequest.state,
+      nonce: oauthRequest.nonce,
+      clientId: oauthConfig.clientId,
+      callbackUrl: oauthConfig.callbackUrl,
       expiresAt: Date.now() + 10 * 60 * 1000
     }), 600);
     response.setHeader("Cache-Control", "no-store");
-    const authorizeUrl = new URL(`${identity.projectUrl}/auth/v1/oauth/authorize`);
-    authorizeUrl.searchParams.set("response_type", "code");
-    authorizeUrl.searchParams.set("client_id", clientId);
-    authorizeUrl.searchParams.set("redirect_uri", callback.href);
-    authorizeUrl.searchParams.set("state", state);
-    authorizeUrl.searchParams.set("nonce", nonce);
-    authorizeUrl.searchParams.set("scope", "openid email profile");
-    authorizeUrl.searchParams.set("code_challenge", challenge);
-    authorizeUrl.searchParams.set("code_challenge_method", "S256");
-    response.writeHead(302, { Location: authorizeUrl.href });
+    response.writeHead(302, { Location: oauthRequest.authorizeUrl.href });
     response.end();
     return;
   }
@@ -1843,7 +1845,10 @@ async function handleRequest(request, response) {
       response.end();
     } catch (error) {
       clearIdentitySessionCookies(response);
-      sendJson(response, error.statusCode || 502, { ok: false, error: error.message || "OAuth callback exchange failed." });
+      sendJson(response, error.statusCode || 502, {
+        ok: false,
+        error: "Electrony Accounts authorization could not be completed."
+      });
     }
     return;
   }

@@ -20,6 +20,66 @@
     else delete element.dataset.tone;
   }
 
+  function reportConsentDiagnostic(status, stage, error, authorizationIdPresent) {
+    const statusValue = error?.status ?? error?.statusCode;
+    const httpStatus = Number.isInteger(statusValue) && statusValue >= 100 && statusValue <= 599
+      ? statusValue
+      : null;
+    const safeErrorCodes = [
+      "access_denied",
+      "authorization_not_found",
+      "bad_code_verifier",
+      "bad_jwt",
+      "email_not_confirmed",
+      "forbidden",
+      "invalid_authorization_id",
+      "invalid_credentials",
+      "invalid_grant",
+      "invalid_request",
+      "not_found",
+      "otp_expired",
+      "session_not_found",
+      "unauthorized",
+      "user_not_found",
+      "weak_password"
+    ];
+    const errorCode = safeErrorCodes.includes(error?.code)
+      ? error.code
+      : null;
+    const knownSafeMessages = [
+      "Auth session missing!",
+      "Invalid JWT",
+      "JWT expired",
+      "Invalid token",
+      "User not found",
+      "Authorization not found",
+      "Authorization request not found",
+      "Invalid authorization request",
+      "Authorization request has expired",
+      "Invalid authorization_id",
+      "Not Found",
+      "Unauthorized",
+      "Forbidden"
+    ];
+    const errorMessage = knownSafeMessages.includes(error?.message)
+      ? error.message
+      : "Error message omitted for safety.";
+    const diagnostic = {
+      stage,
+      httpStatus,
+      errorCode,
+      errorMessage,
+      authorizationIdPresent
+    };
+
+    console.error("[oauth-consent-diagnostic]", diagnostic);
+    setStatus(
+      status,
+      `OAuth consent failed at ${stage}. HTTP status: ${httpStatus ?? "unavailable"}. Supabase error code: ${errorCode || "unavailable"}. ${errorMessage} Authorization ID present: ${authorizationIdPresent ? "yes" : "no"}.`,
+      "error"
+    );
+  }
+
   function disable(button, disabled) {
     if (button) button.disabled = disabled;
   }
@@ -359,27 +419,55 @@
     const content = document.getElementById("consent-content");
     if (!status || !content) return;
     const authorizationId = params.get("authorization_id") || sessionStorage.getItem(AUTH_ID_KEY);
-    const client = getClient();
 
     if (!authorizationId) {
       setStatus(status, "This authorization request is missing its authorization_id. It cannot be approved safely.", "error");
       return;
     }
     storeAuthorizationId(authorizationId);
+    let client;
+    try {
+      client = getClient();
+    } catch (error) {
+      reportConsentDiagnostic(status, "oauth_consent_initialization", error, true);
+      return;
+    }
     if (!client) {
       setStatus(status, "OAuth consent is unavailable because identity configuration is incomplete.", "warning");
       return;
     }
 
+    let userData;
+    let userError;
     try {
-      const { data: userData, error: userError } = await client.auth.getUser();
-      if (userError || !userData?.user) {
-        window.location.assign(`/?view=signin&authorization_id=${encodeURIComponent(authorizationId)}`);
-        return;
-      }
+      ({ data: userData, error: userError } = await client.auth.getUser());
+    } catch (error) {
+      reportConsentDiagnostic(status, "accounts_session_check", error, true);
+      window.location.assign(`/?view=signin&authorization_id=${encodeURIComponent(authorizationId)}`);
+      return;
+    }
+    if (userError) {
+      reportConsentDiagnostic(status, "accounts_session_check", userError, true);
+      window.location.assign(`/?view=signin&authorization_id=${encodeURIComponent(authorizationId)}`);
+      return;
+    }
+    if (!userData?.user) {
+      window.location.assign(`/?view=signin&authorization_id=${encodeURIComponent(authorizationId)}`);
+      return;
+    }
 
-      const { data: details, error } = await client.auth.oauth.getAuthorizationDetails(authorizationId);
-      if (error || !details) throw error || new Error("The authorization request could not be loaded.");
+    let details;
+    try {
+      const { data, error } = await client.auth.oauth.getAuthorizationDetails(authorizationId);
+      if (error) throw error;
+      if (!data) throw new Error("The authorization request could not be loaded.");
+      details = data;
+    } catch (error) {
+      reportConsentDiagnostic(status, "oauth_authorization_details", error, true);
+      return;
+    }
+
+    try {
       if (!("authorization_id" in details) && details.redirect_url) {
         clearAuthorizationId();
         window.location.assign(details.redirect_url);
@@ -427,10 +515,7 @@
         disable(button, false);
       });
     } catch (error) {
-      const message = /expired|invalid|not found/i.test(error.message || "")
-        ? "This authorization request is invalid or has expired."
-        : "The authorization request could not be loaded.";
-      setStatus(status, message, "error");
+      reportConsentDiagnostic(status, "oauth_consent_initialization", error, true);
     }
   }
 

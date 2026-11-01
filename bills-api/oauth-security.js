@@ -43,6 +43,93 @@ function validateOAuthCallback(rawCallbackUrl, nodeEnv = process.env.NODE_ENV) {
   }
 }
 
+function validateOAuthStartConfiguration({
+  projectUrl,
+  publishableKey,
+  clientId,
+  callbackUrl,
+  jwtSecret,
+  nodeEnv = process.env.NODE_ENV
+}) {
+  const missingSettings = [];
+  const invalidSettings = [];
+  const rawProjectUrl = typeof projectUrl === "string" ? projectUrl.trim() : "";
+  const rawPublishableKey = typeof publishableKey === "string" ? publishableKey.trim() : "";
+  const rawClientId = typeof clientId === "string" ? clientId.trim() : "";
+  const rawCallbackUrl = typeof callbackUrl === "string" ? callbackUrl.trim() : "";
+  const rawJwtSecret = typeof jwtSecret === "string" ? jwtSecret.trim() : "";
+  const trustedProjectUrl = validateHttpsSupabaseProject(rawProjectUrl);
+
+  if (!rawProjectUrl) missingSettings.push("ELECTRONY_IDENTITY_SUPABASE_URL");
+  else if (!trustedProjectUrl) invalidSettings.push("ELECTRONY_IDENTITY_SUPABASE_URL");
+
+  if (!rawPublishableKey) missingSettings.push("ELECTRONY_IDENTITY_SUPABASE_PUBLISHABLE_KEY");
+  else if (rawPublishableKey.length < 20 || /replace_with|service_role|secret_key/i.test(rawPublishableKey)) {
+    invalidSettings.push("ELECTRONY_IDENTITY_SUPABASE_PUBLISHABLE_KEY");
+  }
+
+  if (!rawClientId) missingSettings.push("ELECTRONY_IDENTITY_OAUTH_CLIENT_ID");
+  else if (/replace_with|change_me|example/i.test(rawClientId)) {
+    invalidSettings.push("ELECTRONY_IDENTITY_OAUTH_CLIENT_ID");
+  }
+
+  const callback = validateOAuthCallback(rawCallbackUrl, nodeEnv);
+  if (!rawCallbackUrl) missingSettings.push("BILLS_OAUTH_CALLBACK_URL");
+  else if (!callback) invalidSettings.push("BILLS_OAUTH_CALLBACK_URL");
+
+  if (!rawJwtSecret) missingSettings.push("BILLS_JWT_SECRET");
+  else if (rawJwtSecret.length < 32 || /replace_with|change_me|example/i.test(rawJwtSecret)) {
+    invalidSettings.push("BILLS_JWT_SECRET");
+  }
+
+  if (missingSettings.length || invalidSettings.length) {
+    return {
+      ok: false,
+      diagnosticCode: invalidSettings.includes("BILLS_OAUTH_CALLBACK_URL")
+        ? "oauth_callback_invalid"
+        : missingSettings.length
+          ? "oauth_configuration_missing"
+          : "oauth_configuration_invalid",
+      missingSettings,
+      invalidSettings
+    };
+  }
+
+  return {
+    ok: true,
+    projectUrl: trustedProjectUrl,
+    clientId: rawClientId,
+    callbackUrl: callback.href
+  };
+}
+
+function createOAuthAuthorizationRequest({ projectUrl, clientId, callbackUrl }) {
+  const verifier = crypto.randomBytes(32).toString("base64url");
+  const challenge = crypto.createHash("sha256").update(verifier).digest("base64url");
+  const state = crypto.randomBytes(32).toString("base64url");
+  const nonce = crypto.randomBytes(32).toString("base64url");
+  const authorizeUrl = new URL(`${projectUrl}/auth/v1/oauth/authorize`);
+  authorizeUrl.searchParams.set("response_type", "code");
+  authorizeUrl.searchParams.set("client_id", clientId);
+  authorizeUrl.searchParams.set("redirect_uri", callbackUrl);
+  authorizeUrl.searchParams.set("state", state);
+  authorizeUrl.searchParams.set("nonce", nonce);
+  authorizeUrl.searchParams.set("scope", "openid email profile");
+  authorizeUrl.searchParams.set("code_challenge", challenge);
+  authorizeUrl.searchParams.set("code_challenge_method", "S256");
+  return { authorizeUrl, verifier, state, nonce, challenge };
+}
+
+function getSafeOAuthProviderFailure(statusCode) {
+  const safeStatus = Number.isInteger(statusCode) && statusCode >= 400 && statusCode < 500
+    ? statusCode
+    : 502;
+  return {
+    statusCode: safeStatus,
+    message: "Electrony Accounts authorization could not be completed."
+  };
+}
+
 function validateConfiguredOrigin(rawOrigin, nodeEnv = process.env.NODE_ENV, { allowLocalDefault = false } = {}) {
   if (typeof rawOrigin !== "string" || !rawOrigin.trim()) return null;
   try {
@@ -202,6 +289,9 @@ function validateOAuthStateCookie(payload, submittedState, now = Date.now()) {
 module.exports = {
   PRODUCTION_CALLBACK,
   validateOAuthCallback,
+  validateOAuthStartConfiguration,
+  createOAuthAuthorizationRequest,
+  getSafeOAuthProviderFailure,
   validateConfiguredOrigin,
   getAllowedOrigins,
   verifySupabaseIdToken,
