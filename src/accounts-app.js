@@ -20,62 +20,52 @@
     else delete element.dataset.tone;
   }
 
-  function reportConsentDiagnostic(status, stage, error, authorizationIdPresent) {
-    const statusValue = error?.status ?? error?.statusCode;
+  function reportConsentDiagnostic(status, stage, error, authorizationIdSource) {
+    const statusValue = error?.status ?? error?.statusCode ?? error?.response?.status;
     const httpStatus = Number.isInteger(statusValue) && statusValue >= 100 && statusValue <= 599
       ? statusValue
       : null;
-    const safeErrorCodes = [
-      "access_denied",
-      "authorization_not_found",
-      "bad_code_verifier",
-      "bad_jwt",
-      "email_not_confirmed",
-      "forbidden",
-      "invalid_authorization_id",
-      "invalid_credentials",
-      "invalid_grant",
-      "invalid_request",
-      "not_found",
-      "otp_expired",
-      "session_not_found",
-      "unauthorized",
-      "user_not_found",
-      "weak_password"
-    ];
-    const errorCode = safeErrorCodes.includes(error?.code)
+    const errorCode = typeof error?.code === "string" && /^[a-z][a-z0-9_]{0,63}$/.test(error.code)
       ? error.code
       : null;
-    const knownSafeMessages = [
-      "Auth session missing!",
-      "Invalid JWT",
-      "JWT expired",
-      "Invalid token",
-      "User not found",
-      "Authorization not found",
-      "Authorization request not found",
-      "Invalid authorization request",
-      "Authorization request has expired",
-      "Invalid authorization_id",
-      "Not Found",
-      "Unauthorized",
-      "Forbidden"
-    ];
-    const errorMessage = knownSafeMessages.includes(error?.message)
-      ? error.message
-      : "Error message omitted for safety.";
+    const errorCategories = new Map([
+      ["AuthApiError", "api_error"],
+      ["AuthRetryableFetchError", "network_error"],
+      ["AuthSessionMissingError", "session_missing"],
+      ["AuthUnknownError", "unknown_auth_error"]
+    ]);
+    const errorCategory = errorCategories.get(error?.name) || "other_error";
+    const safeMessages = new Map([
+      ["auth session missing!", "Auth session missing!"],
+      ["invalid jwt", "Invalid JWT"],
+      ["jwt expired", "JWT expired"],
+      ["invalid token", "Invalid token"],
+      ["user not found", "User not found"],
+      ["authorization not found", "Authorization not found"],
+      ["authorization request not found", "Authorization request not found"],
+      ["invalid authorization request", "Invalid authorization request"],
+      ["authorization request has expired", "Authorization request has expired"],
+      ["invalid authorization_id", "Invalid authorization_id"],
+      ["not found", "Not Found"],
+      ["unauthorized", "Unauthorized"],
+      ["forbidden", "Forbidden"]
+    ]);
+    const message = typeof error?.message === "string" ? error.message.trim().toLowerCase() : "";
+    const errorMessage = safeMessages.get(message) || "Error message omitted for safety.";
     const diagnostic = {
       stage,
       httpStatus,
       errorCode,
+      errorCategory,
       errorMessage,
-      authorizationIdPresent
+      authorizationIdPresent: authorizationIdSource !== "missing",
+      authorizationIdSource
     };
 
     console.error("[oauth-consent-diagnostic]", diagnostic);
     setStatus(
       status,
-      `OAuth consent failed at ${stage}. HTTP status: ${httpStatus ?? "unavailable"}. Supabase error code: ${errorCode || "unavailable"}. ${errorMessage} Authorization ID present: ${authorizationIdPresent ? "yes" : "no"}.`,
+      `OAuth consent failed at ${stage}. HTTP status: ${httpStatus ?? "unavailable"}. Supabase error code: ${errorCode || "unavailable"}. Error category: ${errorCategory}. ${errorMessage} Authorization ID source: ${authorizationIdSource}.`,
       "error"
     );
   }
@@ -418,7 +408,14 @@
     const status = document.getElementById("consent-status");
     const content = document.getElementById("consent-content");
     if (!status || !content) return;
-    const authorizationId = params.get("authorization_id") || sessionStorage.getItem(AUTH_ID_KEY);
+    const authorizationIdFromConsentUrl = params.get("authorization_id");
+    const storedAuthorizationId = sessionStorage.getItem(AUTH_ID_KEY);
+    const authorizationId = authorizationIdFromConsentUrl || storedAuthorizationId;
+    const authorizationIdSource = authorizationIdFromConsentUrl
+      ? "url"
+      : storedAuthorizationId
+        ? "session_storage"
+        : "missing";
 
     if (!authorizationId) {
       setStatus(status, "This authorization request is missing its authorization_id. It cannot be approved safely.", "error");
@@ -429,7 +426,7 @@
     try {
       client = getClient();
     } catch (error) {
-      reportConsentDiagnostic(status, "oauth_consent_initialization", error, true);
+      reportConsentDiagnostic(status, "oauth_consent_initialization", error, authorizationIdSource);
       return;
     }
     if (!client) {
@@ -442,12 +439,12 @@
     try {
       ({ data: userData, error: userError } = await client.auth.getUser());
     } catch (error) {
-      reportConsentDiagnostic(status, "accounts_session_check", error, true);
+      reportConsentDiagnostic(status, "accounts_session_check", error, authorizationIdSource);
       window.location.assign(`/?view=signin&authorization_id=${encodeURIComponent(authorizationId)}`);
       return;
     }
     if (userError) {
-      reportConsentDiagnostic(status, "accounts_session_check", userError, true);
+      reportConsentDiagnostic(status, "accounts_session_check", userError, authorizationIdSource);
       window.location.assign(`/?view=signin&authorization_id=${encodeURIComponent(authorizationId)}`);
       return;
     }
@@ -463,7 +460,7 @@
       if (!data) throw new Error("The authorization request could not be loaded.");
       details = data;
     } catch (error) {
-      reportConsentDiagnostic(status, "oauth_authorization_details", error, true);
+      reportConsentDiagnostic(status, "oauth_authorization_details", error, authorizationIdSource);
       return;
     }
 
@@ -515,7 +512,7 @@
         disable(button, false);
       });
     } catch (error) {
-      reportConsentDiagnostic(status, "oauth_consent_initialization", error, true);
+      reportConsentDiagnostic(status, "oauth_consent_initialization", error, authorizationIdSource);
     }
   }
 
