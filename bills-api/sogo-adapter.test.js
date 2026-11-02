@@ -1,0 +1,139 @@
+"use strict";
+
+const assert = require("node:assert/strict");
+const crypto = require("node:crypto");
+const test = require("node:test");
+const { SANDBOX_BASE_URL, createSogoAdapter } = require("./adapters/sogo-adapter");
+
+function createResponse(status, payload, headers = {}) {
+  return {
+    status,
+    ok: status >= 200 && status < 300,
+    headers: new Headers(headers),
+    async text() {
+      return JSON.stringify(payload);
+    }
+  };
+}
+
+function configuredEnv(overrides = {}) {
+  return {
+    SOGO_ENABLED: "true",
+    SOGO_API_BASE_URL: SANDBOX_BASE_URL,
+    SOGO_SECRET_KEY: "sogo_sk_test_123456789",
+    SOGO_WEBHOOK_SECRET: "sandbox-webhook-secret",
+    ...overrides
+  };
+}
+
+test("catalogue, plans, packages, verification, purchases, and status use documented sandbox routes", async () => {
+  const calls = [];
+  const adapter = createSogoAdapter({
+    readEnv: (name) => configuredEnv()[name] || "",
+    fetchImpl: async (url, options) => {
+      calls.push({ url, options });
+      return createResponse(200, { data: { providers: [] } });
+    }
+  });
+  const key = crypto.randomUUID();
+
+  await adapter.getCatalogue();
+  await adapter.getDataPlans("mtn");
+  await adapter.getCablePackages("dstv");
+  await adapter.getEducationPlans();
+  await adapter.verifyMeter({ disco_slug: "ikedc", meter_number: "45012345678", meter_type: "prepaid" });
+  await adapter.verifySmartcard({ provider: "dstv", smartcard_number: "1234567890" });
+  await adapter.verifyJamb({ profile_id: "12345678" });
+  await adapter.verifyBetAccount({ provider: "bet9ja", account_id: "123456" });
+  await adapter.purchaseAirtime({ network: "mtn", phone: "08012345678", amount: 1000 }, key);
+  await adapter.purchaseData({ network: "mtn", phone: "08012345678", variation_code: "actual-code" }, key);
+  await adapter.purchaseElectricity({
+    disco_slug: "ikedc",
+    meter_number: "45012345678",
+    meter_type: "prepaid",
+    amount: 1000
+  }, key);
+  await adapter.purchaseCableTv({
+    provider: "dstv",
+    smartcard_number: "1234567890",
+    subscription_type: "renew",
+    variation_code: "actual-package",
+    amount: 1000
+  }, key);
+  await adapter.purchaseEducation({ provider: "jamb", profile_id: "12345678", variation_code: "actual-plan", amount: 1000 }, key);
+  await adapter.getTransaction(key, { byIdempotencyKey: true });
+
+  assert.deepEqual(calls.map(({ url }) => url), [
+    `${SANDBOX_BASE_URL}/bills/catalog`,
+    `${SANDBOX_BASE_URL}/bills/data-plans?network=mtn`,
+    `${SANDBOX_BASE_URL}/bills/cable-packages?provider=dstv`,
+    `${SANDBOX_BASE_URL}/bills/education-plans`,
+    `${SANDBOX_BASE_URL}/bills/electricity/verify-meter`,
+    `${SANDBOX_BASE_URL}/bills/cable-tv/verify-smartcard`,
+    `${SANDBOX_BASE_URL}/bills/education/verify-jamb`,
+    `${SANDBOX_BASE_URL}/bills/bet-funding/verify-account`,
+    `${SANDBOX_BASE_URL}/bills/airtime`,
+    `${SANDBOX_BASE_URL}/bills/data`,
+    `${SANDBOX_BASE_URL}/bills/electricity`,
+    `${SANDBOX_BASE_URL}/bills/cable-tv`,
+    `${SANDBOX_BASE_URL}/bills/education`,
+    `${SANDBOX_BASE_URL}/transactions/${key}?type=bill_payment`
+  ]);
+  for (const { options } of calls) {
+    assert.equal(options.headers.Authorization, "Bearer sogo_sk_test_123456789");
+  }
+  for (const { options } of calls.slice(8, 13)) {
+    assert.equal(options.headers["Idempotency-Key"], key);
+  }
+  assert.equal(calls[4].options.body, JSON.stringify({
+    disco_slug: "ikedc",
+    meter_number: "45012345678",
+    meter_type: "prepaid"
+  }));
+  assert.equal(calls[5].options.body, JSON.stringify({
+    provider: "dstv",
+    smartcard_number: "1234567890"
+  }));
+});
+
+test("configuration fails closed for missing keys, disabled integration, and live URLs or keys", async () => {
+  for (const env of [
+    configuredEnv({ SOGO_ENABLED: "false" }),
+    configuredEnv({ SOGO_API_BASE_URL: "https://api.sogo.africa/v1" }),
+    configuredEnv({ SOGO_SECRET_KEY: "sogo_sk_live_123456789" }),
+    configuredEnv({ SOGO_SECRET_KEY: "" })
+  ]) {
+    const adapter = createSogoAdapter({ readEnv: (name) => env[name] || "" });
+    assert.equal(adapter.isConfigured(), false);
+    await assert.rejects(adapter.getCatalogue(), (error) => error.code === "sogo_not_configured");
+  }
+});
+
+test("purchase timeout is marked uncertain and does not retry or create another key", async () => {
+  let requestCount = 0;
+  const adapter = createSogoAdapter({
+    readEnv: (name) => configuredEnv()[name] || "",
+    fetchImpl: async () => {
+      requestCount += 1;
+      throw new Error("network timeout");
+    }
+  });
+  const key = crypto.randomUUID();
+
+  await assert.rejects(
+    adapter.purchaseAirtime({ network: "mtn", phone: "08012345678", amount: 1000 }, key),
+    (error) => error.code === "sogo_request_uncertain" && error.uncertain === true
+  );
+  assert.equal(requestCount, 1);
+});
+
+test("webhook signature verifies raw bytes with constant-time-safe format validation", () => {
+  const rawBody = Buffer.from('{"event":"transaction.completed"}');
+  const secret = configuredEnv().SOGO_WEBHOOK_SECRET;
+  const signature = `sha256=${crypto.createHmac("sha256", secret).update(rawBody).digest("hex")}`;
+  const adapter = createSogoAdapter({ readEnv: (name) => configuredEnv()[name] || "" });
+
+  assert.equal(adapter.verifyWebhookSignature(rawBody, signature), true);
+  assert.equal(adapter.verifyWebhookSignature(rawBody, `sha256=${"0".repeat(64)}`), false);
+  assert.equal(adapter.verifyWebhookSignature(rawBody, signature.slice(7)), false);
+});

@@ -10,7 +10,7 @@ The Railway deployment is configured in [`railway.json`](./railway.json) to use 
 
 If the Railway service does not load the root `railway.json`, configure its start command as `node bills-api/server.js` and ensure the builder/deployment mode is Railpack rather than a static-site/Caddy deployment. If the website is also deployed to Vercel, retain a deployment-specific `billsApiBaseUrl` in `src/config.js` that points to the existing Railway service.
 
-Production Bills API routes intentionally return `503` until durable Supabase persistence has been implemented against the actual table definitions. Payment session, verification, and webhook mutations return `503` in every mode until authoritative Monnify reference/amount/currency verification and a verified vending-provider contract are implemented. The website remains available while Bills operations are blocked.
+Production Bills payment routes intentionally return `503` until durable Supabase persistence and database authorization have been verified against the actual table definitions. Sogo sandbox catalogue and customer-verification calls are implemented server-side when `SOGO_ENABLED`, `SOGO_API_BASE_URL`, `SOGO_SECRET_KEY`, and `SOGO_WEBHOOK_SECRET` are configured. Payment session, verification, and Monnify webhook mutations remain blocked until Monnify reference/amount/currency verification and end-to-end payment readiness are verified. No Sogo vending is authorized by a browser redirect. The website remains available while Bills payments are blocked.
 
 ## Configuration
 
@@ -20,7 +20,7 @@ Place the approved parent Electrony logo in `assets/brand/` when it is available
 
 ## Electrony Bills
 
-The public Electrony Bills product page remains available at `/bills/` as the product introduction. The guest purchasing experience is available at `/bills/app/` and is implemented as a separate, mobile-first checkout flow with service-specific validation and payment review.
+The public Electrony Bills product page remains available at `/bills/` as the product introduction. The guest purchasing experience is available at `/bills/app/` and is implemented as a separate, mobile-first service flow. Sogo sandbox catalogues and documented meter/smartcard checks are available when the server is configured; payment remains blocked pending Monnify and database verification.
 
 ## Vercel deployments
 

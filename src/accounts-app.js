@@ -44,8 +44,13 @@
       ["authorization not found", "Authorization not found"],
       ["authorization request not found", "Authorization request not found"],
       ["invalid authorization request", "Invalid authorization request"],
+      ["authorization request is invalid", "Authorization request is invalid"],
       ["authorization request has expired", "Authorization request has expired"],
       ["invalid authorization_id", "Invalid authorization_id"],
+      ["authorization_id is invalid", "Authorization ID is invalid"],
+      ["invalid authorization id", "Invalid authorization ID"],
+      ["authorization id is invalid", "Authorization ID is invalid"],
+      ["authorization request is no longer valid", "Authorization request is no longer valid"],
       ["not found", "Not Found"],
       ["unauthorized", "Unauthorized"],
       ["forbidden", "Forbidden"]
