@@ -18,6 +18,64 @@ const SOGO_FAILURE_CATEGORIES = new Set([
   "invalid_response",
   "unknown"
 ]);
+const SOGO_CATALOGUE_CATEGORY_FIELDS = [
+  "airtime",
+  "data",
+  "electricity",
+  "cable_tv",
+  "education"
+];
+
+function getJsonType(value) {
+  if (value === null) return "null";
+  if (Array.isArray(value)) return "array";
+  return typeof value;
+}
+
+function getSogoCatalogueResponseStructure(payload, validJson) {
+  const isTopLevelObject = payload !== null && typeof payload === "object" && !Array.isArray(payload);
+  const hasData = isTopLevelObject && Object.prototype.hasOwnProperty.call(payload, "data");
+  const catalogue = isTopLevelObject ? payload.data ?? payload : null;
+  const isCatalogueObject = catalogue !== null
+    && typeof catalogue === "object"
+    && !Array.isArray(catalogue);
+  const allTopLevelKeys = isTopLevelObject ? Object.keys(payload) : [];
+  const topLevelKeys = allTopLevelKeys.slice(0, 40)
+    .map((key) => key.replace(/[\u0000-\u001f\u007f]/g, " ").slice(0, 80));
+  const categoryFields = Object.fromEntries(SOGO_CATALOGUE_CATEGORY_FIELDS.map((field) => {
+    const exists = isCatalogueObject && Object.prototype.hasOwnProperty.call(catalogue, field);
+    return [field, {
+      exists,
+      type: exists ? getJsonType(catalogue[field]) : "missing"
+    }];
+  }));
+
+  return {
+    validJson,
+    topLevelType: getJsonType(payload),
+    topLevelKeys,
+    topLevelKeysTruncated: allTopLevelKeys.length > topLevelKeys.length
+      || allTopLevelKeys.some((key) => key.length > 80),
+    dataExists: hasData,
+    dataType: hasData ? getJsonType(payload.data) : "missing",
+    categoryFields
+  };
+}
+
+function getUnavailableSogoCatalogueResponseStructure(validJson) {
+  return {
+    validJson,
+    topLevelType: "unavailable",
+    topLevelKeys: [],
+    topLevelKeysTruncated: false,
+    dataExists: null,
+    dataType: "unavailable",
+    categoryFields: Object.fromEntries(SOGO_CATALOGUE_CATEGORY_FIELDS.map((field) => [
+      field,
+      { exists: null, type: "unavailable" }
+    ]))
+  };
+}
 
 function getSafeProviderErrorCode(payload, secretKey) {
   const candidates = [payload?.error?.code, payload?.code];
@@ -62,7 +120,10 @@ function getSogoFailureDiagnostics(error) {
     ...(statusCode === undefined ? {} : { upstreamStatus: statusCode }),
     ...(providerErrorCode === undefined ? {} : { providerErrorCode }),
     failureCategory,
-    upstreamResponseReceived: error?.upstreamResponseReceived === true
+    upstreamResponseReceived: error?.upstreamResponseReceived === true,
+    ...(error?.responseStructure
+      ? { responseStructure: error.responseStructure }
+      : {})
   };
 }
 
@@ -169,6 +230,9 @@ function createSogoAdapter({
       error.statusCode = response.status;
       error.failureCategory = "invalid_response";
       error.upstreamResponseReceived = true;
+      if (path === "/bills/catalog") {
+        error.responseStructure = getUnavailableSogoCatalogueResponseStructure(null);
+      }
       error.uncertain = method === "POST" && response.status >= 500;
       throw error;
     }
@@ -181,6 +245,9 @@ function createSogoAdapter({
       error.statusCode = response.status;
       error.failureCategory = "invalid_response";
       error.upstreamResponseReceived = true;
+      if (path === "/bills/catalog") {
+        error.responseStructure = getUnavailableSogoCatalogueResponseStructure(false);
+      }
       error.uncertain = method === "POST" && response.status >= 500;
       throw error;
     }
@@ -225,6 +292,7 @@ function createSogoAdapter({
       error.statusCode = statusCode;
       error.failureCategory = "invalid_response";
       error.upstreamResponseReceived = true;
+      error.responseStructure = getSogoCatalogueResponseStructure(payload, true);
       throw error;
     }
     return data;

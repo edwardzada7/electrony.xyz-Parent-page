@@ -95,6 +95,8 @@ The server-controlled fee table is in `platform-fees.js`. Electricity, airtime, 
 
 Sogo is the server-side bill vending provider. The adapter is restricted to `https://sandbox.sogo.africa/v1`, requires `SOGO_ENABLED=true` and an `sogo_sk_test_` key, and rejects live endpoints and keys. It uses Bearer authentication, does not log or return credentials, and never falls back to production. The API only makes requests after the relevant environment configuration is present.
 
+For `invalid_response` catalogue failures, diagnostics include JSON validity and structure metadata (top-level type and keys, `data` presence/type, and expected category-field presence/types). Response bodies and field values are not logged or returned to the browser.
+
 Implemented Sogo routes are:
 
 - `GET /bills/catalog`, exposed to the UI through `GET /api/services/catalog`.

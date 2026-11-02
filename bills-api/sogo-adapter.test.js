@@ -181,6 +181,23 @@ test("catalogue HTTP failures expose only safe, classified diagnostics", async (
   }
 });
 
+test("catalogue accepts root and data-wrapped object payloads", async (t) => {
+  for (const [name, payload] of [
+    ["root object", { airtime: { providers: [] } }],
+    ["data-wrapped object", { data: { airtime: { providers: [] } } }]
+  ]) {
+    await t.test(name, async () => {
+      const adapter = createSogoAdapter({
+        readEnv: (name) => configuredEnv()[name] || "",
+        fetchImpl: async () => createResponse(200, payload)
+      });
+
+      const catalogue = await adapter.getCatalogue();
+      assert.deepEqual(catalogue.airtime, { providers: [] });
+    });
+  }
+});
+
 test("catalogue network failures and timeouts are distinguishable without response details", async (t) => {
   for (const [name, requestError, category] of [
     ["network failure", new Error("network failure containing private data"), "network_failure"],
@@ -222,9 +239,78 @@ test("catalogue invalid JSON response is classified without logging its body", a
       operation: "sogo_catalogue",
       upstreamStatus: 200,
       failureCategory: "invalid_response",
-      upstreamResponseReceived: true
+      upstreamResponseReceived: true,
+      responseStructure: {
+        validJson: false,
+        topLevelType: "unavailable",
+        topLevelKeys: [],
+        topLevelKeysTruncated: false,
+        dataExists: null,
+        dataType: "unavailable",
+        categoryFields: {
+          airtime: { exists: null, type: "unavailable" },
+          data: { exists: null, type: "unavailable" },
+          electricity: { exists: null, type: "unavailable" },
+          cable_tv: { exists: null, type: "unavailable" },
+          education: { exists: null, type: "unavailable" }
+        }
+      }
     });
     assert.equal(JSON.stringify(diagnostics).includes(responseBody), false);
+    return true;
+  });
+});
+
+test("catalogue response read failures report JSON structure as unavailable", async () => {
+  const adapter = createSogoAdapter({
+    readEnv: (name) => configuredEnv()[name] || "",
+    fetchImpl: async () => ({
+      status: 200,
+      ok: true,
+      headers: new Headers(),
+      async text() {
+        throw new Error("private response detail");
+      }
+    })
+  });
+
+  await assert.rejects(adapter.getCatalogue(), (error) => {
+    const diagnostics = getSogoFailureDiagnostics(error);
+    assert.equal(diagnostics.responseStructure.validJson, null);
+    assert.equal(diagnostics.responseStructure.topLevelType, "unavailable");
+    assert.equal(JSON.stringify(diagnostics).includes("private response detail"), false);
+    return true;
+  });
+});
+
+test("structurally invalid catalogue JSON diagnostics contain types and keys only", async () => {
+  const privateValue = "private-customer-value";
+  const adapter = createSogoAdapter({
+    readEnv: (name) => configuredEnv()[name] || "",
+    fetchImpl: async () => createResponse(200, {
+      data: [privateValue],
+      privateCustomerField: privateValue
+    })
+  });
+
+  await assert.rejects(adapter.getCatalogue(), (error) => {
+    const diagnostics = getSogoFailureDiagnostics(error);
+    assert.deepEqual(diagnostics.responseStructure, {
+      validJson: true,
+      topLevelType: "object",
+      topLevelKeys: ["data", "privateCustomerField"],
+      topLevelKeysTruncated: false,
+      dataExists: true,
+      dataType: "array",
+      categoryFields: {
+        airtime: { exists: false, type: "missing" },
+        data: { exists: false, type: "missing" },
+        electricity: { exists: false, type: "missing" },
+        cable_tv: { exists: false, type: "missing" },
+        education: { exists: false, type: "missing" }
+      }
+    });
+    assert.equal(JSON.stringify(diagnostics).includes(privateValue), false);
     return true;
   });
 });
