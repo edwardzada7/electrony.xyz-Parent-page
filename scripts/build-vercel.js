@@ -3,12 +3,13 @@ const path = require("path");
 
 const projectRoot = path.resolve(__dirname, "..");
 const outputDirectory = path.join(projectRoot, "dist");
-const publicDirectories = ["assets", "automobile", "bills", "energy", "hardware", "src", "styles"];
+const publicDirectories = ["assets", "automobile", "bills", "energy", "hardware", "software", "src", "styles"];
 const publicOrigins = Object.freeze({
   parent: "https://electrony.xyz",
   automobile: "https://auto.electrony.xyz",
   energy: "https://energy.electrony.xyz",
   hardware: "https://hardware.electrony.xyz",
+  software: "https://software.electrony.xyz",
   bills: "https://bills.electrony.xyz",
   accounts: "https://accounts.electrony.xyz"
 });
@@ -29,7 +30,7 @@ const billsFrontendFiles = [
   "styles/site.css",
   "styles/tokens.css"
 ];
-const sites = new Set(["parent", "automobile", "energy", "hardware", "bills", "accounts"]);
+const sites = new Set(["parent", "automobile", "energy", "hardware", "software", "bills", "accounts"]);
 
 function copyPublicDirectory(directory) {
   const sourceDirectory = path.join(projectRoot, directory);
@@ -193,11 +194,19 @@ function copyAccountsFrontend() {
   }
 }
 
+function prepareSoftwareEntrypoint() {
+  let html = fs.readFileSync(path.join(projectRoot, "software", "index.html"), "utf8");
+  for (const directory of ["assets", "src", "styles"]) {
+    html = html.split(`../${directory}/`).join(`/${directory}/`);
+  }
+  return html;
+}
+
 function writeCrawlFiles(site) {
   const origin = publicOrigins[site];
   if (!origin) throw new Error(`No public origin is configured for the ${site} site.`);
 
-  const pages = site === "parent" ? ["/", "/bills/"] : ["/"];
+  const pages = site === "parent" ? ["/", "/bills/", "/software/"] : ["/"];
   const entries = pages.map((page) => `  <url><loc>${origin}${page}</loc></url>`).join("\n");
   const sitemap = `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${entries}\n</urlset>\n`;
   fs.writeFileSync(path.join(outputDirectory, "robots.txt"), `User-agent: *\nAllow: /\nSitemap: ${origin}/sitemap.xml\n`);
@@ -228,6 +237,8 @@ function buildStaticSite(site) {
     }
     if (site === "automobile") {
       fs.writeFileSync(path.join(outputDirectory, "index.html"), prepareAutomobileEntrypoint());
+    } else if (site === "software") {
+      fs.writeFileSync(path.join(outputDirectory, "index.html"), prepareSoftwareEntrypoint());
     } else {
       const entrypoint = site === "parent" ? "index.html" : path.join(site, "index.html");
       fs.copyFileSync(path.join(projectRoot, entrypoint), path.join(outputDirectory, "index.html"));

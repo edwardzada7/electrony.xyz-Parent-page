@@ -7,11 +7,11 @@ window.ElectronyConfig = Object.freeze({
   identityProjectUrl: null,
   identityPublishableKey: null,
   productLinks: Object.freeze({
-    electronyos: Object.freeze({ landingPageUrl: "https://os.electrony.xyz", appUrl: null }),
+    electronyos: Object.freeze({ landingPageUrl: "https://os.electrony.xyz", appUrl: "https://app.electrony.xyz" }),
     hardware: Object.freeze({ landingPageUrl: "https://hardware.electrony.xyz", appUrl: null }),
     automobile: Object.freeze({ landingPageUrl: "https://auto.electrony.xyz", appUrl: null }),
     energy: Object.freeze({ landingPageUrl: "https://energy.electrony.xyz", appUrl: null }),
     bills: Object.freeze({ landingPageUrl: "https://bills.electrony.xyz", appUrl: "https://bills.electrony.xyz" }),
-    stylist: Object.freeze({ landingPageUrl: "https://istylist.online", appUrl: null })
+    stylist: Object.freeze({ landingPageUrl: "https://istylist.online", appUrl: "https://app.istylist.online" })
   })
 });

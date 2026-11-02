@@ -250,6 +250,7 @@ if (backToTopButton) {
 function getProductStatusText(product) {
   const status = String(product.status || "").toLowerCase();
 
+  if (status === "integration") return "IN DEVELOPMENT";
   if (["conceptual", "prototype"].includes(status) || status.includes("soon")) return "PROTOTYPE";
   if (["live", "active"].includes(status)) return "LIVE";
   return status ? status.toUpperCase() : "LIVE";

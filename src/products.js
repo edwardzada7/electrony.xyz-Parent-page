@@ -9,6 +9,7 @@ window.ElectronyProducts = Object.freeze([
     categoryLabel: "SMART ESTATE MANAGEMENT",
     heading: "Smart technology for modern estates and property management.",
     description: "ElectronyOS helps simplify estate operations, utilities, access and community management through one connected platform.",
+    ecosystemDescription: "Smart Estate Management Software.",
     tagline: "Smart estate and utility management",
     logo: null,
     image: null,
@@ -45,6 +46,7 @@ window.ElectronyProducts = Object.freeze([
     categoryLabel: "EVERYDAY PAYMENTS",
     heading: "Everyday payments, made simpler.",
     description: "A simpler way to manage everyday digital services and payments from one place.",
+    ecosystemDescription: "Guest bill-payment and utility-vending application for Nigerian customers.",
     tagline: "Everyday payments, made simpler.",
     logo: null,
     image: null,
@@ -52,7 +54,8 @@ window.ElectronyProducts = Object.freeze([
     landingPageUrl: productLinks.bills.landingPageUrl,
     appUrl: productLinks.bills.appUrl,
     featured: false,
-    status: "prototype",
+    status: "integration",
+    ecosystemStatus: "In development / integration stage",
     ctaLabel: "Open Bills app"
   }),
   Object.freeze({
@@ -63,6 +66,7 @@ window.ElectronyProducts = Object.freeze([
     categoryLabel: "BEAUTY, LIFESTYLE & SERVICES",
     heading: "Where talent meets opportunity.",
     description: "A platform for beauty, lifestyle and service discovery, connecting customers with skilled providers and trusted experiences.",
+    ecosystemDescription: "Beauty Services Marketplace.",
     tagline: "Beauty, lifestyle and services",
     logo: null,
     image: null,
