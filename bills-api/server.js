@@ -11,7 +11,10 @@ const { createPostgresPersistence } = require("./postgres-persistence");
 const { PLATFORM_FEE_RULES, createPlatformFeeQuote, parseMoneyToMinor } = require("./platform-fees");
 const { createMarpleradAdapter } = require("./adapters/marplerad-adapter");
 const { createTeloadlyAdapter } = require("./adapters/teloadly-adapter");
-const { createSogoAdapter } = require("./adapters/sogo-adapter");
+const {
+  createSogoAdapter,
+  getSogoFailureDiagnostics
+} = require("./adapters/sogo-adapter");
 const {
   CONTACT_BODY_LIMIT,
   ContactEnquiryError,
@@ -2422,7 +2425,7 @@ async function handleRequest(request, response) {
         categories
       });
     } catch (error) {
-      console.error("Sogo catalogue request failed.", error?.code || "provider_error");
+      console.error("Sogo catalogue request failed.", getSogoFailureDiagnostics(error));
       sendJson(response, 503, {
         ok: false,
         available: false,

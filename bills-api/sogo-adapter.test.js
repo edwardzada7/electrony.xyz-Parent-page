@@ -3,7 +3,11 @@
 const assert = require("node:assert/strict");
 const crypto = require("node:crypto");
 const test = require("node:test");
-const { SANDBOX_BASE_URL, createSogoAdapter } = require("./adapters/sogo-adapter");
+const {
+  SANDBOX_BASE_URL,
+  createSogoAdapter,
+  getSogoFailureDiagnostics
+} = require("./adapters/sogo-adapter");
 
 function createResponse(status, payload, headers = {}) {
   return {
@@ -12,6 +16,17 @@ function createResponse(status, payload, headers = {}) {
     headers: new Headers(headers),
     async text() {
       return JSON.stringify(payload);
+    }
+  };
+}
+
+function createRawResponse(status, text) {
+  return {
+    status,
+    ok: status >= 200 && status < 300,
+    headers: new Headers(),
+    async text() {
+      return text;
     }
   };
 }
@@ -125,6 +140,119 @@ test("purchase timeout is marked uncertain and does not retry or create another 
     (error) => error.code === "sogo_request_uncertain" && error.uncertain === true
   );
   assert.equal(requestCount, 1);
+});
+
+test("catalogue HTTP failures expose only safe, classified diagnostics", async (t) => {
+  const secretKey = configuredEnv().SOGO_SECRET_KEY;
+  const responseBody = `provider response with ${secretKey}`;
+  for (const [status, code, category] of [
+    [401, "invalid_credentials", "authentication"],
+    [403, "missing_scope", "authorization"],
+    [429, "rate_limited", "rate_limit"],
+    [503, "provider_unavailable", "upstream_unavailable"]
+  ]) {
+    await t.test(`HTTP ${status}`, async () => {
+      const adapter = createSogoAdapter({
+        readEnv: (name) => configuredEnv()[name] || "",
+        fetchImpl: async () => createResponse(status, {
+          error: {
+            code,
+            message: responseBody
+          }
+        })
+      });
+
+      await assert.rejects(adapter.getCatalogue(), (error) => {
+        assert.equal(error.statusCode, status);
+        assert.equal(error.providerErrorCode, code);
+        const diagnostics = getSogoFailureDiagnostics(error);
+        assert.deepEqual(diagnostics, {
+          operation: "sogo_catalogue",
+          upstreamStatus: status,
+          providerErrorCode: code,
+          failureCategory: category,
+          upstreamResponseReceived: true
+        });
+        assert.equal(JSON.stringify(diagnostics).includes(secretKey), false);
+        assert.equal(JSON.stringify(diagnostics).includes(responseBody), false);
+        return true;
+      });
+    });
+  }
+});
+
+test("catalogue network failures and timeouts are distinguishable without response details", async (t) => {
+  for (const [name, requestError, category] of [
+    ["network failure", new Error("network failure containing private data"), "network_failure"],
+    ["timeout", Object.assign(new Error("timeout containing private data"), { name: "TimeoutError" }), "timeout"]
+  ]) {
+    await t.test(name, async () => {
+      const adapter = createSogoAdapter({
+        readEnv: (envName) => configuredEnv()[envName] || "",
+        fetchImpl: async () => {
+          throw requestError;
+        }
+      });
+
+      await assert.rejects(adapter.getCatalogue(), (error) => {
+        const diagnostics = getSogoFailureDiagnostics(error);
+        assert.deepEqual(diagnostics, {
+          operation: "sogo_catalogue",
+          failureCategory: category,
+          upstreamResponseReceived: false
+        });
+        assert.equal(JSON.stringify(diagnostics).includes("private data"), false);
+        return true;
+      });
+    });
+  }
+});
+
+test("catalogue invalid JSON response is classified without logging its body", async () => {
+  const responseBody = "not-json-with-private-response-content";
+  const adapter = createSogoAdapter({
+    readEnv: (name) => configuredEnv()[name] || "",
+    fetchImpl: async () => createRawResponse(200, responseBody)
+  });
+
+  await assert.rejects(adapter.getCatalogue(), (error) => {
+    assert.equal(error.statusCode, 200);
+    const diagnostics = getSogoFailureDiagnostics(error);
+    assert.deepEqual(diagnostics, {
+      operation: "sogo_catalogue",
+      upstreamStatus: 200,
+      failureCategory: "invalid_response",
+      upstreamResponseReceived: true
+    });
+    assert.equal(JSON.stringify(diagnostics).includes(responseBody), false);
+    return true;
+  });
+});
+
+test("catalogue diagnostics omit credential-shaped provider error codes", async () => {
+  const secretKey = configuredEnv().SOGO_SECRET_KEY;
+  const adapter = createSogoAdapter({
+    readEnv: (name) => configuredEnv()[name] || "",
+    fetchImpl: async () => createResponse(503, {
+      error: {
+        code: secretKey,
+        message: "provider response body"
+      }
+    })
+  });
+
+  await assert.rejects(adapter.getCatalogue(), (error) => {
+    const diagnostics = getSogoFailureDiagnostics(error);
+    assert.deepEqual(diagnostics, {
+      operation: "sogo_catalogue",
+      upstreamStatus: 503,
+      failureCategory: "upstream_unavailable",
+      upstreamResponseReceived: true
+    });
+    assert.equal(JSON.stringify(diagnostics).includes(secretKey), false);
+    assert.equal(JSON.stringify(diagnostics).includes("provider response body"), false);
+    return true;
+  });
 });
 
 test("webhook signature verifies raw bytes with constant-time-safe format validation", () => {

@@ -8,6 +8,63 @@ const SOGO_EVENTS = new Set([
   "transaction.failed",
   "transaction.refunded"
 ]);
+const SOGO_FAILURE_CATEGORIES = new Set([
+  "authentication",
+  "authorization",
+  "rate_limit",
+  "upstream_unavailable",
+  "timeout",
+  "network_failure",
+  "invalid_response",
+  "unknown"
+]);
+
+function getSafeProviderErrorCode(payload, secretKey) {
+  const candidates = [payload?.error?.code, payload?.code];
+  for (const candidate of candidates) {
+    if (typeof candidate !== "string") continue;
+    const code = candidate.trim();
+    if (!/^[A-Za-z][A-Za-z0-9_.-]{0,63}$/.test(code)
+      || code === secretKey
+      || /^(?:sogo_sk_|sk_|pk_|bearer|token|secret|eyJ)/i.test(code)) continue;
+    return code.toLowerCase();
+  }
+  return undefined;
+}
+
+function getSogoFailureCategory(statusCode) {
+  if (statusCode === 401) return "authentication";
+  if (statusCode === 403) return "authorization";
+  if (statusCode === 429) return "rate_limit";
+  if (statusCode === 408 || statusCode === 504) return "timeout";
+  if (Number.isInteger(statusCode) && statusCode >= 500) return "upstream_unavailable";
+  return "unknown";
+}
+
+function getSogoFailureDiagnostics(error) {
+  const statusCode = Number.isInteger(error?.statusCode)
+    && error.statusCode >= 100
+    && error.statusCode <= 599
+    ? error.statusCode
+    : undefined;
+  const providerErrorCode = getSafeProviderErrorCode(
+    { code: error?.providerErrorCode },
+    ""
+  );
+  const failureCategory = SOGO_FAILURE_CATEGORIES.has(error?.failureCategory)
+    ? error.failureCategory
+    : statusCode === undefined
+      ? "unknown"
+      : getSogoFailureCategory(statusCode);
+
+  return {
+    operation: "sogo_catalogue",
+    ...(statusCode === undefined ? {} : { upstreamStatus: statusCode }),
+    ...(providerErrorCode === undefined ? {} : { providerErrorCode }),
+    failureCategory,
+    upstreamResponseReceived: error?.upstreamResponseReceived === true
+  };
+}
 
 function createSogoAdapter({
   readEnv = (name) => process.env[name] || "",
@@ -91,20 +148,39 @@ function createSogoAdapter({
         body: body === undefined ? undefined : JSON.stringify(body),
         signal: AbortSignal.timeout(config.timeoutMs)
       });
-    } catch {
+    } catch (requestError) {
       const error = new Error("Sogo sandbox request outcome is uncertain; reconcile before retrying.");
       error.code = "sogo_request_uncertain";
       error.uncertain = method === "POST";
+      error.failureCategory = requestError?.name === "TimeoutError"
+        || requestError?.code === "ETIMEDOUT"
+        ? "timeout"
+        : "network_failure";
+      error.upstreamResponseReceived = false;
       throw error;
     }
 
-    const responseText = await response.text();
+    let responseText;
+    try {
+      responseText = await response.text();
+    } catch {
+      const error = new Error("Sogo sandbox returned an invalid response.");
+      error.code = "sogo_invalid_response";
+      error.statusCode = response.status;
+      error.failureCategory = "invalid_response";
+      error.upstreamResponseReceived = true;
+      error.uncertain = method === "POST" && response.status >= 500;
+      throw error;
+    }
     let payload;
     try {
       payload = responseText ? JSON.parse(responseText) : {};
     } catch {
       const error = new Error("Sogo sandbox returned an invalid response.");
       error.code = "sogo_invalid_response";
+      error.statusCode = response.status;
+      error.failureCategory = "invalid_response";
+      error.upstreamResponseReceived = true;
       error.uncertain = method === "POST" && response.status >= 500;
       throw error;
     }
@@ -113,6 +189,9 @@ function createSogoAdapter({
       const error = new Error(`Sogo sandbox request failed with HTTP ${response.status}.`);
       error.code = response.status === 404 ? "sogo_not_found" : "sogo_request_failed";
       error.statusCode = response.status;
+      error.providerErrorCode = getSafeProviderErrorCode(payload, config.secretKey);
+      error.failureCategory = getSogoFailureCategory(response.status);
+      error.upstreamResponseReceived = true;
       error.uncertain = method === "POST" && response.status >= 500;
       throw error;
     }
@@ -136,10 +215,17 @@ function createSogoAdapter({
   }
 
   async function getCatalogue() {
-    const { payload } = await request("/bills/catalog");
-    const data = getData(payload);
+    const { payload, statusCode } = await request("/bills/catalog");
+    const data = payload && typeof payload === "object" && !Array.isArray(payload)
+      ? getData(payload)
+      : null;
     if (!data || typeof data !== "object" || Array.isArray(data)) {
-      throw new Error("Sogo returned an invalid bill catalogue.");
+      const error = new Error("Sogo returned an invalid bill catalogue.");
+      error.code = "sogo_invalid_response";
+      error.statusCode = statusCode;
+      error.failureCategory = "invalid_response";
+      error.upstreamResponseReceived = true;
+      throw error;
     }
     return data;
   }
@@ -266,5 +352,6 @@ function createSogoAdapter({
 
 module.exports = {
   SANDBOX_BASE_URL,
-  createSogoAdapter
+  createSogoAdapter,
+  getSogoFailureDiagnostics
 };
