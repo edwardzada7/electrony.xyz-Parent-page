@@ -3,7 +3,7 @@
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <meta name="theme-color" content="#07100b">
+    <meta name="theme-color" content="#f5f6f7">
     <meta name="description" content="Explore Electrony's connected software ecosystem: estate management, beauty services and everyday bill payments.">
     <link rel="canonical" href="https://software.electrony.xyz/">
     <meta property="og:type" content="website">
@@ -79,13 +79,13 @@
               <svg class="board-circuit board-circuit-desktop" viewBox="0 0 1200 650" preserveAspectRatio="none" aria-hidden="true">
                 <defs>
                   <linearGradient id="trace-glow" x1="0" x2="1" y1="0" y2="1">
-                    <stop offset="0" stop-color="#326842" stop-opacity=".24"></stop>
-                    <stop offset=".5" stop-color="#78ed91" stop-opacity=".92"></stop>
-                    <stop offset="1" stop-color="#326842" stop-opacity=".24"></stop>
+                    <stop offset="0" stop-color="#9ca9b5" stop-opacity=".2"></stop>
+                    <stop offset=".5" stop-color="#5a9ed6" stop-opacity=".8"></stop>
+                    <stop offset="1" stop-color="#9ca9b5" stop-opacity=".2"></stop>
                   </linearGradient>
                   <radialGradient id="trace-node">
-                    <stop offset="0" stop-color="#c5ffd0"></stop>
-                    <stop offset="1" stop-color="#5ccc76"></stop>
+                    <stop offset="0" stop-color="#eaf5ff"></stop>
+                    <stop offset="1" stop-color="#7197b8"></stop>
                   </radialGradient>
                 </defs>
                 <g class="circuit-traces">
@@ -119,6 +119,26 @@
                   <circle cx="680" cy="625" r="3"></circle>
                 </g>
                 <path class="circuit-highlight" d="M470 330H400V145H300M730 330H800V145H900M600 395V520"></path>
+                <g class="circuit-pulses">
+                  <circle class="circuit-pulse" r="3.5">
+                    <animateMotion dur="3.8s" begin="-1.2s" repeatCount="indefinite" path="M470 330H400V145H300"></animateMotion>
+                  </circle>
+                  <circle class="circuit-pulse circuit-pulse-return" r="3">
+                    <animateMotion dur="4.3s" begin="-3s" repeatCount="indefinite" path="M300 145H400V330H470"></animateMotion>
+                  </circle>
+                  <circle class="circuit-pulse" r="3.5">
+                    <animateMotion dur="4.1s" begin="-2.1s" repeatCount="indefinite" path="M730 330H800V145H900"></animateMotion>
+                  </circle>
+                  <circle class="circuit-pulse circuit-pulse-return" r="3">
+                    <animateMotion dur="4.6s" begin="-0.8s" repeatCount="indefinite" path="M900 145H800V330H730"></animateMotion>
+                  </circle>
+                  <circle class="circuit-pulse" r="3.5">
+                    <animateMotion dur="3.6s" begin="-2.7s" repeatCount="indefinite" path="M600 395V520"></animateMotion>
+                  </circle>
+                  <circle class="circuit-pulse circuit-pulse-return" r="3">
+                    <animateMotion dur="4.8s" begin="-1.7s" repeatCount="indefinite" path="M600 520V395"></animateMotion>
+                  </circle>
+                </g>
               </svg>
 
               <div class="motherboard-layout">
@@ -189,6 +209,130 @@
             <p>Three products. Different purposes. One connected foundation.</p>
           </div>
           <div class="software-products" id="software-products" aria-live="polite"></div>
+        </div>
+      </section>
+
+      <section class="software-services-section" id="services" aria-labelledby="services-title">
+        <div class="software-container">
+          <div class="services-heading">
+            <p class="software-eyebrow"><span aria-hidden="true"></span> SOFTWARE DEVELOPMENT SERVICES</p>
+            <h2 id="services-title">Software Development Services</h2>
+            <p class="services-headline">We Build Digital Products That<br><span>Move Businesses Forward.</span></p>
+            <p>From business websites to powerful web applications and mobile apps, Electrony designs and develops digital solutions that help businesses operate, connect with customers and grow.</p>
+          </div>
+          <div class="service-cards">
+            <article class="service-card">
+              <div class="service-card-icon" aria-hidden="true">
+                <svg viewBox="0 0 48 48" fill="none"><rect x="6" y="9" width="36" height="29" rx="2" stroke="currentColor" stroke-width="1.7"/><path d="M6 16h36M12 12.5h.1M16 12.5h.1M20 12.5h.1M13 24h9m-9 5h22m-22 5h15" stroke="currentColor" stroke-linecap="round" stroke-width="1.7"/></svg>
+              </div>
+              <p class="service-card-index">01 / DIGITAL PRESENCE</p>
+              <h3>Website Development</h3>
+              <p class="service-card-description">Clear, responsive websites designed to help your business show up and move forward.</p>
+              <ul>
+                <li>Business and corporate websites</li>
+                <li>Landing pages and product websites</li>
+                <li>E-commerce websites</li>
+                <li>Company portals and dashboards</li>
+                <li>Responsive website redesigns</li>
+                <li>Website maintenance and improvements</li>
+              </ul>
+            </article>
+            <article class="service-card">
+              <div class="service-card-icon" aria-hidden="true">
+                <svg viewBox="0 0 48 48" fill="none"><rect x="7" y="8" width="34" height="32" rx="2" stroke="currentColor" stroke-width="1.7"/><path d="M7 16h34m-27 7 4 4-4 4m8 0h8m-9-18h.1m4 0h.1m4 0h.1" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.7"/></svg>
+              </div>
+              <p class="service-card-index">02 / CONNECTED WORKFLOWS</p>
+              <h3>Web Application Development</h3>
+              <p class="service-card-description">Custom web applications that bring services, operations and customer experiences together.</p>
+              <ul>
+                <li>Custom business web applications</li>
+                <li>SaaS platforms</li>
+                <li>Booking and appointment systems</li>
+                <li>Online marketplaces</li>
+                <li>Management and administration systems</li>
+                <li>Payment and third-party API integrations</li>
+                <li>Authentication and role-based access systems</li>
+              </ul>
+            </article>
+            <article class="service-card">
+              <div class="service-card-icon" aria-hidden="true">
+                <svg viewBox="0 0 48 48" fill="none"><rect x="13" y="5" width="22" height="38" rx="3" stroke="currentColor" stroke-width="1.7"/><path d="M20 10h8m-14 23h20m-11 5h2" stroke="currentColor" stroke-linecap="round" stroke-width="1.7"/></svg>
+              </div>
+              <p class="service-card-index">03 / MOBILE EXPERIENCES</p>
+              <h3>Mobile Application Development</h3>
+              <p class="service-card-description">Thoughtful mobile experiences that help customers and teams stay connected on the go.</p>
+              <ul>
+                <li>Android and iOS applications</li>
+                <li>Cross-platform mobile apps</li>
+                <li>Marketplace and booking apps</li>
+                <li>Business and customer applications</li>
+                <li>Mobile API integrations</li>
+                <li>App maintenance and improvements</li>
+              </ul>
+            </article>
+          </div>
+          <div class="services-cta">
+            <div>
+              <p class="service-card-index">HAVE A PROJECT IN MIND?</p>
+              <h3>Let’s build something useful.</h3>
+            </div>
+            <a class="services-cta-link" href="https://electrony.xyz/#company">Discuss Your Project <span aria-hidden="true">↗</span></a>
+          </div>
+        </div>
+      </section>
+
+      <section class="software-technologies-section" id="technologies" aria-labelledby="technologies-title">
+        <div class="software-container">
+          <div class="technologies-heading">
+            <div>
+              <p class="software-eyebrow"><span aria-hidden="true"></span> OUR TECHNOLOGY TOOLKIT</p>
+              <h2 id="technologies-title">Technologies We Work With</h2>
+            </div>
+            <p class="technologies-lead">Modern Technologies.<br><span>Scalable Solutions.</span></p>
+          </div>
+          <p class="technologies-note">Tools and integrations are selected to fit each project; not every technology is used in every solution.</p>
+          <div class="technology-groups">
+            <section class="technology-group" aria-labelledby="technology-frontend">
+              <h3 id="technology-frontend">Frontend Development</h3>
+              <ul class="technology-grid">
+                <li><span class="technology-mark" aria-hidden="true">&lt;/&gt;</span><span>HTML5</span></li>
+                <li><span class="technology-mark" aria-hidden="true">#</span><span>CSS3</span></li>
+                <li><span class="technology-mark" aria-hidden="true">JS</span><span>JavaScript</span></li>
+              </ul>
+            </section>
+            <section class="technology-group" aria-labelledby="technology-backend">
+              <h3 id="technology-backend">Backend Development</h3>
+              <ul class="technology-grid">
+                <li><span class="technology-mark" aria-hidden="true">N</span><span>Node.js</span></li>
+                <li><span class="technology-mark" aria-hidden="true">API</span><span>REST APIs</span></li>
+              </ul>
+            </section>
+            <section class="technology-group" aria-labelledby="technology-data">
+              <h3 id="technology-data">Database and Backend Services</h3>
+              <ul class="technology-grid">
+                <li><span class="technology-mark" aria-hidden="true">PG</span><span>PostgreSQL</span></li>
+                <li><span class="technology-mark" aria-hidden="true">S</span><span>Supabase</span></li>
+                <li><span class="technology-mark" aria-hidden="true">ID</span><span>Supabase Authentication</span></li>
+                <li><span class="technology-mark" aria-hidden="true">RLS</span><span>Row-Level Security (RLS)</span></li>
+              </ul>
+            </section>
+            <section class="technology-group" aria-labelledby="technology-integrations">
+              <h3 id="technology-integrations">Payments and Business Integrations</h3>
+              <ul class="technology-grid">
+                <li><span class="technology-mark" aria-hidden="true">M</span><span>Monnify</span></li>
+                <li><span class="technology-mark" aria-hidden="true">R</span><span>Resend</span></li>
+              </ul>
+            </section>
+            <section class="technology-group" aria-labelledby="technology-tools">
+              <h3 id="technology-tools">Cloud, Deployment and Development Tools</h3>
+              <ul class="technology-grid">
+                <li><span class="technology-mark" aria-hidden="true">V</span><span>Vercel</span></li>
+                <li><span class="technology-mark" aria-hidden="true">RW</span><span>Railway</span></li>
+                <li><span class="technology-mark" aria-hidden="true">GH</span><span>GitHub</span></li>
+                <li><span class="technology-mark" aria-hidden="true">G</span><span>Git</span></li>
+              </ul>
+            </section>
+          </div>
         </div>
       </section>
 

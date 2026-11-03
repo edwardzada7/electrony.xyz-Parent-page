@@ -39,7 +39,7 @@ function selectProduct(product, index) {
   productDescription.textContent = product.ecosystemDescription || product.description;
   productStatus.textContent = statusLabel;
   detailIndex.textContent = `${String(index + 1).padStart(2, "0")} / ${String(softwareProducts.length).padStart(2, "0")}`;
-  document.querySelector("#product-detail").style.setProperty("--selected-accent", product.accentColor || "var(--color-product-default)");
+  document.querySelector("#product-detail").style.setProperty("--selected-accent", "var(--software-accent)");
 
   productLinks.replaceChildren();
   if (product.landingPageUrl) {
@@ -61,7 +61,7 @@ function createProductChip(product, index) {
   button.dataset.productId = product.id;
   const productSlots = ["1 / 1", "1 / 3", "3 / 2"];
   button.style.gridArea = productSlots[index] || `${4 + Math.floor((index - 3) / 3)} / ${((index - 3) % 3) + 1}`;
-  button.style.setProperty("--chip-accent", product.accentColor || "var(--color-product-default)");
+  button.style.setProperty("--chip-accent", "var(--software-accent)");
   button.setAttribute("aria-controls", "product-detail");
   button.setAttribute("aria-pressed", "false");
   button.setAttribute("aria-label", `${product.name}, ${getProductStatus(product)}. Show product details.`);
@@ -102,7 +102,7 @@ function createProductChip(product, index) {
 function createShowcaseProduct(product, index) {
   const article = document.createElement("article");
   article.className = "showcase-product";
-  article.style.setProperty("--product-accent", product.accentColor || "var(--color-product-default)");
+  article.style.setProperty("--product-accent", "var(--software-accent)");
 
   const topline = document.createElement("div");
   topline.className = "showcase-product-topline";
