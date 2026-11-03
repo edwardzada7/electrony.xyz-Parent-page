@@ -3,6 +3,18 @@
 const crypto = require("node:crypto");
 
 const SANDBOX_BASE_URL = "https://sandbox.sogo.africa/v1";
+const REQUEST_TIMEOUT_MS = 20000;
+const SOGO_NETWORK_ERROR_CODES = new Set([
+  "EAI_AGAIN",
+  "EAI_FAIL",
+  "ENODATA",
+  "ENOTFOUND",
+  "ECONNREFUSED",
+  "ECONNRESET",
+  "EHOSTUNREACH",
+  "ENETUNREACH",
+  "ETIMEDOUT"
+]);
 const SOGO_EVENTS = new Set([
   "transaction.completed",
   "transaction.failed",
@@ -12,8 +24,10 @@ const SOGO_FAILURE_CATEGORIES = new Set([
   "authentication",
   "authorization",
   "rate_limit",
+  "not_found",
   "upstream_unavailable",
   "timeout",
+  "dns_failure",
   "network_failure",
   "invalid_response",
   "unknown"
@@ -93,6 +107,7 @@ function getSafeProviderErrorCode(payload, secretKey) {
 function getSogoFailureCategory(statusCode) {
   if (statusCode === 401) return "authentication";
   if (statusCode === 403) return "authorization";
+  if (statusCode === 404) return "not_found";
   if (statusCode === 429) return "rate_limit";
   if (statusCode === 408 || statusCode === 504) return "timeout";
   if (Number.isInteger(statusCode) && statusCode >= 500) return "upstream_unavailable";
@@ -114,11 +129,21 @@ function getSogoFailureDiagnostics(error) {
     : statusCode === undefined
       ? "unknown"
       : getSogoFailureCategory(statusCode);
+  const configurationHint = statusCode === 401
+    ? "Verify SOGO_SECRET_KEY is a valid, active sandbox key."
+    : statusCode === 403
+      ? "Verify sandbox API access is enabled and the key has bills:read permission."
+      : undefined;
+  const networkCode = SOGO_NETWORK_ERROR_CODES.has(error?.networkCode)
+    ? error.networkCode
+    : undefined;
 
   return {
     operation: "sogo_catalogue",
     ...(statusCode === undefined ? {} : { upstreamStatus: statusCode }),
     ...(providerErrorCode === undefined ? {} : { providerErrorCode }),
+    ...(configurationHint === undefined ? {} : { configurationHint }),
+    ...(networkCode === undefined ? {} : { networkCode }),
     failureCategory,
     upstreamResponseReceived: error?.upstreamResponseReceived === true,
     ...(error?.responseStructure
@@ -135,7 +160,6 @@ function createSogoAdapter({
     const baseUrl = String(readEnv("SOGO_API_BASE_URL") || "").trim().replace(/\/+$/, "");
     const secretKey = String(readEnv("SOGO_SECRET_KEY") || "").trim();
     const enabled = String(readEnv("SOGO_ENABLED") || "").trim().toLowerCase() === "true";
-    const timeoutValue = Number(readEnv("SOGO_TIMEOUT_MS") || 20000);
     let validSandboxUrl = false;
     try {
       const url = new URL(baseUrl);
@@ -152,9 +176,7 @@ function createSogoAdapter({
       secretKey,
       enabled,
       validSandboxUrl,
-      timeoutMs: Number.isSafeInteger(timeoutValue) && timeoutValue > 0 && timeoutValue <= 120000
-        ? timeoutValue
-        : 20000
+      timeoutMs: REQUEST_TIMEOUT_MS
     };
   }
 
@@ -210,13 +232,22 @@ function createSogoAdapter({
         signal: AbortSignal.timeout(config.timeoutMs)
       });
     } catch (requestError) {
+      const requestErrorCode = requestError?.cause?.code || requestError?.code;
+      const networkCode = SOGO_NETWORK_ERROR_CODES.has(requestErrorCode)
+        ? requestErrorCode
+        : undefined;
+      const timedOut = requestError?.name === "TimeoutError"
+        || requestError?.code === "ETIMEDOUT"
+        || requestError?.cause?.code === "ETIMEDOUT";
       const error = new Error("Sogo sandbox request outcome is uncertain; reconcile before retrying.");
       error.code = "sogo_request_uncertain";
       error.uncertain = method === "POST";
-      error.failureCategory = requestError?.name === "TimeoutError"
-        || requestError?.code === "ETIMEDOUT"
+      error.failureCategory = timedOut
         ? "timeout"
-        : "network_failure";
+        : ["EAI_AGAIN", "EAI_FAIL", "ENODATA", "ENOTFOUND"].includes(networkCode)
+          ? "dns_failure"
+          : "network_failure";
+      if (networkCode) error.networkCode = networkCode;
       error.upstreamResponseReceived = false;
       throw error;
     }

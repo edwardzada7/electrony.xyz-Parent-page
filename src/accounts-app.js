@@ -476,11 +476,21 @@
         return;
       }
 
-      const clientName = details.client?.name || "Registered application";
+      const clientName = typeof details.client?.name === "string" ? details.client.name.trim() : "";
+      if (!clientName) {
+        setStatus(status, "The requesting application could not be identified. This authorization cannot be approved safely.", "error");
+        return;
+      }
       document.getElementById("client-name").textContent = clientName;
       const scopeList = document.getElementById("scope-list");
       scopeList.replaceChildren();
       const scopes = String(details.scope || "").trim().split(/\s+/).filter(Boolean);
+      const scopeDescriptions = {
+        openid: "Confirm your Electrony Account identity",
+        email: "Read your email address and its verification status",
+        profile: "Read basic profile information",
+        phone: "Read your phone number"
+      };
       if (!scopes.length) {
         const item = document.createElement("li");
         item.textContent = "No additional identity scopes";
@@ -488,7 +498,7 @@
       } else {
         scopes.forEach((scope) => {
           const item = document.createElement("li");
-          item.textContent = scope;
+          item.textContent = scopeDescriptions[scope] || scope;
           scopeList.appendChild(item);
         });
       }

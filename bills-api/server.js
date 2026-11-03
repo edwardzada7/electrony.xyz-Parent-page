@@ -26,6 +26,9 @@ const {
   verifySupabaseIdToken,
   validateOAuthStartConfiguration,
   createOAuthAuthorizationRequest,
+  validateBillsReturnUrl,
+  validateOAuthStateCookie,
+  isSupabaseEmailVerified,
   getSafeOAuthProviderFailure
 } = require("./oauth-security");
 
@@ -56,7 +59,9 @@ function getValidatedBillsOAuthCallback() {
 
 function getValidatedBillsAppUrl() {
   const rawAppUrl = readEnv("BILLS_APP_URL").trim();
-  const fallback = "https://bills.electrony.xyz/bills/app/";
+  const fallback = process.env.NODE_ENV === "production"
+    ? "https://bills.electrony.xyz/bills/app/"
+    : "http://localhost:4173/bills/app/";
   try {
     const appUrl = new URL(rawAppUrl || fallback);
     if (appUrl.username || appUrl.password || appUrl.search || appUrl.hash) return null;
@@ -137,7 +142,7 @@ function getIdentityProjectConfig() {
   }
 }
 
-async function verifySupabaseAccessToken(accessToken) {
+async function verifySupabaseAccessToken(accessToken, { allowUnverified = false } = {}) {
   const identity = getIdentityProjectConfig();
   if (!identity || typeof accessToken !== "string" || !accessToken.trim()) return null;
   try {
@@ -152,11 +157,12 @@ async function verifySupabaseAccessToken(accessToken) {
     if (!response.ok) return null;
     const user = await response.json();
     if (typeof user?.id !== "string" || !/^[0-9a-f-]{36}$/i.test(user.id)) return null;
-    if (!user.email_confirmed_at && !user.confirmed_at) return null;
+    const emailVerified = isSupabaseEmailVerified(user);
+    if (!emailVerified && !allowUnverified) return null;
     return {
       id: user.id,
       email: String(user.email || ""),
-      name: String(user.user_metadata?.full_name || "")
+      ...(allowUnverified ? { emailVerified } : {})
     };
   } catch {
     return null;
@@ -179,7 +185,8 @@ async function exchangeSupabaseOAuthToken(form) {
   if (!response.ok || !payload?.access_token) {
     const failure = getSafeOAuthProviderFailure(response.status);
     throw Object.assign(new Error(failure.message), {
-      statusCode: failure.statusCode
+      statusCode: failure.statusCode,
+      authStatus: payload?.error === "invalid_grant" ? "expired" : "failed"
     });
   }
   return payload;
@@ -228,6 +235,26 @@ function clearIdentitySessionCookies(response) {
   clearCsrfCookie(response);
 }
 
+function redirectBillsAuthResult(response, rawReturnUrl, status) {
+  const appUrl = getValidatedBillsAppUrl();
+  const returnUrl = validateBillsReturnUrl(rawReturnUrl, appUrl?.href)
+    || (appUrl ? new URL(appUrl.href) : null);
+  if (!returnUrl) {
+    sendJson(response, 503, {
+      ok: false,
+      error: "The Bills application redirect is not configured safely."
+    });
+    return;
+  }
+  returnUrl.searchParams.delete("signed_in");
+  returnUrl.searchParams.set("auth", status);
+  response.writeHead(302, {
+    Location: returnUrl.href,
+    "Cache-Control": "no-store"
+  });
+  response.end();
+}
+
 function signAuthToken(user) {
   const secret = getAuthSecret();
   const header = Buffer.from(JSON.stringify({ alg: "HS256", typ: "JWT" })).toString("base64url");
@@ -262,11 +289,10 @@ async function authenticateSupabaseRequest(request) {
     if (!response.ok) return null;
     const user = await response.json();
     if (typeof user?.id !== "string" || !/^[0-9a-f-]{36}$/i.test(user.id)) return null;
-    if (!user.email_confirmed_at && !user.confirmed_at) return null;
+    if (!isSupabaseEmailVerified(user)) return null;
     return {
       id: user.id,
-      email: String(user.email || ""),
-      name: String(user.user_metadata?.full_name || "")
+      email: String(user.email || "")
     };
   } catch {
     return null;
@@ -310,8 +336,12 @@ async function authenticateBillsRequest(request, response) {
             refresh_token: refreshToken,
             client_id: clientId
           });
-          setIdentitySessionCookies(response, tokens, readRequestCookie(request, BILLS_CSRF_COOKIE));
-          return await verifySupabaseAccessToken(tokens.access_token);
+          const refreshedUser = await verifySupabaseAccessToken(tokens.access_token);
+          if (refreshedUser) {
+            setIdentitySessionCookies(response, tokens, readRequestCookie(request, BILLS_CSRF_COOKIE));
+            return refreshedUser;
+          }
+          clearIdentitySessionCookies(response);
         } catch {
           clearIdentitySessionCookies(response);
         }
@@ -2112,6 +2142,11 @@ async function handleRequest(request, response) {
   }
 
   if (request.method === "GET" && url.pathname === "/api/auth/oauth/start") {
+    const billsAppUrl = getValidatedBillsAppUrl();
+    const requestedReturnUrl = url.searchParams.get("return_to");
+    const returnUrl = requestedReturnUrl === null
+      ? billsAppUrl
+      : validateBillsReturnUrl(requestedReturnUrl, billsAppUrl?.href);
     const oauthConfig = validateOAuthStartConfiguration({
       projectUrl: readEnv("ELECTRONY_IDENTITY_SUPABASE_URL"),
       publishableKey: readEnv("ELECTRONY_IDENTITY_SUPABASE_PUBLISHABLE_KEY"),
@@ -2121,12 +2156,13 @@ async function handleRequest(request, response) {
       nodeEnv: process.env.NODE_ENV
     });
     if (!oauthConfig.ok) {
-      sendJson(response, 503, {
+      redirectBillsAuthResult(response, returnUrl?.href, "failed");
+      return;
+    }
+    if (!billsAppUrl || !returnUrl) {
+      sendJson(response, 400, {
         ok: false,
-        error: "Electrony Accounts OAuth is not configured.",
-        diagnosticCode: oauthConfig.diagnosticCode,
-        missingSettings: oauthConfig.missingSettings,
-        invalidSettings: oauthConfig.invalidSettings
+        error: "The Bills sign-in return page is invalid or unavailable."
       });
       return;
     }
@@ -2137,6 +2173,7 @@ async function handleRequest(request, response) {
       nonce: oauthRequest.nonce,
       clientId: oauthConfig.clientId,
       callbackUrl: oauthConfig.callbackUrl,
+      returnTo: returnUrl.href,
       expiresAt: Date.now() + 10 * 60 * 1000
     }), 600);
     response.setHeader("Cache-Control", "no-store");
@@ -2147,20 +2184,27 @@ async function handleRequest(request, response) {
 
   if (request.method === "GET" && url.pathname === "/api/auth/oauth/callback") {
     const oauth = readSignedOAuthCookie(request);
-    const code = String(url.searchParams.get("code") || "").trim();
-    const state = String(url.searchParams.get("state") || "").trim();
-    const oauthError = String(url.searchParams.get("error_description") || url.searchParams.get("error") || "").trim();
-    if (oauthError) {
+    const codes = url.searchParams.getAll("code");
+    const states = url.searchParams.getAll("state");
+    const errors = url.searchParams.getAll("error");
+    const code = String(codes[0] || "").trim();
+    const state = String(states[0] || "").trim();
+    const oauthError = String(errors[0] || "").trim();
+    if (!oauth || codes.length > 1 || states.length !== 1 || errors.length > 1
+      || !validateOAuthStateCookie(oauth, state)) {
       clearIdentitySessionCookies(response);
-      sendJson(response, 400, { ok: false, error: "Electrony Accounts authorization was denied or failed." });
+      redirectBillsAuthResult(response, oauth?.returnTo, "failed");
       return;
     }
-    if (!oauth || !code || !state || state.length !== String(oauth.state || "").length || !crypto.timingSafeEqual(
-      Buffer.from(state),
-      Buffer.from(oauth.state || "")
-    )) {
+    const returnTo = oauth.returnTo;
+    if (oauthError) {
       clearIdentitySessionCookies(response);
-      sendJson(response, 400, { ok: false, error: "Invalid or expired OAuth callback state." });
+      redirectBillsAuthResult(response, returnTo, oauthError === "access_denied" ? "cancelled" : "failed");
+      return;
+    }
+    if (!code) {
+      clearIdentitySessionCookies(response);
+      redirectBillsAuthResult(response, returnTo, "failed");
       return;
     }
     const clientId = readEnv("ELECTRONY_IDENTITY_OAUTH_CLIENT_ID").trim();
@@ -2168,7 +2212,7 @@ async function handleRequest(request, response) {
     if (!callback || !oauth.callbackUrl || oauth.callbackUrl !== callback.href
       || !oauth.clientId || oauth.clientId !== clientId) {
       clearIdentitySessionCookies(response);
-      sendJson(response, 400, { ok: false, error: "Invalid OAuth callback configuration." });
+      redirectBillsAuthResult(response, returnTo, "failed");
       return;
     }
     try {
@@ -2181,46 +2225,37 @@ async function handleRequest(request, response) {
       });
       if (!tokens?.id_token) {
         clearIdentitySessionCookies(response);
-        sendJson(response, 401, { ok: false, error: "The OAuth nonce could not be validated." });
+        redirectBillsAuthResult(response, returnTo, "failed");
         return;
       }
       const identity = getIdentityProjectConfig();
       if (!identity) {
         clearIdentitySessionCookies(response);
-        sendJson(response, 503, { ok: false, error: "Electrony Accounts OAuth is not configured." });
+        redirectBillsAuthResult(response, returnTo, "failed");
         return;
       }
-      await verifySupabaseIdToken(tokens.id_token, {
+      const idTokenClaims = await verifySupabaseIdToken(tokens.id_token, {
         projectUrl: identity.projectUrl,
         clientId: oauth.clientId,
         expectedNonce: oauth.nonce
       });
-      const user = await verifySupabaseAccessToken(tokens.access_token);
-      if (!user) {
+      const user = await verifySupabaseAccessToken(tokens.access_token, { allowUnverified: true });
+      if (!user || typeof idTokenClaims.sub !== "string" || user.id !== idTokenClaims.sub) {
         clearIdentitySessionCookies(response);
-        sendJson(response, 401, { ok: false, error: "The OAuth access token could not be verified." });
+        redirectBillsAuthResult(response, returnTo, "failed");
+        return;
+      }
+      if (!user.emailVerified) {
+        clearIdentitySessionCookies(response);
+        redirectBillsAuthResult(response, returnTo, "verification_required");
         return;
       }
       setIdentitySessionCookies(response, tokens);
       clearSecureCookie(response, BILLS_OAUTH_COOKIE);
-      const returnUrl = getValidatedBillsAppUrl();
-      if (!returnUrl) {
-        clearIdentitySessionCookies(response);
-        sendJson(response, 503, { ok: false, error: "The Bills application redirect is not configured safely." });
-        return;
-      }
-      returnUrl.searchParams.set("signed_in", "1");
-      response.writeHead(302, {
-        Location: returnUrl.href,
-        "Cache-Control": "no-store"
-      });
-      response.end();
+      redirectBillsAuthResult(response, returnTo, "success");
     } catch (error) {
       clearIdentitySessionCookies(response);
-      sendJson(response, error.statusCode || 502, {
-        ok: false,
-        error: "Electrony Accounts authorization could not be completed."
-      });
+      redirectBillsAuthResult(response, returnTo, error.authStatus || "failed");
     }
     return;
   }
@@ -2289,20 +2324,24 @@ async function handleRequest(request, response) {
       return;
     }
     const accessToken = readRequestCookie(request, BILLS_ACCESS_SESSION_COOKIE);
+    let providerRevoked = false;
     if (accessToken) {
       const identity = getIdentityProjectConfig();
       if (identity) {
         try {
-          await fetch(`${identity.projectUrl}/auth/v1/logout`, {
+          const logoutResponse = await fetch(`${identity.projectUrl}/auth/v1/logout`, {
             method: "POST",
             headers: { apikey: identity.publishableKey, Authorization: `Bearer ${accessToken}` },
             signal: AbortSignal.timeout(10000)
           });
-        } catch {}
+          providerRevoked = logoutResponse.ok;
+        } catch {
+          providerRevoked = false;
+        }
       }
     }
     clearIdentitySessionCookies(response);
-    sendJson(response, 200, { ok: true, signedOut: true });
+    sendJson(response, 200, { ok: true, signedOut: true, providerRevoked });
     return;
   }
 

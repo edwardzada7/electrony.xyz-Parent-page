@@ -145,9 +145,10 @@ test("purchase timeout is marked uncertain and does not retry or create another 
 test("catalogue HTTP failures expose only safe, classified diagnostics", async (t) => {
   const secretKey = configuredEnv().SOGO_SECRET_KEY;
   const responseBody = `provider response with ${secretKey}`;
-  for (const [status, code, category] of [
-    [401, "invalid_credentials", "authentication"],
-    [403, "missing_scope", "authorization"],
+  for (const [status, code, category, configurationHint] of [
+    [401, "invalid_credentials", "authentication", "Verify SOGO_SECRET_KEY is a valid, active sandbox key."],
+    [403, "missing_scope", "authorization", "Verify sandbox API access is enabled and the key has bills:read permission."],
+    [404, "route_unavailable", "not_found"],
     [429, "rate_limited", "rate_limit"],
     [503, "provider_unavailable", "upstream_unavailable"]
   ]) {
@@ -170,6 +171,7 @@ test("catalogue HTTP failures expose only safe, classified diagnostics", async (
           operation: "sogo_catalogue",
           upstreamStatus: status,
           providerErrorCode: code,
+          ...(configurationHint ? { configurationHint } : {}),
           failureCategory: category,
           upstreamResponseReceived: true
         });
@@ -198,9 +200,10 @@ test("catalogue accepts root and data-wrapped object payloads", async (t) => {
   }
 });
 
-test("catalogue network failures and timeouts are distinguishable without response details", async (t) => {
+test("catalogue network, DNS, and timeout failures are distinguishable without response details", async (t) => {
   for (const [name, requestError, category] of [
     ["network failure", new Error("network failure containing private data"), "network_failure"],
+    ["DNS failure", Object.assign(new Error("DNS lookup failed"), { cause: { code: "ENOTFOUND" } }), "dns_failure"],
     ["timeout", Object.assign(new Error("timeout containing private data"), { name: "TimeoutError" }), "timeout"]
   ]) {
     await t.test(name, async () => {
@@ -215,6 +218,7 @@ test("catalogue network failures and timeouts are distinguishable without respon
         const diagnostics = getSogoFailureDiagnostics(error);
         assert.deepEqual(diagnostics, {
           operation: "sogo_catalogue",
+          ...(category === "dns_failure" ? { networkCode: "ENOTFOUND" } : {}),
           failureCategory: category,
           upstreamResponseReceived: false
         });

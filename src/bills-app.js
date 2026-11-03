@@ -1078,14 +1078,68 @@ function displayTransactionResult(message, details, status) {
 async function initializeIdentitySignIn() {
   const button = document.querySelector("#accounts-sign-in-button");
   if (!button) return;
-  try {
+  const authStatus = document.querySelector("#accounts-auth-status");
+  const historyStatus = document.querySelector("#customer-history-status");
+  const authResult = new URLSearchParams(window.location.search).get("auth");
+  let csrfToken = "";
+  const authMessages = {
+    required: "Sign in with Electrony Accounts for account features. Guest checkout remains available.",
+    consent_required: "Review and approve the Electrony Bills access request in Electrony Accounts.",
+    verification_required: "Verify your Electrony Account email, then sign in again.",
+    success: "Signed in with Electrony Accounts.",
+    expired: "Your Electrony Accounts session expired. Sign in again.",
+    cancelled: "Sign-in was cancelled. Guest checkout remains available.",
+    failed: "Sign-in could not be completed. Please try again; guest checkout remains available."
+  };
+  const showAuthStatus = (message) => {
+    if (!authStatus) return;
+    authStatus.textContent = message;
+    authStatus.hidden = !message;
+  };
+  const getSignInUrl = () => {
     const apiUrl = new URL(getBillsApiBaseUrl());
-    button.href = `${apiUrl.href.replace(/\/+$/, "")}/api/auth/oauth/start`;
-    button.addEventListener("click", (event) => {
+    const returnUrl = new URL(window.location.href);
+    returnUrl.hash = "";
+    const signInUrl = new URL(`${apiUrl.href.replace(/\/+$/, "")}/api/auth/oauth/start`);
+    signInUrl.searchParams.set("return_to", returnUrl.href);
+    return signInUrl.href;
+  };
+  showAuthStatus(authMessages[authResult] || "");
+  try {
+    button.href = getSignInUrl();
+    button.addEventListener("click", async (event) => {
       event.preventDefault();
-      window.location.assign(button.href);
+      if (!state.user) {
+        window.location.assign(button.href);
+        return;
+      }
+      try {
+        const logoutResponse = await fetch(`${getBillsApiBaseUrl()}/api/auth/logout`, {
+          method: "POST",
+          credentials: "include",
+          headers: {
+            "Content-Type": "application/json",
+            "X-CSRF-Token": csrfToken
+          },
+          body: "{}"
+        });
+        const logoutPayload = await logoutResponse.json().catch(() => null);
+        if (!logoutResponse.ok || !logoutPayload?.signedOut) {
+          throw new Error(logoutPayload?.error || "Sign-out could not be completed.");
+        }
+        state.user = null;
+        button.textContent = "Sign in with Electrony Accounts";
+        button.href = getSignInUrl();
+        showAuthStatus(logoutPayload.providerRevoked
+          ? "You have signed out of Electrony Accounts."
+          : "Signed out on this device. The central account session may still be active.");
+        if (historyStatus) historyStatus.hidden = true;
+      } catch {
+        showAuthStatus("Sign-out could not be confirmed. Please try again.");
+      }
     });
   } catch {
+    showAuthStatus(authMessages.failed);
     return;
   }
 
@@ -1094,36 +1148,21 @@ async function initializeIdentitySignIn() {
     const payload = await response.json().catch(() => null);
     if (response.ok && payload?.ok) {
       state.user = payload.user;
+      if (authResult === "success") showAuthStatus(authMessages.success);
       button.textContent = "Sign out of Electrony Accounts";
       button.href = "#";
-      const csrfToken = String(payload.csrfToken || "");
-      const historyStatus = document.querySelector("#customer-history-status");
+      csrfToken = String(payload.csrfToken || "");
       if (historyStatus) {
         historyStatus.textContent = "Registered transaction history unavailable";
         historyStatus.hidden = false;
       }
-      button.addEventListener("click", async (event) => {
-        event.preventDefault();
-        try {
-          await fetch(`${getBillsApiBaseUrl()}/api/auth/logout`, {
-            method: "POST",
-            credentials: "include",
-            headers: {
-              "Content-Type": "application/json",
-              "X-CSRF-Token": csrfToken
-            },
-            body: "{}"
-          });
-        } finally {
-          state.user = null;
-          window.location.assign(window.location.pathname);
-        }
-      });
     } else {
       state.user = null;
+      if (authResult === "success") showAuthStatus(authMessages.expired);
     }
   } catch {
     state.user = null;
+    if (authResult === "success") showAuthStatus(authMessages.expired);
   }
 }
 

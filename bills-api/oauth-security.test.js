@@ -7,12 +7,14 @@ const test = require("node:test");
 const { SignJWT } = require("jose");
 const {
   validateOAuthCallback,
+  validateBillsReturnUrl,
   validateOAuthStartConfiguration,
   createOAuthAuthorizationRequest,
   getSafeOAuthProviderFailure,
   getAllowedOrigins,
   verifySupabaseIdToken,
-  validateOAuthStateCookie
+  validateOAuthStateCookie,
+  isSupabaseEmailVerified
 } = require("./oauth-security");
 
 const PROJECT_URL = "https://identity.supabase.co";
@@ -101,7 +103,7 @@ test("OAuth authorization request uses Supabase endpoint, exact callback, scopes
   assert.equal(url.searchParams.get("client_id"), CLIENT_ID);
   assert.equal(url.searchParams.get("redirect_uri"), OAUTH_CONFIG.callbackUrl);
   assert.equal(url.searchParams.get("response_type"), "code");
-  assert.equal(url.searchParams.get("scope"), "openid email profile");
+  assert.equal(url.searchParams.get("scope"), "openid email");
   assert.equal(url.searchParams.get("state"), request.state);
   assert.equal(url.searchParams.get("nonce"), request.nonce);
   assert.equal(url.searchParams.get("code_challenge_method"), "S256");
@@ -130,10 +132,12 @@ test("OAuth start sends a secure-cookie 302 and callback provider errors stay re
       PATH: process.env.PATH,
       NODE_ENV: "production",
       PORT: String(port),
+      NODE_OPTIONS: `--require=${path.join(__dirname, "oauth-provider.fixture.js")}`,
       ELECTRONY_IDENTITY_SUPABASE_URL: PROJECT_URL,
       ELECTRONY_IDENTITY_SUPABASE_PUBLISHABLE_KEY: OAUTH_CONFIG.publishableKey,
       ELECTRONY_IDENTITY_OAUTH_CLIENT_ID: CLIENT_ID,
       BILLS_OAUTH_CALLBACK_URL: OAUTH_CONFIG.callbackUrl,
+      BILLS_APP_URL: "https://bills.electrony.xyz/bills/app/",
       BILLS_JWT_SECRET: jwtSecret
     },
     stdio: ["ignore", "pipe", "pipe"]
@@ -141,9 +145,42 @@ test("OAuth start sends a secure-cookie 302 and callback provider errors stay re
 
   try {
     await waitForServer(child);
-    const startResponse = await fetch(`http://127.0.0.1:${port}/api/auth/oauth/start`, {
-      redirect: "manual"
-    });
+    const appUrl = "https://bills.electrony.xyz/bills/app/";
+    const startOAuth = async (returnTo = appUrl) => fetch(
+      `http://127.0.0.1:${port}/api/auth/oauth/start?return_to=${encodeURIComponent(returnTo)}`,
+      { redirect: "manual" }
+    );
+    const getOAuthCookie = (response) => {
+      const cookie = response.headers.getSetCookie()
+        .find((value) => value.startsWith("__Secure-electrony-bills-oauth="));
+      const pair = cookie.split(";", 1)[0];
+      const encoded = pair.slice(pair.indexOf("=") + 1);
+      const [body] = decodeURIComponent(encoded).split(".");
+      return {
+        pair,
+        payload: JSON.parse(Buffer.from(body, "base64url").toString("utf8"))
+      };
+    };
+    const callCallback = (oauthCookie, code, cookiePair = oauthCookie.pair) => {
+      const callbackUrl = new URL(`http://127.0.0.1:${port}/api/auth/oauth/callback`);
+      callbackUrl.searchParams.set("state", oauthCookie.payload.state);
+      if (code !== null) callbackUrl.searchParams.set("code", code);
+      return fetch(callbackUrl, {
+        headers: { Cookie: cookiePair },
+        redirect: "manual"
+      });
+    };
+    const invalidReturnResponse = await fetch(
+      `http://127.0.0.1:${port}/api/auth/oauth/start?return_to=${encodeURIComponent("https://attacker.example/")}`,
+      { redirect: "manual" }
+    );
+    assert.equal(invalidReturnResponse.status, 400);
+
+    const returnTo = "https://bills.electrony.xyz/bills/app/?service=data";
+    const startResponse = await fetch(
+      `http://127.0.0.1:${port}/api/auth/oauth/start?return_to=${encodeURIComponent(returnTo)}`,
+      { redirect: "manual" }
+    );
     assert.equal(startResponse.status, 302);
     assert.equal(startResponse.headers.get("cache-control"), "no-store");
 
@@ -164,7 +201,8 @@ test("OAuth start sends a secure-cookie 302 and callback provider errors stay re
     assert.equal(authorizationUrl.searchParams.get("client_id"), CLIENT_ID);
     assert.equal(authorizationUrl.searchParams.get("redirect_uri"), OAUTH_CONFIG.callbackUrl);
     assert.equal(authorizationUrl.searchParams.get("response_type"), "code");
-    assert.equal(authorizationUrl.searchParams.get("scope"), "openid email profile");
+    assert.equal(authorizationUrl.searchParams.get("scope"), "openid email");
+    assert.equal(oauthCookie.returnTo, returnTo);
     assert.equal(authorizationUrl.searchParams.get("code_challenge_method"), "S256");
     assert.equal(
       authorizationUrl.searchParams.get("code_challenge"),
@@ -173,14 +211,107 @@ test("OAuth start sends a secure-cookie 302 and callback provider errors stay re
 
     const providerMessage = "provider-private-error-detail";
     const callbackResponse = await fetch(
-      `http://127.0.0.1:${port}/api/auth/oauth/callback?error=access_denied&error_description=${encodeURIComponent(providerMessage)}`,
-      { headers: { Cookie: cookiePair } }
+      `http://127.0.0.1:${port}/api/auth/oauth/callback?error=access_denied&state=${encodeURIComponent(oauthCookie.state)}&error_description=${encodeURIComponent(providerMessage)}`,
+      { headers: { Cookie: cookiePair }, redirect: "manual" }
     );
     const callbackBody = await callbackResponse.text();
-    assert.equal(callbackResponse.status, 400);
+    assert.equal(callbackResponse.status, 302);
     assert.equal(callbackBody.includes(providerMessage), false);
     assert.equal(callbackBody.includes("access_denied"), false);
-    assert.match(callbackBody, /authorization was denied or failed/);
+    const cancelledUrl = new URL(callbackResponse.headers.get("location"));
+    assert.equal(cancelledUrl.origin, "https://bills.electrony.xyz");
+    assert.equal(cancelledUrl.pathname, "/bills/app/");
+    assert.equal(cancelledUrl.searchParams.get("service"), "data");
+    assert.equal(cancelledUrl.searchParams.get("auth"), "cancelled");
+
+    const invalidStateResponse = await fetch(
+      `http://127.0.0.1:${port}/api/auth/oauth/callback?code=not-used&state=attacker-state`,
+      { headers: { Cookie: cookiePair }, redirect: "manual" }
+    );
+    assert.equal(invalidStateResponse.status, 302);
+    const failedUrl = new URL(invalidStateResponse.headers.get("location"));
+    assert.equal(failedUrl.searchParams.get("auth"), "failed");
+    assert.equal(failedUrl.searchParams.get("service"), "data");
+
+    const successStart = await startOAuth("https://bills.electrony.xyz/bills/app/?service=airtime");
+    const successOAuth = getOAuthCookie(successStart);
+    const successCode = `authorization:${successOAuth.payload.nonce}:${successOAuth.payload.verifier}`;
+    const successCallback = await callCallback(successOAuth, successCode);
+    assert.equal(successCallback.status, 302);
+    const successUrl = new URL(successCallback.headers.get("location"));
+    assert.equal(successUrl.searchParams.get("auth"), "success");
+    assert.equal(successUrl.searchParams.get("service"), "airtime");
+
+    const sessionCookieNames = [
+      "__Secure-electrony-bills-session",
+      "__Secure-electrony-bills-refresh",
+      "__Secure-electrony-bills-csrf"
+    ];
+    const sessionCookies = successCallback.headers.getSetCookie()
+      .filter((value) => sessionCookieNames.some((name) => value.startsWith(`${name}=`)))
+      .map((value) => value.split(";", 1)[0]);
+    assert.equal(sessionCookies.length, 3);
+    const billsSessionCookie = sessionCookies.join("; ");
+    const csrfCookie = sessionCookies.find((value) => value.startsWith("__Secure-electrony-bills-csrf="));
+    const csrfToken = csrfCookie.slice(csrfCookie.indexOf("=") + 1);
+
+    const meResponse = await fetch(`http://127.0.0.1:${port}/api/auth/me`, {
+      headers: { Cookie: billsSessionCookie }
+    });
+    assert.equal(meResponse.status, 200);
+    assert.equal((await meResponse.json()).user.id, "5a64cc19-377f-4f4e-a0b1-38da49865004");
+
+    const transactionResponse = await fetch(`http://127.0.0.1:${port}/api/customer/transactions`, {
+      headers: { Cookie: billsSessionCookie }
+    });
+    assert.equal(transactionResponse.status, 503);
+    assert.equal((await transactionResponse.json()).user.id, "5a64cc19-377f-4f4e-a0b1-38da49865004");
+
+    const logoutResponse = await fetch(`http://127.0.0.1:${port}/api/auth/logout`, {
+      method: "POST",
+      headers: {
+        Cookie: billsSessionCookie,
+        "Content-Type": "application/json",
+        "X-CSRF-Token": csrfToken
+      },
+      body: "{}"
+    });
+    assert.equal(logoutResponse.status, 200);
+    assert.equal((await logoutResponse.json()).providerRevoked, true);
+
+    const expiredCodeStart = await startOAuth();
+    const expiredCodeOAuth = getOAuthCookie(expiredCodeStart);
+    const expiredCodeCallback = await callCallback(expiredCodeOAuth, "expired");
+    assert.equal(expiredCodeCallback.status, 302);
+    assert.equal(new URL(expiredCodeCallback.headers.get("location")).searchParams.get("auth"), "expired");
+
+    const missingVerifierStart = await startOAuth();
+    const missingVerifier = getOAuthCookie(missingVerifierStart);
+    missingVerifier.payload.verifier = "";
+    const missingVerifierBody = Buffer.from(JSON.stringify(missingVerifier.payload)).toString("base64url");
+    const missingVerifierSignature = crypto.createHmac("sha256", jwtSecret)
+      .update(missingVerifierBody).digest("base64url");
+    const missingVerifierCookie = `__Secure-electrony-bills-oauth=${encodeURIComponent(`${missingVerifierBody}.${missingVerifierSignature}`)}`;
+    const missingVerifierCode = `authorization:${missingVerifier.payload.nonce}:`;
+    const missingVerifierCallback = await callCallback(missingVerifier, missingVerifierCode, missingVerifierCookie);
+    assert.equal(new URL(missingVerifierCallback.headers.get("location")).searchParams.get("auth"), "expired");
+
+    const unverifiedStart = await startOAuth();
+    const unverifiedOAuth = getOAuthCookie(unverifiedStart);
+    const unverifiedCode = `unverified:${unverifiedOAuth.payload.nonce}:${unverifiedOAuth.payload.verifier}`;
+    const unverifiedCallback = await callCallback(unverifiedOAuth, unverifiedCode);
+    assert.equal(new URL(unverifiedCallback.headers.get("location")).searchParams.get("auth"), "verification_required");
+
+    const expiredSessionResponse = await fetch(`http://127.0.0.1:${port}/api/auth/me`, {
+      headers: {
+        Cookie: [
+          "__Secure-electrony-bills-session=fixture-expired-access",
+          "__Secure-electrony-bills-refresh=fixture-expired-refresh"
+        ].join("; ")
+      }
+    });
+    assert.equal(expiredSessionResponse.status, 401);
+    assert.ok(expiredSessionResponse.headers.getSetCookie().some((value) => value.includes("Max-Age=0")));
   } finally {
     const stopped = new Promise((resolve) => child.once("exit", resolve));
     child.kill("SIGTERM");
@@ -320,6 +451,24 @@ test("expired OAuth state is rejected", () => {
     state: "state-value",
     expiresAt: Date.now() - 1
   }, "state-value"), false);
+});
+
+test("unverified Supabase accounts are not accepted as Bills customers", () => {
+  assert.equal(isSupabaseEmailVerified({ email_confirmed_at: "2026-01-01T00:00:00Z" }), true);
+  assert.equal(isSupabaseEmailVerified({ confirmed_at: "2026-01-01T00:00:00Z" }), true);
+  assert.equal(isSupabaseEmailVerified({ email_confirmed_at: null }), false);
+  assert.equal(isSupabaseEmailVerified(null), false);
+});
+
+test("Bills OAuth return URL is limited to the configured app route", () => {
+  const appUrl = "https://bills.electrony.xyz/bills/app/";
+  assert.equal(
+    validateBillsReturnUrl(`${appUrl}?service=data`, appUrl).href,
+    `${appUrl}?service=data`
+  );
+  assert.equal(validateBillsReturnUrl("https://attacker.example/collect", appUrl), null);
+  assert.equal(validateBillsReturnUrl("https://bills.electrony.xyz/other/", appUrl), null);
+  assert.equal(validateBillsReturnUrl(`${appUrl}#fragment`, appUrl), null);
 });
 
 test("incorrect OAuth state is rejected", () => {

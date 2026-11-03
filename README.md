@@ -102,16 +102,13 @@ Only complete this section after the identity project dashboard exposes a workin
 
 The consent route extracts the Supabase `authorization_id` query parameter, preserves it in session storage during sign-in only, calls `getAuthorizationDetails()`, and renders the registered client's name and returned scopes. `approveAuthorization()` and `denyAuthorization()` handle the user's decision. Supabase generates and redirects authorization codes/tokens through its own documented flow; this frontend does not implement a token issuer or token exchange. If `authorization_id` is missing, the page fails closed. Temporary consent diagnostics identify the failed stage (`accounts_session_check`, `oauth_authorization_details`, or `oauth_consent_initialization`) and report only HTTP status, a syntax-checked Supabase error code, a mapped error category, an explicitly allowlisted message (or an omission notice), and whether the authorization ID came from the URL or session storage. Session storage has no locally verified expiry, so its presence does not establish that an authorization ID is still valid. To investigate a deployed failure, open the browser developer console, enable preserved logs if sign-in redirects, reproduce once, and share only the `[oauth-consent-diagnostic]` entry after confirming it contains no request data; never share the URL, network request/response bodies, cookies, tokens, or authorization ID.
 
-### Later Bills pilot
+### Electrony Bills sign-in
 
-Bills remains independently authenticated and guest checkout is unchanged. A later pilot may use a registered Electrony OAuth client only after:
+Electrony Bills uses Electrony Identity as its central provider and is a registered Supabase OAuth client. Bills sign-in is optional; the four utility services retain guest checkout. The API starts the OAuth authorization-code flow with PKCE S256, random `state` and `nonce`, requests only `openid email`, and stores the verifier and callback context in a signed, short-lived HttpOnly cookie. The callback validates state, the registered client/callback, the ID-token signature, issuer, audience, expiry and nonce, matches its subject to the verified Supabase user, and rejects accounts without a confirmed email. Access and refresh tokens remain in Secure, HttpOnly API cookies; Bills JavaScript does not receive tokens.
 
-- A real Bills client and exact callback URI are registered in the identity project.
-- The Bills callback is tested in a browser and returns to Bills by a Supabase-supported OAuth authorization-code/PKCE flow.
-- The Bills application validates the account server-side and maps explicit product permissions separately.
-- No Bills JSON account, JWT, database record, vending, payment, or guest-checkout migration is performed.
+The consent page displays Electrony Bills' registered application name and human-readable requested scopes; the customer must approve or deny the request. The API returns the customer to the same Bills app route after success, cancellation, verification requirements, or failure. Return URLs are limited to the configured Bills app origin and path. Local logout clears the Bills session cookies and attempts provider logout.
 
-Do not claim cross-domain SSO until the dashboard client, redirect allowlist, account callback, and end-to-end browser flow all pass.
+Before deploying, confirm in the identity project that the Bills registration is a public client (`token_endpoint_auth_method=none`) because the server sends the client ID without a client secret; verify the exact callback URI and client ID, and configure asymmetric JWT signing (RS256 or ES256) for OIDC ID-token verification. The repository has no identity-project dashboard access or real client credentials, so a real sign-in/consent/callback test has not been completed. Do not claim end-to-end authentication until that test succeeds.
 
 ## Electrony Automobile
 

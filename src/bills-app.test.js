@@ -6,7 +6,7 @@ const vm = require("node:vm");
 
 const appSource = fs.readFileSync(path.join(__dirname, "bills-app.js"), "utf8");
 
-function createAppContext(search = "?service=virtual-cards") {
+function createAppContext(search = "?service=virtual-cards", fetchHandler = null, withIdentity = false) {
   const requests = [];
   const servicePanel = {
     innerHTML: "",
@@ -22,6 +22,16 @@ function createAppContext(search = "?service=virtual-cards") {
     }
   };
   const serviceGrid = { innerHTML: "" };
+  const accountsButton = {
+    href: "https://accounts.electrony.xyz/",
+    textContent: "Sign in with Electrony Accounts",
+    listeners: [],
+    addEventListener(event, listener) {
+      this.listeners.push({ event, listener });
+    }
+  };
+  const authStatus = { hidden: true, textContent: "" };
+  const historyStatus = { hidden: true, textContent: "" };
   const checkoutPanel = {
     innerHTML: "",
     classList: {
@@ -39,6 +49,9 @@ function createAppContext(search = "?service=virtual-cards") {
       if (selector === "#service-panel") return servicePanel;
       if (selector === "#service-grid") return serviceGrid;
       if (selector === "#checkout-panel") return checkoutPanel;
+      if (withIdentity && selector === "#accounts-sign-in-button") return accountsButton;
+      if (withIdentity && selector === "#accounts-auth-status") return authStatus;
+      if (withIdentity && selector === "#customer-history-status") return historyStatus;
       return null;
     },
     createElement() {
@@ -53,7 +66,9 @@ function createAppContext(search = "?service=virtual-cards") {
     location: {
       href: `https://example.test/bills/app/${search}`,
       protocol: "https:",
-      search
+      search,
+      pathname: "/bills/app/",
+      assign() {}
     },
     sessionStorage: {
       length: 0,
@@ -71,6 +86,7 @@ function createAppContext(search = "?service=virtual-cards") {
     document,
     fetch: (...args) => {
       requests.push(args);
+      if (fetchHandler) return fetchHandler(...args);
       throw new Error("Unexpected Bills API request.");
     },
     window
@@ -83,7 +99,10 @@ function createAppContext(search = "?service=virtual-cards") {
     ready: document.listeners.DOMContentLoaded,
     servicePanel,
     serviceGrid,
-    serviceList
+    serviceList,
+    accountsButton,
+    authStatus,
+    historyStatus
   };
 }
 
@@ -153,4 +172,43 @@ test("guest services retain their existing catalogue request", () => {
 
   assert.equal(requests.length, 1);
   assert.match(requests[0][0], /\/api\/services\/catalog$/);
+});
+
+test("OAuth sign-in preserves the Bills page and displays cancellation without blocking guests", async () => {
+  const { context, accountsButton, authStatus } = createAppContext(
+    "?service=data&auth=cancelled",
+    async () => ({ ok: false, json: async () => ({ ok: false }) }),
+    true
+  );
+
+  await context.initializeIdentitySignIn();
+
+  const signInUrl = new URL(accountsButton.href);
+  const returnTo = new URL(signInUrl.searchParams.get("return_to"));
+  assert.equal(signInUrl.pathname, "/api/auth/oauth/start");
+  assert.equal(returnTo.pathname, "/bills/app/");
+  assert.equal(returnTo.searchParams.get("service"), "data");
+  assert.equal(authStatus.hidden, false);
+  assert.match(authStatus.textContent, /Sign-in was cancelled/);
+  assert.match(authStatus.textContent, /Guest checkout remains available/);
+});
+
+test("verified Bills session can sign out and reports when provider revocation is unavailable", async () => {
+  let requestCount = 0;
+  const { context, accountsButton, authStatus } = createAppContext("", async () => {
+    requestCount += 1;
+    return requestCount === 1
+      ? { ok: true, json: async () => ({ ok: true, user: { id: "verified-user" }, csrfToken: "csrf" }) }
+      : { ok: true, json: async () => ({ ok: true, signedOut: true, providerRevoked: false }) };
+  }, true);
+
+  await context.initializeIdentitySignIn();
+  assert.equal(accountsButton.textContent, "Sign out of Electrony Accounts");
+  const clickHandler = accountsButton.listeners.at(-1).listener;
+  await clickHandler({ preventDefault() {} });
+
+  assert.equal(accountsButton.textContent, "Sign in with Electrony Accounts");
+  assert.match(authStatus.textContent, /Signed out on this device/);
+  await clickHandler({ preventDefault() {} });
+  assert.equal(requestCount, 2);
 });

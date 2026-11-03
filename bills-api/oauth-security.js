@@ -114,10 +114,26 @@ function createOAuthAuthorizationRequest({ projectUrl, clientId, callbackUrl }) 
   authorizeUrl.searchParams.set("redirect_uri", callbackUrl);
   authorizeUrl.searchParams.set("state", state);
   authorizeUrl.searchParams.set("nonce", nonce);
-  authorizeUrl.searchParams.set("scope", "openid email profile");
+  authorizeUrl.searchParams.set("scope", "openid email");
   authorizeUrl.searchParams.set("code_challenge", challenge);
   authorizeUrl.searchParams.set("code_challenge_method", "S256");
   return { authorizeUrl, verifier, state, nonce, challenge };
+}
+
+function validateBillsReturnUrl(rawReturnUrl, rawBillsAppUrl) {
+  if (typeof rawReturnUrl !== "string" || !rawReturnUrl.trim()
+    || typeof rawBillsAppUrl !== "string" || !rawBillsAppUrl.trim()) return null;
+  try {
+    const appUrl = new URL(rawBillsAppUrl.trim());
+    const returnUrl = new URL(rawReturnUrl.trim());
+    if (appUrl.username || appUrl.password || appUrl.search || appUrl.hash
+      || returnUrl.username || returnUrl.password || returnUrl.hash
+      || returnUrl.origin !== appUrl.origin
+      || returnUrl.pathname !== appUrl.pathname) return null;
+    return returnUrl;
+  } catch {
+    return null;
+  }
 }
 
 function getSafeOAuthProviderFailure(statusCode) {
@@ -286,15 +302,21 @@ function validateOAuthStateCookie(payload, submittedState, now = Date.now()) {
   return isValidSignedState(submittedState, payload.state);
 }
 
+function isSupabaseEmailVerified(user) {
+  return Boolean(user && (user.email_confirmed_at || user.confirmed_at));
+}
+
 module.exports = {
   PRODUCTION_CALLBACK,
   validateOAuthCallback,
   validateOAuthStartConfiguration,
   createOAuthAuthorizationRequest,
+  validateBillsReturnUrl,
   getSafeOAuthProviderFailure,
   validateConfiguredOrigin,
   getAllowedOrigins,
   verifySupabaseIdToken,
   isValidSignedState,
-  validateOAuthStateCookie
+  validateOAuthStateCookie,
+  isSupabaseEmailVerified
 };

@@ -95,7 +95,7 @@ The server-controlled fee table is in `platform-fees.js`. Electricity, airtime, 
 
 Sogo is the server-side bill vending provider. The adapter is restricted to `https://sandbox.sogo.africa/v1`, requires `SOGO_ENABLED=true` and an `sogo_sk_test_` key, and rejects live endpoints and keys. It uses Bearer authentication, does not log or return credentials, and never falls back to production. The API only makes requests after the relevant environment configuration is present.
 
-For `invalid_response` catalogue failures, diagnostics include JSON validity and structure metadata (top-level type and keys, `data` presence/type, and expected category-field presence/types). Response bodies and field values are not logged or returned to the browser.
+Catalogue diagnostics record upstream HTTP status and a safe provider error code when returned. HTTP 401 logs advise checking the active sandbox key; HTTP 403 logs advise checking sandbox access and `bills:read`; DNS failures are separated from other network failures using an allowlisted system code. For `invalid_response` failures, diagnostics include JSON validity and structure metadata (top-level type and keys, `data` presence/type, and expected category-field presence/types). Response bodies, credentials, authorization headers, and customer values are not logged or returned to the browser. The browser receives a generic, retryable catalogue error.
 
 Implemented Sogo routes are:
 
@@ -198,7 +198,7 @@ Supabase Auth is being used as an OAuth 2.1 authorization server according to th
 - Customer history: `GET /api/customer/transactions`
 - Legacy account compatibility: `POST /api/auth/register`, `POST /api/auth/login`
 
-The callback URL registered in Supabase must exactly equal `BILLS_OAUTH_CALLBACK_URL`. For production this is `https://electronyxyz-parent-page-production.up.railway.app/api/auth/oauth/callback`; it is not a Bills frontend page URL. Dynamic client registration is intentionally disabled.
+The callback URL registered in Supabase must exactly equal `BILLS_OAUTH_CALLBACK_URL`. For production this is `https://electronyxyz-parent-page-production.up.railway.app/api/auth/oauth/callback`; it is not a Bills frontend page URL. Dynamic client registration is intentionally disabled. The API expects a public client with `token_endpoint_auth_method=none`; it sends the client ID in the token request and does not send a client secret. Confirm this setting and the actual registered client ID in the identity dashboard before deployment.
 
 ### Dashboard and environment requirements
 
@@ -207,11 +207,13 @@ The callback URL registered in Supabase must exactly equal `BILLS_OAUTH_CALLBACK
 - Keep the Accounts URL Configuration Site URL set to `https://accounts.electrony.xyz`.
 - Register Electrony Bills as a separate public OAuth client with the exact Railway callback URL.
 - The Authorization Code flow, PKCE S256, and exact redirect URI validation are required.
-- Use scopes `openid email profile`; the `nonce` is included in the authorization request.
+- Use only scopes `openid email`; profile and phone are not required. The `nonce` is included in the authorization request.
 - Configure `ELECTRONY_IDENTITY_SUPABASE_URL`, `ELECTRONY_IDENTITY_SUPABASE_PUBLISHABLE_KEY`, `ELECTRONY_IDENTITY_OAUTH_CLIENT_ID`, and `BILLS_OAUTH_CALLBACK_URL` in Railway.
 - `ELECTRONY_IDENTITY_SUPABASE_PUBLISHABLE_KEY` is public; never configure or expose a service-role/secret key in Bills or its frontend.
 
-The OAuth start endpoint signs and HttpOnly-stores a ten-minute verifier/client/state/nonce/callback cookie. The callback verifies state, callback/client configuration, nonce, and exchanges the authorization code with PKCE S256 before validating the access token through the configured Supabase Auth server. Access and refresh tokens are stored only as Secure, HttpOnly, SameSite=None cookies on the Railway API origin. State-changing logout and refresh operations require a CSRF token and exact allowed-origin/CORS checks.
+The OAuth start endpoint signs and HttpOnly-stores a ten-minute verifier/client/state/nonce/callback/return-route cookie. The callback checks state for both successful and denied responses, verifies callback/client configuration, exchanges the authorization code with PKCE S256, validates the ID-token signature/issuer/audience/expiry/nonce and matches its subject to the verified account returned by Supabase Auth. Unconfirmed email accounts are rejected. Access and refresh tokens are stored only as Secure, HttpOnly, SameSite=None cookies on the Railway API origin. State-changing logout and refresh operations require a CSRF token and exact allowed-origin/CORS checks. Callback results return to the same configured Bills app route without exposing provider error details.
+
+The callback and token exchange have mocked/cryptographic test coverage only; no real identity project, OAuth client registration, consent, or browser end-to-end sign-in was available for verification. A successful local API redirect test is not proof of provider authentication.
 
 ### Identity and legacy compatibility
 
