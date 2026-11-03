@@ -1,260 +1,64 @@
-const crypto = require("crypto");
+"use strict";
 
 function normalizeConfigValue(value) {
-  if (typeof value !== "string") return "";
-  return value.trim();
+  return typeof value === "string" ? value.trim() : "";
 }
 
 function readEnv(name, fallback = "") {
-  const value = normalizeConfigValue(process.env[name]);
-  return value || fallback;
-}
-
-function createHeaders(body, secretKey) {
-  const signature = crypto
-    .createHmac("sha256", secretKey)
-    .update(body)
-    .digest("hex");
-
-  return {
-    "Content-Type": "application/json",
-    "x-signature": signature
-  };
+  return normalizeConfigValue(process.env[name]) || fallback;
 }
 
 class NullProviderAdapter {
-  constructor(config) {
-    this.config = config;
-  }
-
   isConfigured() {
     return false;
   }
 
   getMissingConfiguration() {
-    return Object.entries(this.config)
-      .filter(([, value]) => !value)
-      .map(([key]) => key);
+    return [];
   }
 
   async validateMeter() {
-    return {
-      ok: false,
-      status: "provider_unconfigured",
-      message: "No vending provider has been configured. Add BILLS_PROVIDER_* or BILLS_VENDING_PROVIDER values to enable real service delivery."
-    };
+    return this.unavailable("Customer verification is unavailable because no authorized vending provider is configured.");
   }
 
   async validateCustomer() {
-    return {
-      ok: false,
-      status: "provider_unconfigured",
-      message: "No vending provider has been configured. Add BILLS_PROVIDER_* or BILLS_VENDING_PROVIDER values to enable real service delivery."
-    };
+    return this.unavailable("Customer verification is unavailable because no authorized vending provider is configured.");
   }
 
   async purchaseElectricity() {
-    return {
-      ok: false,
-      status: "vending_failed",
-      message: "No vending provider has been configured. Add BILLS_PROVIDER_* or BILLS_VENDING_PROVIDER values to enable actual electricity vending."
-    };
+    return this.unavailable("Electricity vending is unavailable because no authorized provider is configured.");
   }
 
   async purchaseAirtime() {
-    return {
-      ok: false,
-      status: "vending_failed",
-      message: "No vending provider has been configured. Add BILLS_PROVIDER_* or BILLS_VENDING_PROVIDER values to enable actual airtime vending."
-    };
+    return this.unavailable("Airtime vending is unavailable because no authorized provider is configured.");
   }
 
   async purchaseData() {
-    return {
-      ok: false,
-      status: "vending_failed",
-      message: "No vending provider has been configured. Add BILLS_PROVIDER_* or BILLS_VENDING_PROVIDER values to enable actual data vending."
-    };
+    return this.unavailable("Data vending is unavailable because no authorized provider is configured.");
   }
 
   async purchaseBill() {
-    return {
-      ok: false,
-      status: "vending_failed",
-      message: "No vending provider has been configured. Add BILLS_PROVIDER_* or BILLS_VENDING_PROVIDER values to enable actual bill vending."
-    };
+    return this.unavailable("Bill vending is unavailable because no authorized provider is configured.");
   }
 
   async fetchStatus() {
-    return {
-      ok: false,
-      status: "pending_reconciliation",
-      message: "Provider status checks are unavailable until the vending provider is configured."
-    };
+    return this.unavailable("Transaction status is unavailable because no authorized vending provider is configured.", "pending_reconciliation");
   }
 
   async reconcileTransaction() {
-    return {
-      ok: false,
-      status: "pending_reconciliation",
-      message: "Provider reconciliation is pending until the vending provider is configured."
-    };
-  }
-}
-
-class ProviderAdapter {
-  constructor(config) {
-    this.config = config;
+    return this.unavailable("Transaction reconciliation is unavailable because no authorized vending provider is configured.", "pending_reconciliation");
   }
 
-  isConfigured() {
-    if (["baseUrl", "apiKey", "secretKey"].some((field) => {
-      const value = this.config[field];
-      return !value || /replace_with|change_me|example/i.test(value);
-    })) {
-      return false;
-    }
-
-    try {
-      const baseUrl = new URL(this.config.baseUrl);
-      return (baseUrl.protocol === "https:" || baseUrl.hostname === "localhost")
-        && !baseUrl.username
-        && !baseUrl.password;
-    } catch (error) {
-      return false;
-    }
-  }
-
-  getMissingConfiguration() {
-    return Object.entries(this.config)
-      .filter(([, value]) => !value || /replace_with|change_me|example/i.test(value))
-      .map(([key]) => key);
-  }
-
-  async request(path, options = {}) {
-    const url = new URL(path, this.config.baseUrl.endsWith("/") ? this.config.baseUrl : `${this.config.baseUrl}/`);
-
-    const response = await fetch(url, {
-      method: options.method || "GET",
-      headers: {
-        "Content-Type": "application/json",
-        "Authorization": `Bearer ${this.config.apiKey}`,
-        ...(options.headers || {})
-      },
-      body: options.body ? JSON.stringify(options.body) : undefined,
-      signal: AbortSignal.timeout(this.config.timeoutMs)
-    });
-
-    const text = await response.text();
-    let payload = {};
-    try {
-      payload = text ? JSON.parse(text) : {};
-    } catch (error) {
-      payload = { raw: text };
-    }
-
-    if (!response.ok) {
-      throw new Error(`Vending provider request failed with status ${response.status}.`);
-    }
-
-    return payload;
-  }
-
-  async validateMeter(details) {
-    return this.request("/meter-validation", {
-      method: "POST",
-      body: {
-        provider: this.config.name || "vtu",
-        ...details
-      }
-    });
-  }
-
-  async validateCustomer(details) {
-    return this.request("/customer-validation", {
-      method: "POST",
-      body: {
-        provider: this.config.name || "vtu",
-        ...details
-      }
-    });
-  }
-
-  async purchaseElectricity(details) {
-    return this.request("/electricity/vend", {
-      method: "POST",
-      body: {
-        provider: this.config.name || "vtu",
-        ...details
-      }
-    });
-  }
-
-  async purchaseAirtime(details) {
-    return this.request("/airtime/vend", {
-      method: "POST",
-      body: {
-        provider: this.config.name || "vtu",
-        ...details
-      }
-    });
-  }
-
-  async purchaseData(details) {
-    return this.request("/data/vend", {
-      method: "POST",
-      body: {
-        provider: this.config.name || "vtu",
-        ...details
-      }
-    });
-  }
-
-  async purchaseBill(details) {
-    return this.request("/bill/vend", {
-      method: "POST",
-      body: {
-        provider: this.config.name || "vtu",
-        ...details
-      }
-    });
-  }
-
-  async fetchStatus(reference) {
-    return this.request(`/transactions/${encodeURIComponent(reference)}`);
-  }
-
-  async reconcileTransaction(reference) {
-    return this.request(`/transactions/${encodeURIComponent(reference)}/reconcile`);
+  unavailable(message, status = "provider_unconfigured") {
+    return { ok: false, status, message };
   }
 }
 
 function buildProviderAdapter() {
-  const configuredTimeoutMs = Number(readEnv("BILLS_PROVIDER_TIMEOUT_MS") || 20000);
-  const config = {
-    name: readEnv("BILLS_VENDING_PROVIDER") || readEnv("BILLS_PROVIDER_NAME") || "",
-    baseUrl: readEnv("BILLS_PROVIDER_BASE_URL") || readEnv("VTU_PROVIDER_BASE_URL") || "",
-    apiKey: readEnv("BILLS_PROVIDER_API_KEY") || readEnv("VTU_API_KEY") || "",
-    secretKey: readEnv("BILLS_PROVIDER_SECRET_KEY") || readEnv("VTU_SECRET_KEY") || "",
-    webhookSecret: readEnv("BILLS_PROVIDER_WEBHOOK_SECRET") || readEnv("VTU_WEBHOOK_SECRET") || "",
-    timeoutMs: Number.isSafeInteger(configuredTimeoutMs) && configuredTimeoutMs > 0 && configuredTimeoutMs <= 120000
-      ? configuredTimeoutMs
-      : 20000
-  };
-
-  if (!config.baseUrl && !config.apiKey && !config.secretKey) {
-    return new NullProviderAdapter(config);
-  }
-
-  if (config.baseUrl && config.apiKey && config.secretKey) {
-    return new ProviderAdapter(config);
-  }
-
-  return new NullProviderAdapter(config);
+  return new NullProviderAdapter();
 }
 
 module.exports = {
-  createHeaders,
   buildProviderAdapter,
   readEnv,
   normalizeConfigValue

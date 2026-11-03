@@ -79,49 +79,21 @@ Marplerad and Teloadly adapters are intentionally provider-independent and fail 
 - `BILLS_WEBHOOK_BASE_URL`
 - `BILLS_DATABASE_URL`
 - `BILLS_RUNTIME_DATABASE_URL` (Railway backend variable only; connect as `electrony_bills_runtime`; PostgreSQL TLS certificate verification is required; never include it in browser/frontend variables)
-- `BILLS_VENDING_PROVIDER`
-- `BILLS_PROVIDER_BASE_URL`
-- `BILLS_PROVIDER_API_KEY`
-- `BILLS_PROVIDER_SECRET_KEY`
-- `BILLS_PROVIDER_WEBHOOK_SECRET`
 
 `BILLS_JWT_SECRET` must be a private random value of at least 32 characters. The API uses it to sign short-lived account tokens. Password hashes and user references are stored in the local JSON persistence directory; plaintext passwords and tokens are not persisted by the API.
 
-`BILLS_PROVIDER_TIMEOUT_MS` bounds each vending-provider request. Valid values are 1–120000 milliseconds; invalid values use the 20000 millisecond default.
 
 ## Platform fees and transaction safety
 
-The server-controlled fee table is in `platform-fees.js`. Electricity, airtime, data, and supported bills each have one NGN 100 fee per payment transaction; virtual cards have no fixed NGN fee and use USD product pricing; gift cards have a zero Electrony platform fee. Fee quotes use integer minor units and expire after five minutes. Payment initialization recalculates the quote server-side and rejects a missing, stale, or mismatched quote; client-supplied fees are never authoritative.
+The server-controlled fee table is in `platform-fees.js`. Electricity, airtime, data, and supported bills each have one NGN 100 platform fee per payment transaction. Fee calculations use integer minor units; client-supplied fees are never authoritative.
 
-Sogo is the server-side bill vending provider. The adapter is restricted to `https://sandbox.sogo.africa/v1`, requires `SOGO_ENABLED=true` and an `sogo_sk_test_` key, and rejects live endpoints and keys. It uses Bearer authentication, does not log or return credentials, and never falls back to production. The API only makes requests after the relevant environment configuration is present.
+Monnify is the customer payment gateway only. This repository has no authorized electricity, airtime, data, or TV vending adapter. `GET /api/services/catalog` therefore returns empty provider/product lists for every utility category. Plan, customer-verification, fee-quote, and payment-session operations fail closed; no Monnify payment is initialized without an authorized vending provider and verified readiness.
 
-Catalogue diagnostics record upstream HTTP status and a safe provider error code when returned. HTTP 401 logs advise checking the active sandbox key; HTTP 403 logs advise checking sandbox access and `bills:read`; DNS failures are separated from other network failures using an allowlisted system code. For `invalid_response` failures, diagnostics include JSON validity and structure metadata (top-level type and keys, `data` presence/type, and expected category-field presence/types). Response bodies, credentials, authorization headers, and customer values are not logged or returned to the browser. The browser receives a generic, retryable catalogue error.
+Sogo is no longer an active integration: the server does not read its configuration or make catalogue, verification, vending, reconciliation, or webhook requests. The legacy `POST /api/sogo/webhook` path returns `410 Gone`. Existing transaction rows, provider references, webhook audit rows, and legacy provider metadata are retained and are not rewritten; the API does not resume or reconcile those old operations.
 
-Implemented Sogo routes are:
+Git history does not contain a previously enabled Monnify guest checkout: the pre-Sogo frontend already had payment operations hard-disabled, and backend payment initialization was gated on unverified Monnify and PostgreSQL requirements. The current backend keeps Monnify initialization, direct transaction-query verification, and signed-webhook code server-side, but the code-level readiness gate remains false. Monnify is not treated as a bill catalogue or vending provider.
 
-- `GET /bills/catalog`, exposed to the UI through `GET /api/services/catalog`.
-- `GET /bills/data-plans`, `GET /bills/cable-packages`, and `GET /bills/education-plans`, exposed through `GET /api/services/plans`.
-- `POST /bills/electricity/verify-meter` and `POST /bills/cable-tv/verify-smartcard`, exposed through `POST /api/services/verify`.
-- Purchase calls for airtime, data, electricity, cable TV, and education; education has no enabled frontend checkout.
-- `GET /transactions/{reference}` and `GET /transactions/{idempotency-key}?type=bill_payment` for transaction details and reconciliation.
-- `POST /api/sogo/webhook`, verifying `X-Sogo-Signature-256` against the raw body and deduplicating on `X-Sogo-Delivery`.
-
-The Bills guest UI uses Sogo-returned provider slugs, plan variation codes, prices, and returned verification details. It does not show hard-coded providers or plans. Education and ePIN checkout are not exposed because those guest purchase flows have not been implemented. Plan rows without a documented variation code and numeric `price` are not selectable.
-
-Monnify remains the customer checkout gateway and is not conflated with Sogo vending. The existing hard payment block remains in place because the Monnify payment contract, fee quote, durable production database authorization, and end-to-end verification are not verified; no amount of Sogo configuration overrides it. Thus payment sessions are not created and no Sogo purchase can be triggered from a browser success redirect. Once a Monnify payment is independently verified and the other gates are reviewed, Sogo vending first stores a UUID v4 idempotency key and changes the durable fulfilment state, then sends one purchase request. A timeout keeps that same key and requires transaction lookup before any retry. Payment state remains separate from fulfilment state.
-
-Sogo operation metadata, provider references, safe response summaries, reconciliation markers, and Sogo webhook delivery identifiers use the existing PostgreSQL `bill_orders.metadata`, `provider_transaction_reference`, and `bill_payment_webhook_events` fields. No database tables or schema migration are added. Digital assets are not copied into customer-facing status payloads. Electricity orders requiring a token that cannot be securely retrieved remain in review rather than being marked delivered.
-
-Set these server-only Railway API variables before testing catalogue or verification calls:
-
-```text
-SOGO_API_BASE_URL=https://sandbox.sogo.africa/v1
-SOGO_SECRET_KEY=sogo_sk_test_...
-SOGO_WEBHOOK_SECRET=<registered sandbox webhook secret>
-SOGO_ENABLED=true
-```
-
-Register `POST https://<Bills-API-origin>/api/sogo/webhook` in the Sogo sandbox developer profile and subscribe to `transaction.completed`, `transaction.failed`, and `transaction.refunded`. Do not put these secrets in Vercel build variables, `src/config.js`, browser code, URLs, or logs. Sogo sandbox requests are limited to 10 requests/minute/key; catalogue and plan reads are cached for one minute.
+Required server-side Monnify variable names are `MONNIFY_API_KEY`, `MONNIFY_SECRET_KEY`, `MONNIFY_CONTRACT_CODE`, `MONNIFY_BASE_URL`, `BILLS_PAYMENT_REDIRECT_URL`, and `BILLS_WEBHOOK_BASE_URL`. Set only sandbox values for sandbox testing and production values for production. The sample values in `.env.example` are placeholders. Payment routes remain blocked even when credentials are set until the Monnify contract, PostgreSQL runtime security, order persistence, fee handling, and an authorized vending provider are verified.
 
 ## Accounts and services not yet configured
 
@@ -164,7 +136,7 @@ Run `node bills-api/postgres-test-fixture.js setup` before a standalone verifica
 
 The database role, grants, and policy expressions must be reviewed against the live database; the health check verifies RLS enablement and role-scoped policy coverage without comparing PostgreSQL's normalized policy-expression text. Health status does not prove customer authorization. Do not run `postgres-role-setup.sql` again. After reviewing the deployed `/health` `checks.privilegeDiagnostics`, an administrator may use [`postgres-role-permissions-remediation.sql`](./postgres-role-permissions-remediation.sql) to reset only direct grants on the six fixed Bills tables and their owned sequences to the operations used by the repository. The script verifies table ownership, RLS, and the dedicated role's lack of memberships, and aborts unless it finds an excess direct grant in the scope it changes. It does not change owners, RLS, public or inherited grants, other schemas, application functions, or unrelated objects. Review its SQL and the diagnostic findings before executing it. Any remaining `PUBLIC` or inherited grants, `public` schema `CREATE`, sensitive function exposure, or public-role access require a separate object-specific review; do not broaden the script or revoke privileges blindly. After redeployment, inspect the safe readiness/diagnostic fields at the Railway health endpoint. `connected: true` means only that TLS and authentication succeeded. PostgreSQL operations are present in payment handlers that remain hard-blocked, but Bills order persistence is not verified end to end; payments and vending remain disabled until every authorization, payment, fee, provider, and idempotency gate is implemented and verified.
 
-Sogo provides bill catalogue and purchase operations, not the customer collection gateway. Payment-session creation, verification, and Monnify webhook mutations continue to return `503` while the Monnify contract and production readiness checks remain unverified. Sogo vending is only invoked by the server-side verified-payment fulfillment path; it is not invoked from browser redirects or unsigned callbacks.
+No utility vending provider is currently configured. Payment-session creation remains blocked, and no browser redirect or Monnify webhook can trigger vending. Historical provider metadata remains available for audit only.
 
 ## Payment flow
 
@@ -177,7 +149,7 @@ The backend currently:
 5. Contains server-side transaction-query and amount/currency/reference matching code, but the verification contract and end-to-end behavior are not verified; a redirect is not proof of payment.
 6. Retains the provider adapter abstraction, but does not enable bill delivery without Monnify's validation, vend, fee, reference, and reconciliation contract.
 
-`PAYMENTS_BLOCKED=false` cannot override the hard Monnify payment-contract block. Sandbox Sogo API calls require authorized sandbox credentials, which are not stored in this repository. Do not test live vending or treat a callback as fulfillment. Before checkout can be enabled, verify Monnify payment initialization, amount/currency/reference verification, fee handling, webhook behavior, PostgreSQL runtime security, and end-to-end order persistence.
+`PAYMENTS_BLOCKED=false` cannot override the hard Monnify payment-contract block. Do not test live vending or treat a callback as fulfillment. Before checkout can be enabled, verify Monnify initialization and amount/currency/reference verification, fee handling, webhook behavior, PostgreSQL runtime security, end-to-end order persistence, and each separately authorized vending integration.
 
 Official documentation consulted: [Bills Payment workflow](https://developers.monnify.com/docs/bills-payment/process-a-bill), [settlement and merchant payable](https://developers.monnify.com/docs/bills-payment/settlement-process), [collection transaction verification](https://developers.monnify.com/docs/collections/manage-payments/verify-transactions), [checkout API](https://developers.monnify.com/docs/collections/one-time-payments/checkout-api), and [webhooks](https://developers.monnify.com/docs/webhooks). The accessible documentation names the Bills operations but the linked API reference did not provide verifiable endpoint paths or full schemas in this integration environment.
 

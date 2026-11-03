@@ -7,7 +7,7 @@ const serviceCatalog = {
     icon: "↯",
     title: "Electricity purchase",
     guestCheckout: true,
-    helper: "Select a DisCo from Sogo's live catalogue and verify the meter before payment."
+    helper: "Select an electricity provider from the configured catalogue and verify the meter before payment."
   },
   airtime: {
     id: "airtime",
@@ -15,7 +15,7 @@ const serviceCatalog = {
     icon: "∿",
     title: "Airtime top-up",
     guestCheckout: true,
-    helper: "Choose a network from Sogo's live catalogue and enter the recipient and amount."
+    helper: "Choose a network from the configured catalogue and enter the recipient and amount."
   },
   data: {
     id: "data",
@@ -23,7 +23,7 @@ const serviceCatalog = {
     icon: "⌁",
     title: "Data purchase",
     guestCheckout: true,
-    helper: "Choose a network and a data plan returned by Sogo."
+    helper: "Choose a network and data plan returned by the configured provider."
   },
   bills: {
     id: "bills",
@@ -31,7 +31,7 @@ const serviceCatalog = {
     icon: "▤",
     title: "TV and utility bills",
     guestCheckout: true,
-    helper: "Choose a cable provider and package returned by Sogo; verify the smartcard first."
+    helper: "Choose a cable provider and package returned by the configured provider; verify the smartcard first."
   },
   "virtual-cards": {
     id: "virtual-cards",
@@ -257,12 +257,12 @@ function renderServicePanel() {
   const billers = Array.isArray(category?.billers) ? category.billers : [];
   const available = category?.available === true && billers.length > 0;
   const statusMessage = state.catalogueLoading
-    ? "Loading the Sogo sandbox catalogue…"
+    ? "Loading the configured provider catalogue…"
     : state.catalogueError
       ? `Catalogue unavailable: ${state.catalogueError}`
       : category?.available === true && billers.length === 0
-        ? "Sogo currently lists no providers for this service."
-        : category?.message || "The Sogo catalogue is unavailable. No providers are shown.";
+        ? "The configured provider currently lists no products for this service."
+        : category?.message || "No verified provider is configured for this service.";
   const selectedProvider = state.selectedBillers[service.id] || billers[0]?.code || "";
   const providerSelect = available ? `
     <label class="field">
@@ -295,7 +295,7 @@ function renderServicePanel() {
           <button type="button" class="secondary-button" id="verify-customer-button">Verify ${service.id === "electricity" ? "meter" : "smartcard"}</button>
           <div id="verified-customer" class="catalog-state" role="status" aria-live="polite">${renderVerifiedCustomer()}</div>
         ` : ""}
-        <div id="fee-preview" class="catalog-state">Payments remain unavailable until Monnify payment verification and durable database readiness are verified.</div>
+        <div id="fee-preview" class="catalog-state">Checkout remains unavailable until a verified vending provider and payment configuration are in place.</div>
         <button type="submit" class="primary-button" disabled>Continue to payment</button>
       </form>
     ` : ""}
@@ -332,7 +332,7 @@ function renderServicePanel() {
     }
   });
   panel.querySelector("#verify-customer-button")?.addEventListener("click", () => {
-    void verifySogoCustomer(service.id);
+    void verifyBillCustomer(service.id);
   });
   panel.querySelector("#catalogue-retry")?.addEventListener("click", () => {
     void loadServiceCatalogue();
@@ -433,7 +433,7 @@ function renderGuestServiceFields(serviceId, provider) {
     return `
       <label class="field"><span>Recipient phone number</span><input name="recipient" inputmode="tel" autocomplete="tel" required></label>
       <label class="field"><span>Data plan</span><select name="plan" required>
-        <option value="">${state.plansLoading ? "Loading plans…" : state.plansError || "Select a plan returned by Sogo"}</option>
+        <option value="">${state.plansLoading ? "Loading plans…" : state.plansError || "Select a plan returned by the configured provider"}</option>
         ${plans.filter((plan) => getPlanVariationCode(plan) && getPlanPrice(plan)).map((plan) => `
           <option value="${escapeHtml(getPlanVariationCode(plan))}" data-amount="${getPlanPrice(plan)}">${escapeHtml(getPlanLabel(plan))}</option>
         `).join("")}
@@ -446,7 +446,7 @@ function renderGuestServiceFields(serviceId, provider) {
       <label class="field"><span>Smartcard or decoder number</span><input name="customerId" inputmode="numeric" autocomplete="off" required></label>
       <label class="field"><span>Subscription action</span><select name="subscriptionType" required><option value="">Select action</option><option value="renew">Renew</option><option value="change">Change package</option></select></label>
       <label class="field"><span>Package</span><select name="plan" required>
-        <option value="">${state.plansLoading ? "Loading packages…" : state.plansError || "Select a package returned by Sogo"}</option>
+        <option value="">${state.plansLoading ? "Loading packages…" : state.plansError || "Select a package returned by the configured provider"}</option>
         ${plans.filter((plan) => getPlanVariationCode(plan) && getPlanPrice(plan)).map((plan) => `
           <option value="${escapeHtml(getPlanVariationCode(plan))}" data-amount="${getPlanPrice(plan)}">${escapeHtml(getPlanLabel(plan))}</option>
         `).join("")}
@@ -467,7 +467,7 @@ function renderVerifiedCustomer() {
     ["Subscription status", details.subscription_status]
   ].filter(([, value]) => typeof value === "string" && value.trim());
   return fields.map(([label, value]) => `<p><strong>${label}:</strong> ${escapeHtml(value)}</p>`).join("")
-    || "Sogo returned no customer details.";
+  || "The provider returned no customer details.";
 }
 
 function readPurchaseFormValues(form) {
@@ -505,7 +505,7 @@ async function loadServicePlans(serviceId, provider) {
     const result = await fetchBillingApi(`/api/services/plans?${query}`);
     state.servicePlans = result.plans;
     if (!getPlanRows(result.plans).some((plan) => getPlanVariationCode(plan) && getPlanPrice(plan))) {
-      state.plansError = "Sogo returned no selectable plans with a variation code and price.";
+      state.plansError = "The provider returned no selectable plans with a variation code and price.";
     }
   } catch (error) {
     state.plansError = `Plans unavailable: ${error.message}`;
@@ -517,7 +517,7 @@ async function loadServicePlans(serviceId, provider) {
   }
 }
 
-async function verifySogoCustomer(serviceId) {
+async function verifyBillCustomer(serviceId) {
   const form = document.querySelector("#purchase-form");
   if (!form) return;
   const values = readPurchaseFormValues(form);
@@ -535,7 +535,7 @@ async function verifySogoCustomer(serviceId) {
     };
   state.verifiedCustomer = null;
   state.verifiedFor = "";
-  state.verificationError = "Verifying with Sogo…";
+  state.verificationError = "Verifying with the configured provider…";
   const resultElement = document.querySelector("#verified-customer");
   if (resultElement) resultElement.textContent = state.verificationError;
   try {
@@ -553,7 +553,7 @@ async function verifySogoCustomer(serviceId) {
         customerId: values.customerId || ""
       })
       : "";
-    state.verificationError = result.verification ? "" : "Sogo did not return verified customer details.";
+    state.verificationError = result.verification ? "" : "The provider did not return verified customer details.";
   } catch (error) {
     state.verificationError = `Verification failed: ${error.message}`;
   }
@@ -807,11 +807,11 @@ async function handlePurchaseSubmission() {
       return;
     }
     if (!values.provider || !["prepaid", "postpaid"].includes(values.meterType)) {
-      renderInlineMessage("Select a Sogo DisCo and meter type.", "error");
+      renderInlineMessage("Select a provider and meter type from the available catalogue.", "error");
       return;
     }
     if (state.verifiedFor !== verificationRequestKey("electricity", values) || !state.verifiedCustomer) {
-      renderInlineMessage("Verify this meter with Sogo before continuing.", "error");
+      renderInlineMessage("Verify this meter with the configured provider before continuing.", "error");
       return;
     }
     if (Number(values.amount) <= 0 || Number(values.amount) > 5000000) {
@@ -822,7 +822,7 @@ async function handlePurchaseSubmission() {
 
   if (state.activeService === "airtime") {
     if (!values.provider) {
-      renderInlineMessage("Select a network from Sogo's catalogue.", "error");
+      renderInlineMessage("Select a network from the configured provider catalogue.", "error");
       return;
     }
     if (!validatePhone(values.recipient)) {
@@ -837,7 +837,7 @@ async function handlePurchaseSubmission() {
 
   if (state.activeService === "data") {
     if (!values.provider) {
-      renderInlineMessage("Select a network from Sogo's catalogue.", "error");
+      renderInlineMessage("Select a network from the configured provider catalogue.", "error");
       return;
     }
     if (!validatePhone(values.recipient)) {
@@ -852,7 +852,7 @@ async function handlePurchaseSubmission() {
 
   if (state.activeService === "bills") {
     if (!values.provider) {
-      renderInlineMessage("Select a cable TV provider from Sogo's catalogue.", "error");
+      renderInlineMessage("Select a cable TV provider from the configured provider catalogue.", "error");
       return;
     }
     if (!values.customerId || values.customerId.trim().length < 4) {
@@ -860,7 +860,7 @@ async function handlePurchaseSubmission() {
       return;
     }
     if (state.verifiedFor !== verificationRequestKey("bills", values) || !state.verifiedCustomer) {
-      renderInlineMessage("Verify this smartcard with Sogo before continuing.", "error");
+      renderInlineMessage("Verify this smartcard with the configured provider before continuing.", "error");
       return;
     }
     if (!values.subscriptionType || !values.plan || !Number(values.amount)) {
@@ -1025,33 +1025,60 @@ function displayPaymentOutcome(response, reference) {
   const status = String(response.status || "").toLowerCase();
   const paymentStatus = String(response.paymentStatus || "").toLowerCase();
   const fulfillmentStatus = String(response.fulfillmentStatus || "").toLowerCase();
+  const paymentConfirmed = response.verified === true
+    || paymentStatus === "paid"
+    || status === "paid";
 
-  if (response.verified === true && paymentStatus === "payment_success") {
-    if (fulfillmentStatus === "success") {
-      displayTransactionResult("Payment confirmed.", `Reference: ${reference}. Your service was confirmed.`, "success");
+  if (paymentConfirmed) {
+    if (["fulfilled", "successful", "success"].includes(fulfillmentStatus)) {
+      const providerReference = typeof response.providerReference === "string" && response.providerReference
+        ? ` Service reference: ${response.providerReference}.`
+        : "";
+      displayTransactionResult("Successful.", `Payment confirmed. Reference: ${reference}.${providerReference}`, "success");
       return;
     }
 
-    const deliveryFailed = ["failed", "vending_failed"].includes(status)
-      || ["failed", "vending_failed"].includes(fulfillmentStatus);
+    if (["failed", "vending_failed"].includes(fulfillmentStatus) || status === "vending_failed") {
+      displayTransactionResult(
+        "Payment confirmed; service delivery failed.",
+        `Reference: ${reference}. The payment was received, but delivery was not confirmed. Please contact support; do not pay again.`,
+        "error"
+      );
+      return;
+    }
+
+    if (["review_required", "pending_reconciliation", "not_started"].includes(fulfillmentStatus)) {
+      displayTransactionResult(
+        "Requires support or reconciliation.",
+        `Reference: ${reference}. Payment is confirmed, but the service outcome needs review. Do not pay again.`,
+        "pending"
+      );
+      return;
+    }
+
     displayTransactionResult(
-      deliveryFailed ? "Payment confirmed; service delivery needs attention." : "Payment confirmed.",
-      deliveryFailed
-        ? `Reference: ${reference}. Your payment was received, but service delivery was not confirmed.`
-        : `Reference: ${reference}. Your service is still being processed.`,
-      deliveryFailed ? "error" : "pending"
+      fulfillmentStatus === "processing" || fulfillmentStatus === "pending"
+        ? "Processing service."
+        : "Payment confirmed.",
+      `Reference: ${reference}. The service outcome has not yet been confirmed.`,
+      "pending"
     );
     return;
   }
 
-  if (response.verified === true
-    && (["payment_failed", "failed", "cancelled", "canceled"].includes(status)
-      || paymentStatus === "payment_failed")) {
-    displayTransactionResult("Payment could not be confirmed.", `Reference: ${reference}. Please review your payment or try again.`, "error");
+  if (["payment_failed", "failed", "cancelled", "canceled"].includes(status)
+    || ["payment_failed", "failed", "cancelled"].includes(paymentStatus)) {
+    displayTransactionResult("Payment failed.", `Reference: ${reference}. The backend did not confirm a successful payment.`, "error");
     return;
   }
 
-  displayTransactionResult("Payment status is not verified.", `Reference: ${reference}. Please check again shortly. No bill is considered fulfilled until the backend confirms payment.`, "pending");
+  if (["awaiting_payment", "payment_pending", "initiated", "created", "pending"].includes(status)
+    || ["payment_pending", "initiated", "pending", "not_started"].includes(paymentStatus)) {
+    displayTransactionResult("Awaiting payment.", `Reference: ${reference}. Complete payment in Monnify or check again shortly.`, "pending");
+    return;
+  }
+
+  displayTransactionResult("Pending confirmation.", `Reference: ${reference}. The backend has not confirmed payment or service delivery.`, "pending");
 }
 
 function displayTransactionResult(message, details, status) {

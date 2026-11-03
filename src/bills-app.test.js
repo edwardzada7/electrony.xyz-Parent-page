@@ -174,6 +174,29 @@ test("guest services retain their existing catalogue request", () => {
   assert.match(requests[0][0], /\/api\/services\/catalog$/);
 });
 
+test("guest service catalogue renders unavailable without provider-supplied products", async () => {
+  const { context, requests, servicePanel } = createAppContext("?service=electricity", async () => ({
+    ok: true,
+    json: async () => ({
+      ok: true,
+      categories: {
+        electricity: { available: false, billers: [], products: [], message: "No verified provider is configured." },
+        airtime: { available: false, billers: [], products: [], message: "No verified provider is configured." },
+        data: { available: false, billers: [], products: [], message: "No verified provider is configured." },
+        bills: { available: false, billers: [], products: [], message: "No verified provider is configured." }
+      }
+    })
+  }));
+
+  await context.loadServiceCatalogue();
+  context.renderServicePanel();
+
+  assert.equal(requests.length, 1);
+  assert.match(servicePanel.innerHTML, /No verified provider is configured/);
+  assert.doesNotMatch(servicePanel.innerHTML, /purchase-form|biller-code|Continue to payment/);
+  assert.doesNotMatch(appSource, /Sogo|SOGO_/i);
+});
+
 test("OAuth sign-in preserves the Bills page and displays cancellation without blocking guests", async () => {
   const { context, accountsButton, authStatus } = createAppContext(
     "?service=data&auth=cancelled",

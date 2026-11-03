@@ -6,15 +6,10 @@ const os = require("os");
 const http = require("http");
 const { URL } = require("url");
 const { readEnv } = require("./provider-adapter");
-const { createMonnifyBillsAdapter } = require("./monnify-bills-adapter");
 const { createPostgresPersistence } = require("./postgres-persistence");
 const { PLATFORM_FEE_RULES, createPlatformFeeQuote, parseMoneyToMinor } = require("./platform-fees");
 const { createMarpleradAdapter } = require("./adapters/marplerad-adapter");
 const { createTeloadlyAdapter } = require("./adapters/teloadly-adapter");
-const {
-  createSogoAdapter,
-  getSogoFailureDiagnostics
-} = require("./adapters/sogo-adapter");
 const {
   CONTACT_BODY_LIMIT,
   ContactEnquiryError,
@@ -43,12 +38,8 @@ const BILLS_REFRESH_SESSION_COOKIE = "__Secure-electrony-bills-refresh";
 const BILLS_CSRF_COOKIE = "__Secure-electrony-bills-csrf";
 const BILLS_OAUTH_COOKIE = "__Secure-electrony-bills-oauth";
 const MONNIFY_PAYMENT_CONTRACT_VERIFIED = false;
-const monnifyBillsAdapter = createMonnifyBillsAdapter();
 const marpleradAdapter = createMarpleradAdapter(readEnv);
 const teloadlyAdapter = createTeloadlyAdapter(readEnv);
-const sogoAdapter = createSogoAdapter({ readEnv });
-const SOGO_READ_CACHE = new Map();
-const SOGO_READ_CACHE_TTL_MS = 60 * 1000;
 const scrypt = promisify(crypto.scrypt);
 const PRODUCTION_BILLS_OAUTH_CALLBACK_URL =
   "https://electronyxyz-parent-page-production.up.railway.app/api/auth/oauth/callback";
@@ -81,8 +72,8 @@ function paymentsBlocked() {
     || readEnv("PAYMENTS_BLOCKED", "true").toLowerCase() !== "false";
 }
 
-function isBillFulfillmentEnabled() {
-  return sogoAdapter.isConfigured() && sogoAdapter.isWebhookConfigured();
+function isVendingProviderAvailable() {
+  return false;
 }
 
 function readUsers() {
@@ -732,26 +723,23 @@ function hasMonnifyConfig() {
   return getMissingMonnifyConfig().length === 0;
 }
 
-async function getMonnifyCatalogueStatus() {
-  const result = await monnifyBillsAdapter.listCategories();
-  const status = result.status;
-  const message = result.message;
-
+function getVendingCatalogueStatus() {
+  const message = "No authorized vending provider is configured for this service.";
+  const categories = ["electricity", "airtime", "data", "bills"].reduce((result, service) => {
+    result[service] = {
+      available: false,
+      status: "provider_unconfigured",
+      billers: [],
+      products: [],
+      message
+    };
+    return result;
+  }, {});
   return {
     ok: true,
     available: false,
-    status,
-    categories: ["electricity", "airtime", "data", "bills"].reduce((categories, service) => {
-      categories[service] = {
-        available: false,
-        status,
-        billers: [],
-        products: [],
-        message
-      };
-      return categories;
-    }, {}),
-    monnifyCategories: [],
+    status: "provider_unconfigured",
+    categories,
     message
   };
 }
@@ -883,24 +871,6 @@ function readRawBody(request) {
       const raw = Buffer.concat(chunks).toString("utf8");
       resolve(raw);
     });
-    request.on("error", reject);
-  });
-}
-
-function readSogoWebhookRawBody(request) {
-  return new Promise((resolve, reject) => {
-    const chunks = [];
-    let size = 0;
-    request.on("data", (chunk) => {
-      size += chunk.length;
-      if (size > 1024 * 1024) {
-        request.resume();
-        reject(new Error("Sogo webhook body exceeds the allowed size."));
-        return;
-      }
-      chunks.push(chunk);
-    });
-    request.on("end", () => resolve(Buffer.concat(chunks)));
     request.on("error", reject);
   });
 }
@@ -1169,412 +1139,6 @@ function extractMonnifyStatus(payload) {
   return normalized || "unknown";
 }
 
-async function getCachedSogoRead(key, load) {
-  const cached = SOGO_READ_CACHE.get(key);
-  if (cached && cached.expiresAt > Date.now()) return cached.value;
-  const value = await load();
-  SOGO_READ_CACHE.set(key, { value, expiresAt: Date.now() + SOGO_READ_CACHE_TTL_MS });
-  return value;
-}
-
-async function getSogoCatalogue() {
-  return getCachedSogoRead("catalogue", () => sogoAdapter.getCatalogue());
-}
-
-function getSogoCategoryProviders(catalogue, category) {
-  return sogoAdapter.getProviders(catalogue?.[category]);
-}
-
-function getSogoServiceProviders(catalogue, service) {
-  if (service === "electricity") return getSogoCategoryProviders(catalogue, "electricity");
-  if (service === "airtime" || service === "data") return getSogoCategoryProviders(catalogue, service);
-  if (service === "bills") return getSogoCategoryProviders(catalogue, "cable_tv");
-  return [];
-}
-
-async function handleSogoWebhook(request, response) {
-  try {
-    const rawBody = await readSogoWebhookRawBody(request);
-    const signature = request.headers["x-sogo-signature-256"];
-    if (!sogoAdapter.verifyWebhookSignature(rawBody, signature)) {
-      sendJson(response, 401, { ok: false, error: "Sogo webhook signature verification failed." });
-      return;
-    }
-
-    const eventType = String(request.headers["x-sogo-event"] || "");
-    const eventId = String(request.headers["x-sogo-delivery"] || "");
-    if (!sogoAdapter.supportedWebhookEvents.has(eventType) || !eventId) {
-      sendJson(response, 400, { ok: false, error: "Sogo webhook event headers are invalid." });
-      return;
-    }
-    const payload = parseJsonBody(rawBody.toString("utf8"));
-    const event = payload?.data || payload?.event || payload;
-    const reference = String(event?.reference || payload?.reference || "");
-    if (!reference) {
-      sendJson(response, 400, { ok: false, error: "Sogo webhook transaction reference is required." });
-      return;
-    }
-
-    const recorded = await postgresPersistence.recordWebhookEvent({
-      provider: "sogo",
-      providerEventId: eventId,
-      eventType,
-      merchantReference: reference,
-      payload: { eventType, reference }
-    });
-    if (recorded.duplicate
-      && (recorded.event?.event_type !== eventType
-        || recorded.event?.merchant_reference !== reference)) {
-      sendJson(response, 409, { ok: false, error: "Sogo webhook delivery identifier conflicts with a previous event." });
-      return;
-    }
-    if (recorded.duplicate && recorded.event?.processing_status !== "failed") {
-      sendJson(response, 200, { ok: true, duplicate: true });
-      return;
-    }
-
-    const claimed = await postgresPersistence.claimWebhookEvent("sogo", eventId);
-    if (!claimed) {
-      sendJson(response, 200, { ok: true, duplicate: true });
-      return;
-    }
-    sendJson(response, 200, { ok: true, accepted: true });
-    setImmediate(() => {
-      void processSogoWebhookEvent({ eventId, eventType, reference });
-    });
-  } catch (error) {
-    console.error("Sogo webhook could not be safely recorded.", error?.code || "persistence_or_payload_error");
-    sendJson(response, 503, { ok: false, error: "Unable to safely accept the Sogo webhook." });
-  }
-}
-
-async function processSogoWebhookEvent({ eventId, eventType, reference }) {
-  try {
-    const order = await postgresPersistence.getOrderByProviderTransactionReference(reference);
-    if (!order) {
-      await postgresPersistence.completeWebhookEvent({
-        provider: "sogo",
-        providerEventId: eventId,
-        status: "failed",
-        errorMessage: "No order matched the Sogo transaction reference; reconciliation is required."
-      });
-      return;
-    }
-
-    const idempotencyKey = order.metadata?.sogo?.idempotencyKey;
-    if (!idempotencyKey) {
-      await postgresPersistence.completeWebhookEvent({
-        provider: "sogo",
-        providerEventId: eventId,
-        status: "failed",
-        errorMessage: "The order has no persisted Sogo idempotency key."
-      });
-      return;
-    }
-
-    let responseSummary = {};
-    if (eventType === "transaction.completed") {
-      try {
-        const transaction = await sogoAdapter.getTransaction(reference);
-        responseSummary = {
-          status: String(transaction?.status || "completed").toLowerCase(),
-          reference,
-          ...(typeof transaction?.type === "string" ? { type: transaction.type } : {}),
-          ...(typeof transaction?.created_at === "string" ? { created_at: transaction.created_at } : {})
-        };
-      } catch (error) {
-        if (order.service_type === "electricity") {
-          await postgresPersistence.updateOrderFulfillmentState({
-            orderReference: order.order_reference,
-            expectedStatus: "processing",
-            fulfilmentStatus: "review_required",
-            providerTransactionReference: reference,
-            failureReason: "Sogo confirmed completion but its secure transaction details are not yet available."
-          });
-          await postgresPersistence.updateSogoOperation({
-            orderReference: order.order_reference,
-            idempotencyKey,
-            patch: {
-              status: "completed",
-              webhookEventId: eventId,
-              webhookReceivedAt: nowIso(),
-              reconciliationStatus: "required",
-              lastErrorCode: String(error?.code || "sogo_details_unavailable").slice(0, 100)
-            }
-          });
-          await postgresPersistence.completeWebhookEvent({
-            provider: "sogo",
-            providerEventId: eventId,
-            status: "review_required",
-            errorMessage: "Electricity delivery details require secure retrieval."
-          });
-          return;
-        }
-        responseSummary = { status: "completed", reference };
-      }
-    } else {
-      responseSummary = { status: eventType === "transaction.refunded" ? "refunded" : "failed", reference };
-    }
-
-    await postgresPersistence.updateSogoOperation({
-      orderReference: order.order_reference,
-      idempotencyKey,
-      patch: {
-        status: responseSummary.status,
-        providerReference: reference,
-        responseSummary,
-        webhookEventId: eventId,
-        webhookReceivedAt: nowIso(),
-        reconciliationStatus: "not_required"
-      }
-    });
-
-    if (order.fulfilment_status === "processing") {
-      if (eventType === "transaction.completed" && responseSummary.status === "completed") {
-        await postgresPersistence.updateOrderFulfillmentState({
-          orderReference: order.order_reference,
-          expectedStatus: "processing",
-          fulfilmentStatus: "fulfilled",
-          providerTransactionReference: reference,
-          providerConfirmation: { confirmed: true }
-        });
-      } else if (eventType === "transaction.failed" || eventType === "transaction.refunded") {
-        await postgresPersistence.updateOrderFulfillmentState({
-          orderReference: order.order_reference,
-          expectedStatus: "processing",
-          fulfilmentStatus: "failed",
-          providerTransactionReference: reference,
-          failureReason: eventType === "transaction.refunded"
-            ? "Sogo refunded the vending transaction; the Monnify customer payment is separate."
-            : "Sogo confirmed that bill vending failed."
-        });
-      }
-    }
-    await postgresPersistence.completeWebhookEvent({
-      provider: "sogo",
-      providerEventId: eventId,
-      status: "processed"
-    });
-  } catch (error) {
-    console.error("Sogo transaction event processing failed.", error?.code || "reconciliation_required");
-    try {
-      await postgresPersistence.completeWebhookEvent({
-        provider: "sogo",
-        providerEventId: eventId,
-        status: "failed",
-        errorMessage: "Sogo transaction event requires reconciliation."
-      });
-    } catch (completionError) {
-      console.error("Sogo transaction event failure could not be persisted.", completionError?.code || "unknown");
-    }
-  }
-}
-
-async function processVendingForTransaction(transaction, idempotencyKey) {
-  const customer = transaction.customer || {};
-  const amount = Number(transaction.amount_minor) / 100;
-  if (!Number.isFinite(amount) || amount <= 0) {
-    throw new Error("Sogo purchase amount is invalid.");
-  }
-
-  if (transaction.service_type === "electricity") {
-    return sogoAdapter.purchaseElectricity({
-      disco_slug: customer.disco,
-      meter_number: customer.meterNumber,
-      meter_type: customer.meterType,
-      amount
-    }, idempotencyKey);
-  }
-  if (transaction.service_type === "airtime") {
-    return sogoAdapter.purchaseAirtime({
-      network: customer.network,
-      phone: customer.recipient,
-      amount
-    }, idempotencyKey);
-  }
-  if (transaction.service_type === "data") {
-    return sogoAdapter.purchaseData({
-      network: customer.network,
-      phone: customer.recipient,
-      variation_code: customer.plan
-    }, idempotencyKey);
-  }
-  if (transaction.service_type === "bills") {
-    return sogoAdapter.purchaseCableTv({
-      provider: customer.biller,
-      smartcard_number: customer.customerId,
-      subscription_type: customer.subscriptionType,
-      variation_code: customer.plan,
-      amount
-    }, idempotencyKey);
-  }
-  throw new Error("This Sogo bill category is not supported by the current guest checkout.");
-}
-
-async function fulfillPaidTransaction(order) {
-  if (!isBillFulfillmentEnabled()) {
-    throw new Error("Bill fulfilment remains disabled pending verified Monnify and Sogo contracts.");
-  }
-  if (!order || order.payment_status !== "paid") {
-    throw new Error("Verified Monnify payment is required before Sogo vending.");
-  }
-  if (!sogoAdapter.isConfigured() || !sogoAdapter.isWebhookConfigured()) {
-    throw new Error("Sogo sandbox API and webhook configuration are required before vending.");
-  }
-
-  const orderReference = order.order_reference;
-  const prepared = await postgresPersistence.prepareSogoOperation({
-    orderReference,
-    idempotencyKey: crypto.randomUUID()
-  });
-  if (!prepared.claimed) return prepared.order;
-
-  let purchase;
-  try {
-    purchase = await processVendingForTransaction({
-      ...prepared.order,
-      customer: prepared.order.metadata?.customer || {}
-    }, prepared.idempotencyKey);
-  } catch (error) {
-    const uncertain = error?.uncertain === true || error?.code === "sogo_request_uncertain";
-    await postgresPersistence.updateSogoOperation({
-      orderReference,
-      idempotencyKey: prepared.idempotencyKey,
-      patch: {
-        status: uncertain ? "uncertain" : "failed",
-        reconciliationStatus: uncertain ? "required" : "not_required",
-        lastAttemptAt: nowIso(),
-        lastErrorCode: String(error?.code || "sogo_request_failed").slice(0, 100)
-      }
-    });
-    if (!uncertain) {
-      await postgresPersistence.updateOrderFulfillmentState({
-        orderReference,
-        expectedStatus: "processing",
-        fulfilmentStatus: "failed",
-        failureReason: "Sogo could not accept the bill purchase."
-      });
-    }
-    if (uncertain) {
-      console.error("Sogo purchase outcome is uncertain; the stored idempotency key requires reconciliation.", {
-        orderReference
-      });
-      return { ...prepared.order, fulfilment_status: "processing" };
-    }
-
-    return { ...prepared.order, fulfilment_status: "failed" };
-  }
-
-  const providerTransaction = purchase.transaction;
-  const providerReference = typeof providerTransaction?.reference === "string"
-    ? providerTransaction.reference
-    : "";
-  const providerStatus = String(providerTransaction?.status || "").toLowerCase();
-  const providerResponse = {
-    status: providerStatus,
-    ...(providerReference ? { reference: providerReference } : {}),
-    ...(typeof providerTransaction?.type === "string" ? { type: providerTransaction.type } : {}),
-    ...(typeof providerTransaction?.created_at === "string" ? { created_at: providerTransaction.created_at } : {})
-  };
-  await postgresPersistence.updateSogoOperation({
-    orderReference,
-    idempotencyKey: prepared.idempotencyKey,
-    patch: {
-      status: providerStatus || "unknown",
-      providerReference,
-      responseSummary: providerResponse,
-      lastAttemptAt: nowIso(),
-      reconciliationStatus: providerStatus === "processing" ? "pending" : "not_required"
-    }
-  });
-
-  if (providerStatus === "completed" && providerReference) {
-    return postgresPersistence.updateOrderFulfillmentState({
-      orderReference,
-      expectedStatus: "processing",
-      fulfilmentStatus: "fulfilled",
-      providerTransactionReference: providerReference,
-      providerConfirmation: { confirmed: true }
-    });
-  }
-  if (providerStatus === "failed" || providerStatus === "refunded") {
-    return postgresPersistence.updateOrderFulfillmentState({
-      orderReference,
-      expectedStatus: "processing",
-      fulfilmentStatus: "failed",
-      providerTransactionReference: providerReference,
-      failureReason: providerStatus === "refunded"
-        ? "Sogo refunded the vending transaction; customer payment remains a separate Monnify transaction."
-        : "Sogo confirmed that bill vending failed."
-    });
-  }
-  return { ...prepared.order, fulfilment_status: "processing" };
-}
-
-async function reconcileSogoOrder(order) {
-  const operation = order?.metadata?.sogo;
-  const key = operation?.idempotencyKey;
-  if (!key || order.payment_status !== "paid"
-    || !["processing", "review_required"].includes(order.fulfilment_status)) {
-    return order;
-  }
-  try {
-    const transaction = await sogoAdapter.getTransaction(key, { byIdempotencyKey: true });
-    const status = String(transaction?.status || "").toLowerCase();
-    const providerReference = typeof transaction?.reference === "string" ? transaction.reference : "";
-    const responseSummary = {
-      status,
-      ...(providerReference ? { reference: providerReference } : {}),
-      ...(typeof transaction?.type === "string" ? { type: transaction.type } : {}),
-      ...(typeof transaction?.created_at === "string" ? { created_at: transaction.created_at } : {})
-    };
-    await postgresPersistence.updateSogoOperation({
-      orderReference: order.order_reference,
-      idempotencyKey: key,
-      patch: {
-        status: status || "unknown",
-        providerReference,
-        responseSummary,
-        reconciliationStatus: status === "processing" ? "pending" : "resolved",
-        reconciledAt: nowIso()
-      }
-    });
-    if (status === "completed" && providerReference) {
-      return postgresPersistence.updateOrderFulfillmentState({
-        orderReference: order.order_reference,
-        expectedStatus: order.fulfilment_status,
-        fulfilmentStatus: "fulfilled",
-        providerTransactionReference: providerReference,
-        providerConfirmation: { confirmed: true }
-      });
-    }
-    if (status === "failed" || status === "refunded") {
-      return postgresPersistence.updateOrderFulfillmentState({
-        orderReference: order.order_reference,
-        expectedStatus: order.fulfilment_status,
-        fulfilmentStatus: "failed",
-        providerTransactionReference: providerReference,
-        failureReason: status === "refunded"
-          ? "Sogo refunded the vending transaction; the Monnify customer payment is separate."
-          : "Sogo confirmed that bill vending failed."
-      });
-    }
-    return order;
-  } catch (error) {
-    const notFound = error?.code === "sogo_not_found";
-    await postgresPersistence.updateSogoOperation({
-      orderReference: order.order_reference,
-      idempotencyKey: key,
-      patch: {
-        reconciliationStatus: notFound ? "not_found" : "uncertain",
-        reconciledAt: nowIso(),
-        lastErrorCode: String(error?.code || "sogo_reconciliation_failed").slice(0, 100)
-      }
-    });
-    return order;
-  }
-}
-
 function normalizeService(service) {
   if (!service || !ALLOWED_SERVICES.includes(service)) {
     return "";
@@ -1659,12 +1223,12 @@ function validateServiceRequest(payload) {
       throw new Error("Electricity amount exceeds the supported maximum.");
     }
     if (!customer.disco || !["prepaid", "postpaid"].includes(customer.meterType)) {
-      throw new Error("Select a supported Sogo DisCo and meter type.");
+      throw new Error("Select a supported electricity provider and meter type.");
     }
   }
 
   if (service === "airtime") {
-    if (!customer.network) throw new Error("Select a supported Sogo airtime network.");
+    if (!customer.network) throw new Error("Select a supported airtime network.");
     if (!isValidNigerianPhone(customer.recipient || customer.phone)) {
       throw new Error("A valid phone number is required for airtime purchases.");
     }
@@ -1674,11 +1238,11 @@ function validateServiceRequest(payload) {
   }
 
   if (service === "data") {
-    if (!customer.network) throw new Error("Select a supported Sogo data network.");
+    if (!customer.network) throw new Error("Select a supported data network.");
     if (!isValidNigerianPhone(customer.recipient || customer.phone)) {
       throw new Error("A valid phone number is required for data purchases.");
     }
-    if (!customer.plan) throw new Error("Select a Sogo data variation before continuing.");
+    if (!customer.plan) throw new Error("Select a supported data product before continuing.");
   }
 
   if (service === "bills") {
@@ -1686,7 +1250,7 @@ function validateServiceRequest(payload) {
       throw new Error("A valid smart card or decoder number is required.");
     }
     if (!customer.biller || !customer.plan || !["renew", "change"].includes(customer.subscriptionType)) {
-      throw new Error("Select a Sogo cable provider, package, and subscription action.");
+      throw new Error("Select a cable provider, package, and subscription action.");
     }
   }
 
@@ -1698,66 +1262,18 @@ function validateServiceRequest(payload) {
   };
 }
 
-function getSogoPlanRows(payload) {
-  const value = payload?.plans ?? payload?.data ?? payload;
-  if (Array.isArray(value)) return value;
-  if (value && typeof value === "object") {
-    return Object.values(value).find(Array.isArray) || [];
+function getTransactionLifecycleStatus(order) {
+  if (["failed", "cancelled"].includes(order.payment_status)) return "payment_failed";
+  if (order.payment_status === "refunded") return "refunded";
+  if (order.payment_status === "paid") {
+    if (order.fulfilment_status === "fulfilled") return "successful";
+    if (["pending", "processing"].includes(order.fulfilment_status)) return "processing";
+    if (order.fulfilment_status === "failed") return "vending_failed";
+    if (order.fulfilment_status === "review_required") return "pending_reconciliation";
+    return "paid";
   }
-  return [];
-}
-
-async function validateSogoOrder(validation) {
-  if (!sogoAdapter.isConfigured()) {
-    throw new Error("Sogo sandbox is not configured. No payment was created.");
-  }
-  const catalogue = await getSogoCatalogue();
-  const customer = validation.customer;
-  const catalogueCategory = validation.service === "bills" ? "cable_tv" : validation.service;
-  const providers = getSogoCategoryProviders(catalogue, catalogueCategory);
-  const selectedProvider = validation.service === "bills" ? customer.biller
-    : validation.service === "electricity" ? customer.disco
-      : customer.network;
-  if (!providers.some((provider) => provider.slug === selectedProvider)) {
-    throw new Error("The selected provider is not in the current Sogo catalogue.");
-  }
-
-  if (validation.service === "data" || validation.service === "bills") {
-    const service = validation.service === "bills" ? "cable-tv" : "data";
-    const plansPayload = service === "data"
-      ? await getCachedSogoRead(`plans:${service}:${selectedProvider}`, () => sogoAdapter.getDataPlans(selectedProvider))
-      : await getCachedSogoRead(`plans:${service}:${selectedProvider}`, () => sogoAdapter.getCablePackages(selectedProvider));
-    const plan = getSogoPlanRows(plansPayload).find((candidate) => (
-      candidate?.variation_code === customer.plan
-    ));
-    const returnedPrice = Number(plan?.price);
-    if (!plan || !Number.isFinite(returnedPrice) || returnedPrice <= 0
-      || parseMoneyToMinor(returnedPrice) !== validation.amountMinor) {
-      throw new Error("The selected Sogo variation or returned price has changed. Refresh the catalogue.");
-    }
-  }
-
-  if (validation.service === "electricity") {
-    const result = await sogoAdapter.verifyMeter({
-      disco_slug: customer.disco,
-      meter_number: customer.meterNumber,
-      meter_type: customer.meterType
-    });
-    const verified = result?.verification;
-    if (!verified || verified.meter_number !== customer.meterNumber || verified.meter_type !== customer.meterType) {
-      throw new Error("Sogo did not verify the selected meter and type.");
-    }
-  }
-
-  if (validation.service === "bills") {
-    const result = await sogoAdapter.verifySmartcard({
-      provider: customer.biller,
-      smartcard_number: customer.customerId
-    });
-    if (!result?.verification) {
-      throw new Error("Sogo did not verify the selected smartcard.");
-    }
-  }
+  if (order.payment_status === "initiated") return "awaiting_payment";
+  return "created";
 }
 
 async function handleWebhook(request, response) {
@@ -1859,10 +1375,6 @@ async function handleWebhook(request, response) {
       providerReference: verified.providerReference || providerReference,
       verification: verified.verification
     });
-    if (isBillFulfillmentEnabled()) {
-      const paidOrder = await postgresPersistence.getOrderByReferenceForInternalUse(merchantReference);
-      if (paidOrder) await fulfillPaidTransaction(paidOrder);
-    }
     await postgresPersistence.completeWebhookEvent({
       provider: "monnify",
       providerEventId: eventId,
@@ -1909,7 +1421,7 @@ async function handleRequest(request, response) {
     }
     response.setHeader("Access-Control-Allow-Origin", origin);
     response.setHeader("Access-Control-Allow-Methods", "GET,POST,OPTIONS");
-    response.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization, X-CSRF-Token, X-Requested-With, monnify-signature, X-Sogo-Signature-256, X-Sogo-Event, X-Sogo-Delivery, X-Sogo-Timestamp");
+    response.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization, X-CSRF-Token, X-Requested-With, monnify-signature");
     response.setHeader("Access-Control-Allow-Credentials", "true");
     response.setHeader("Vary", "Origin");
   }
@@ -1923,35 +1435,32 @@ async function handleRequest(request, response) {
   const url = new URL(request.url, `http://${request.headers.host}`);
 
   if (request.method === "GET" && url.pathname === "/health") {
-    const vendingProvider = sogoAdapter;
     const production = process.env.NODE_ENV === "production";
     const databaseReadiness = await postgresPersistence.getReadiness();
     const missingHealthConfiguration = getMissingHealthConfiguration();
     const databaseSecurityReady = databaseReadiness.securityStatus === "controls_verified";
-    const catalogueStatus = await getMonnifyCatalogueStatus();
+    const catalogueStatus = getVendingCatalogueStatus();
     const catalogueReady = catalogueStatus.available === true;
-    const providerFeeQuoteAvailable = typeof vendingProvider.quotePurchase === "function";
     const databaseSecurityChecks = databaseReadiness.checks || {};
     const paymentBlockers = [
       "monnify_payment_contract_not_verified",
-      "payment_operations_disabled_pending_contract_review"
+      "payment_operations_disabled_pending_contract_review",
+      "no_authorized_bill_vending_provider_configured"
     ];
     if (!databaseSecurityReady) paymentBlockers.push("database_security_controls_not_verified");
-    if (!sogoAdapter.isConfigured()) paymentBlockers.push("sogo_sandbox_configuration_missing");
-    if (!sogoAdapter.isWebhookConfigured()) paymentBlockers.push("sogo_webhook_configuration_missing");
     if (missingHealthConfiguration.length) paymentBlockers.push(...missingHealthConfiguration);
     if (databaseReadiness.securityFailure) {
       paymentBlockers.push(databaseReadiness.securityFailure);
     }
-    if (!providerFeeQuoteAvailable) paymentBlockers.push("provider_fee_quote_unavailable");
     if (databaseSecurityChecks.otherRoleGrants?.status !== "none_detected") {
       paymentBlockers.push("anon_authenticated_grants_require_review");
     }
-    const billsReadiness = monnifyBillsAdapter.getReadiness();
     const readinessChecks = {
-      billsApiActivation: billsReadiness.billsApiActivation,
-      verifiedApiContract: billsReadiness.verifiedApiContract,
-      catalogueAccess: billsReadiness.catalogueAccess,
+      billVendingProvider: {
+        ready: false,
+        status: "provider_unconfigured",
+        blocker: "no_authorized_bill_vending_provider_configured"
+      },
       authoritativeCollectionPaymentVerification: {
         ready: false,
         status: "unverified",
@@ -1967,7 +1476,11 @@ async function handleRequest(request, response) {
         status: databaseReadiness.status === "connection_verified" ? "not_end_to_end_verified" : "unavailable",
         blocker: "database_backed_order_persistence_unverified"
       },
-      vendingAndReconciliation: billsReadiness.vendingAndReconciliation
+      vendingAndReconciliation: {
+        ready: false,
+        status: "unavailable",
+        blocker: "vending_and_reconciliation_unavailable_without_provider"
+      }
     };
     const readinessBlockers = Object.values(readinessChecks)
       .filter((check) => !check.ready)
@@ -1975,7 +1488,7 @@ async function handleRequest(request, response) {
     const healthReady = databaseSecurityReady
       && catalogueReady
       && !paymentsBlocked()
-      && isBillFulfillmentEnabled()
+      && isVendingProviderAvailable()
       && readinessBlockers.length === 0;
     sendJson(response, 200, {
       ok: true,
@@ -2060,11 +1573,7 @@ async function handleRequest(request, response) {
           ready: catalogueReady,
           status: catalogueStatus.status,
           reason: catalogueStatus.message,
-          blockers: [
-            readinessChecks.billsApiActivation.blocker,
-            readinessChecks.verifiedApiContract.blocker,
-            readinessChecks.catalogueAccess.blocker
-          ]
+          blockers: [readinessChecks.billVendingProvider.blocker]
         },
         payment: {
           ready: false,
@@ -2073,12 +1582,12 @@ async function handleRequest(request, response) {
         },
         vending: {
           ready: false,
-          status: "disabled",
-          providerConfigured: vendingProvider.isConfigured() && vendingProvider.isWebhookConfigured(),
-          providerFeeQuoteAvailable,
+          status: "provider_unconfigured",
+          providerConfigured: false,
+          providerFeeQuoteAvailable: false,
           fulfillmentContractVerified: false,
           blockers: [
-            "monnify_bills_vending_contract_unverified",
+            "no_authorized_bill_vending_provider_configured",
             "provider_fee_and_reconciliation_contract_unverified"
           ]
         }
@@ -2099,10 +1608,8 @@ async function handleRequest(request, response) {
         paymentsBlockedConfigured: !missingHealthConfiguration.includes("PAYMENTS_BLOCKED"),
         monnifyPaymentVerification: false,
         monnifyPaymentContractVerified: MONNIFY_PAYMENT_CONTRACT_VERIFIED,
-        vendingProvider: vendingProvider.isConfigured() && vendingProvider.isWebhookConfigured(),
-        sogoConfigured: sogoAdapter.isConfigured(),
-        missingSogo: sogoAdapter.getMissingConfiguration({ webhook: true }),
-        providerFeeQuote: providerFeeQuoteAvailable,
+        vendingProvider: false,
+        providerFeeQuote: false,
         providerFulfillmentContractVerified: false,
         durableTransactionalIdempotency: false,
         postgresSecurityControlsVerified: databaseSecurityReady,
@@ -2431,158 +1938,35 @@ async function handleRequest(request, response) {
   }
 
   if (request.method === "GET" && url.pathname === "/api/services/catalog") {
-    if (!sogoAdapter.isConfigured()) {
-      sendJson(response, 503, {
-        ok: false,
-        available: false,
-        status: "provider_unconfigured",
-        requiredConfig: sogoAdapter.getMissingConfiguration(),
-        error: "Sogo sandbox catalogue is unavailable until its server-side sandbox configuration is complete."
-      });
-      return;
-    }
-    try {
-      const catalogue = await getSogoCatalogue();
-      const categories = {};
-      for (const service of ["electricity", "airtime", "data", "bills"]) {
-        const source = service === "bills" ? "cable_tv" : service;
-        const category = catalogue[source];
-        const billers = getSogoServiceProviders(catalogue, service);
-        categories[service] = {
-          available: billers.length > 0,
-          status: billers.length > 0 ? "available" : "unavailable",
-          billers: billers.map(({ slug, name }) => ({ code: slug, name })),
-          products: [],
-          label: typeof category?.label === "string" ? category.label : ""
-        };
-      }
-      sendJson(response, 200, {
-        ok: true,
-        available: true,
-        provider: "sogo",
-        status: "available",
-        categories
-      });
-    } catch (error) {
-      console.error("Sogo catalogue request failed.", getSogoFailureDiagnostics(error));
-      sendJson(response, 503, {
-        ok: false,
-        available: false,
-        status: "provider_unavailable",
-        error: "Sogo sandbox catalogue is temporarily unavailable."
-      });
-    }
+    sendJson(response, 200, getVendingCatalogueStatus());
     return;
   }
 
   if (request.method === "GET" && url.pathname === "/api/services/plans") {
-    if (!sogoAdapter.isConfigured()) {
-      sendJson(response, 503, {
-        ok: false,
-        available: false,
-        status: "provider_unconfigured",
-        requiredConfig: sogoAdapter.getMissingConfiguration(),
-        error: "Sogo sandbox plans are unavailable until its server-side sandbox configuration is complete."
-      });
-      return;
-    }
-    const service = url.searchParams.get("service") || "";
-    const provider = url.searchParams.get("provider") || "";
-    if (!["data", "cable-tv", "education"].includes(service) || !provider) {
-      sendJson(response, 400, { ok: false, error: "A supported service and provider slug are required." });
-      return;
-    }
-    try {
-      const catalogue = await getSogoCatalogue();
-      const category = service === "cable-tv" ? "cable_tv" : service;
-      if (!getSogoCategoryProviders(catalogue, category).some((item) => item.slug === provider)) {
-        sendJson(response, 400, { ok: false, error: "The selected provider is not in the current Sogo catalogue." });
-        return;
-      }
-      const cacheKey = `plans:${service}:${provider}`;
-      const plans = await getCachedSogoRead(cacheKey, () => {
-        if (service === "data") return sogoAdapter.getDataPlans(provider);
-        if (service === "cable-tv") return sogoAdapter.getCablePackages(provider);
-        return sogoAdapter.getEducationPlans();
-      });
-      sendJson(response, 200, { ok: true, service, provider, plans });
-    } catch (error) {
-      console.error("Sogo plans request failed.", error?.code || "provider_error");
-      sendJson(response, 503, {
-        ok: false,
-        error: "Sogo sandbox plans are temporarily unavailable."
-      });
-    }
+    sendJson(response, 503, {
+      ok: false,
+      available: false,
+      status: "provider_unconfigured",
+      error: "Product catalogues are unavailable because no authorized vending provider is configured."
+    });
     return;
   }
 
   if (request.method === "POST" && url.pathname === "/api/services/verify") {
-    if (!sogoAdapter.isConfigured()) {
-      sendJson(response, 503, {
-        ok: false,
-        status: "provider_unconfigured",
-        requiredConfig: sogoAdapter.getMissingConfiguration(),
-        error: "Sogo sandbox verification is unavailable until its server-side sandbox configuration is complete."
-      });
-      return;
-    }
-    try {
-      const payload = await readPayload(request);
-      const service = String(payload.service || "");
-      const provider = String(payload.provider || "");
-      const catalogue = await getSogoCatalogue();
-      let verification;
-      if (service === "electricity") {
-        const meterNumber = String(payload.meter_number || "").trim();
-        const meterType = String(payload.meter_type || "");
-        if (!/^\d{6,14}$/.test(meterNumber) || !["prepaid", "postpaid"].includes(meterType)) {
-          sendJson(response, 400, { ok: false, error: "A valid meter number and returned meter type are required." });
-          return;
-        }
-        if (!getSogoCategoryProviders(catalogue, "electricity").some((item) => item.slug === provider)) {
-          sendJson(response, 400, { ok: false, error: "Select a DisCo from the current Sogo catalogue." });
-          return;
-        }
-        verification = await sogoAdapter.verifyMeter({
-          disco_slug: provider,
-          meter_number: meterNumber,
-          meter_type: meterType
-        });
-      } else if (service === "cable-tv") {
-        const smartcardNumber = String(payload.smartcard_number || "").trim();
-        if (smartcardNumber.length < 4 || smartcardNumber.length > 32) {
-          sendJson(response, 400, { ok: false, error: "Enter a valid smartcard or decoder number." });
-          return;
-        }
-        if (!getSogoCategoryProviders(catalogue, "cable_tv").some((item) => item.slug === provider)) {
-          sendJson(response, 400, { ok: false, error: "Select a cable TV provider from the current Sogo catalogue." });
-          return;
-        }
-        verification = await sogoAdapter.verifySmartcard({
-          provider,
-          smartcard_number: smartcardNumber
-        });
-      } else {
-        sendJson(response, 400, { ok: false, error: "This customer verification flow is not available." });
-        return;
-      }
-      const details = verification?.verification ?? verification?.data?.verification ?? null;
-      sendJson(response, 200, {
-        ok: true,
-        verification: details && typeof details === "object" && !Array.isArray(details) ? details : null
-      });
-    } catch (error) {
-      console.error("Sogo customer verification failed.", error?.code || "provider_error");
-      sendJson(response, error?.code === "invalid_json" ? 400 : 503, {
-        ok: false,
-        error: "Sogo sandbox customer verification could not be completed."
-      });
-    }
+    sendJson(response, 503, {
+      ok: false,
+      status: "provider_unconfigured",
+      error: "Customer verification is unavailable because no authorized vending provider is configured."
+    });
     return;
   }
 
   if (request.method === "POST" && url.pathname === "/api/sogo/webhook") {
-    await handleSogoWebhook(request, response);
+    sendJson(response, 410, {
+      ok: false,
+      status: "provider_disabled",
+      error: "This vending provider is no longer accepted."
+    });
     return;
   }
 
@@ -2626,13 +2010,21 @@ async function handleRequest(request, response) {
   if (request.method === "GET" && url.pathname === "/api/fees/quote") {
     sendJson(response, 503, {
       ok: false,
-      error: "Bill fee quotes are unavailable until the Monnify catalogue and its service products are verified.",
-      status: (await getMonnifyCatalogueStatus()).status
+      status: "provider_unconfigured",
+      error: "Fee quotes are unavailable until an authorized vending provider and its current products are configured."
     });
     return;
   }
 
   if (request.method === "POST" && url.pathname === "/api/payments/session") {
+    if (!isVendingProviderAvailable()) {
+      sendJson(response, 503, {
+        ok: false,
+        status: "provider_unconfigured",
+        error: "Checkout is unavailable because no authorized vending provider is configured. No payment was created."
+      });
+      return;
+    }
     try {
       const readiness = await postgresPersistence.getReadiness();
       if (readiness.status !== "connection_verified") {
@@ -2710,31 +2102,6 @@ async function handleRequest(request, response) {
 
       if (!existingOrder && storedQuote.is_valid !== true) {
         sendJson(response, 409, { ok: false, error: "Your fee quote has expired or has already been used." });
-        return;
-      }
-      if (!sogoAdapter.isConfigured() || !sogoAdapter.isWebhookConfigured()) {
-        sendJson(response, 503, {
-          ok: false,
-          error: "Sogo sandbox vending and signed-webhook configuration are required. No payment was created.",
-          requiredConfig: sogoAdapter.getMissingConfiguration({ webhook: true })
-        });
-        return;
-      }
-      try {
-        await validateSogoOrder(validation);
-      } catch (error) {
-        console.error("Sogo order validation failed before payment.", error?.code || "validation_failed");
-        sendJson(response, error?.code === "sogo_not_configured" ? 503 : 409, {
-          ok: false,
-          error: error.message || "Sogo could not verify the selected purchase."
-        });
-        return;
-      }
-      if (quote.providerFeeMinor === null) {
-        sendJson(response, 503, {
-          ok: false,
-          error: "The selected Sogo purchase has no verified provider-fee quote. No payment was created."
-        });
         return;
       }
       const order = existingOrder || await postgresPersistence.createOrderFromQuote({
@@ -2880,11 +2247,14 @@ async function handleRequest(request, response) {
         return;
       }
       if (order.payment_status === "paid") {
-        if (isBillFulfillmentEnabled() && order.fulfilment_status === "not_started") {
-          const paidOrder = await postgresPersistence.getOrderByReferenceForInternalUse(order.order_reference);
-          if (paidOrder) await fulfillPaidTransaction(paidOrder);
-        }
-        sendJson(response, 200, { ok: true, reference, verified: true, status: "paid" });
+        sendJson(response, 200, {
+          ok: true,
+          reference,
+          verified: true,
+          status: getTransactionLifecycleStatus(order),
+          paymentStatus: order.payment_status,
+          fulfillmentStatus: order.fulfilment_status
+        });
         return;
       }
       const attempt = await postgresPersistence.getPaymentAttemptByMerchantReference(reference, reference);
@@ -2901,15 +2271,17 @@ async function handleRequest(request, response) {
         providerReference: verified.providerReference,
         verification: verified.verification
       });
-      if (isBillFulfillmentEnabled()) {
-        const paidOrder = await postgresPersistence.getOrderByReferenceForInternalUse(order.order_reference);
-        if (paidOrder) await fulfillPaidTransaction(paidOrder);
+      order = await postgresPersistence.getOrderByReferenceForInternalUse(order.order_reference);
+      if (!order || order.payment_status !== "paid") {
+        throw new Error("Verified payment state was not confirmed in order persistence.");
       }
       sendJson(response, 200, {
         ok: true,
         reference,
         verified: true,
-        status: "paid",
+        status: getTransactionLifecycleStatus(order),
+        paymentStatus: order.payment_status,
+        fulfillmentStatus: order.fulfilment_status,
         providerReference: verified.providerReference
       });
       return;
@@ -2954,22 +2326,15 @@ async function handleRequest(request, response) {
       return;
     }
 
-    if (isBillFulfillmentEnabled()) {
-      order = await reconcileSogoOrder(order);
-    }
     sendJson(response, 200, {
       ok: true,
       reference: order.order_reference,
-      status: order.payment_status === "pending"
-        ? "created"
-        : (order.payment_status === "initiated" ? "awaiting_payment" : order.payment_status),
+      status: getTransactionLifecycleStatus(order),
       paymentStatus: order.payment_status === "pending"
         ? "not_started"
         : (order.payment_status === "initiated" ? "payment_pending" : order.payment_status),
       fulfillmentStatus: order.fulfilment_status,
       providerReference: order.provider_transaction_reference || "",
-      providerStatus: order.metadata?.sogo?.status || "not_started",
-      reconciliationStatus: order.metadata?.sogo?.reconciliationStatus || "not_started",
       note: "Status checks are intentionally server-side to avoid exposing payment credentials or provider details."
     });
     return;

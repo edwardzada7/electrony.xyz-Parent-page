@@ -3829,3 +3829,649 @@ body.software-page {
     background-position: 0 50%;
   }
 }
+
+body.software-page {
+  --software-bg: #cbd2d6;
+  --software-panel: #e1e6e9;
+  --software-raised: #f0f3f4;
+  --software-ink: #172229;
+  --software-muted: #394851;
+  --software-dim: #4a5a63;
+  --software-accent: #09577e;
+  --software-green: #09577e;
+  --software-line: rgb(37 55 65 / 20%);
+  --color-product-default: var(--software-accent);
+  --color-product-electronyos: var(--software-accent);
+  --color-product-istylist: var(--software-accent);
+  --color-product-bills: var(--software-accent);
+  background:
+    repeating-linear-gradient(92deg, rgb(255 255 255 / 12%) 0 1px, transparent 1px 5px),
+    linear-gradient(135deg, #dce1e4 0%, #c4ccd1 48%, #e0e5e8 100%);
+  color: var(--software-ink);
+  color-scheme: light;
+}
+
+.software-page a:focus-visible,
+.software-page button:focus-visible,
+.software-page summary:focus-visible {
+  outline: 2px solid #123f59;
+  outline-offset: 3px;
+  box-shadow: 0 0 0 5px #a9d8ee;
+}
+
+.software-header {
+  border-bottom-color: #9daab1;
+  background:
+    linear-gradient(110deg, rgb(255 255 255 / 76%), transparent 48%),
+    repeating-linear-gradient(95deg, rgb(255 255 255 / 15%) 0 1px, transparent 1px 5px),
+    linear-gradient(180deg, #edf0f2 0%, #cbd2d6 100%);
+  box-shadow: 0 0.4rem 1.4rem rgb(26 39 48 / 12%);
+}
+
+.software-wordmark-label,
+.software-navigation a,
+.footer-navigation a,
+.footer-product-links a {
+  color: #33434c;
+}
+
+.software-navigation a:hover,
+.footer-navigation a:hover,
+.footer-product-links a:hover,
+.software-navigation a[aria-current="page"] {
+  color: #10191e;
+}
+
+.software-wordmark-divider {
+  background: #89979f;
+}
+
+.software-navigation .software-header-cta,
+.mobile-menu-cta {
+  border-color: #47758e;
+  background: linear-gradient(180deg, #f8fbfc, #ccdce4);
+  color: #173c50;
+  box-shadow: inset 0 1px #fff, 0 0.25rem 0.7rem rgb(35 61 74 / 10%);
+}
+
+.software-header-cta:hover,
+.mobile-menu-cta:hover {
+  border-color: #126d9b;
+  background: linear-gradient(180deg, #fff, #d4eaf3);
+}
+
+.software-hero {
+  background:
+    radial-gradient(ellipse at 50% 42%, rgb(255 255 255 / 66%), transparent 46%),
+    repeating-linear-gradient(0deg, rgb(255 255 255 / 12%) 0 1px, transparent 1px 5px),
+    linear-gradient(145deg, #e9edef 0%, #d2d9dd 53%, #e2e7e9 100%);
+}
+
+.software-hero::before {
+  background-image:
+    linear-gradient(rgb(44 62 73 / 4%) 1px, transparent 1px),
+    linear-gradient(90deg, rgb(44 62 73 / 4%) 1px, transparent 1px);
+}
+
+.software-hero h1,
+.ecosystem-heading h2,
+.products-heading h2,
+.future-copy h2,
+.services-heading h2,
+.technologies-heading h2 {
+  color: #18242b;
+}
+
+.software-hero h1 span,
+.ecosystem-heading h2 span,
+.future-copy h2 span,
+.services-heading h2 span,
+.technologies-lead span {
+  color: #315d75;
+}
+
+.software-eyebrow,
+.board-topline,
+.board-bottomline {
+  color: #3e515c;
+}
+
+.software-eyebrow > span,
+.board-online i {
+  background: #1687bb;
+  box-shadow: 0 0 0.7rem rgb(22 135 187 / 42%);
+}
+
+.software-hero-intro p,
+.ecosystem-copy p,
+.ecosystem-copy .ecosystem-lead,
+.products-heading > p,
+.services-heading > p:last-child,
+.technologies-lead,
+.technologies-note,
+.future-copy > p:last-child {
+  color: #35464f;
+}
+
+.software-primary-link {
+  border-color: #8799a3;
+  background: linear-gradient(180deg, #f9fbfc, #d1d9de);
+  color: #1b303c !important;
+  box-shadow: inset 0 1px #fff, 0 0.35rem 1rem rgb(32 45 55 / 9%);
+}
+
+.software-primary-link:hover {
+  border-color: #397c9d;
+  background: linear-gradient(180deg, #fff, #d8edf5);
+}
+
+.motherboard {
+  border-color: #75858e;
+  background:
+    radial-gradient(ellipse at 50% 49%, rgb(255 255 255 / 58%), transparent 39%),
+    radial-gradient(ellipse at 50% 50%, transparent 42%, rgb(67 80 88 / 16%) 100%),
+    repeating-linear-gradient(105deg, rgb(255 255 255 / 10%) 0 1px, transparent 1px 5px),
+    linear-gradient(145deg, #c0c9ce 0%, #929fa6 48%, #c5cdd1 100%);
+  box-shadow:
+    0 1.5rem 3.5rem rgb(28 39 47 / 24%),
+    inset 0 1px rgb(255 255 255 / 76%),
+    inset 0 -1rem 2rem rgb(55 69 77 / 11%);
+}
+
+.motherboard::before {
+  background-image:
+    radial-gradient(rgb(52 71 82 / 22%) 0.7px, transparent 0.8px),
+    linear-gradient(90deg, transparent 49.8%, rgb(255 255 255 / 22%) 50%, transparent 50.2%);
+  opacity: 0.35;
+}
+
+.motherboard::after {
+  border-color: rgb(255 255 255 / 44%);
+}
+
+.circuit-traces path {
+  stroke: #536e7c;
+  opacity: 0.76;
+}
+
+.circuit-nodes circle {
+  fill: #e8faff;
+  filter: drop-shadow(0 0 4px rgb(65 173 220 / 72%));
+}
+
+.circuit-highlight {
+  stroke: #e9fbff;
+  stroke-dasharray: 12 110;
+  stroke-dashoffset: 0;
+  stroke-width: 2;
+  filter: drop-shadow(0 0 4px rgb(42 161 213 / 84%));
+  animation: circuit-energy-flow 2.35s linear infinite;
+}
+
+.circuit-pulse {
+  display: initial;
+  fill: #fff;
+  opacity: 1;
+  filter: drop-shadow(0 0 5px rgb(47 179 231 / 95%));
+}
+
+.circuit-pulse-return {
+  fill: #bceeff;
+  opacity: 0.64;
+}
+
+.motherboard-core {
+  z-index: 2;
+  border-color: #f4fcff;
+  background:
+    linear-gradient(112deg, rgb(255 255 255 / 80%), transparent 31%, rgb(255 255 255 / 22%) 52%, transparent 74%),
+    repeating-linear-gradient(95deg, rgb(37 55 66 / 5%) 0 1px, transparent 1px 4px),
+    linear-gradient(145deg, #e7ecee 0%, #aeb9bf 50%, #dce3e6 100%);
+  box-shadow:
+    0 0 0 0.4rem rgb(68 80 87 / 82%),
+    0 0 0 0.48rem rgb(255 255 255 / 72%),
+    0 1.5rem 3.5rem rgb(39 52 60 / 28%),
+    0 0 2.75rem rgb(70 190 235 / 38%),
+    inset 0 0 2rem rgb(255 255 255 / 52%);
+}
+
+.motherboard-core::before {
+  position: absolute;
+  z-index: 0;
+  inset: 19%;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgb(255 255 255 / 96%) 0%, rgb(109 220 255 / 66%) 24%, rgb(70 174 222 / 25%) 53%, transparent 76%);
+  content: "";
+  filter: blur(0.35rem);
+  opacity: 0.88;
+  pointer-events: none;
+  animation: core-light-bloom 3.2s ease-in-out infinite;
+}
+
+.motherboard-core::after {
+  position: absolute;
+  z-index: 1;
+  inset: 0.65rem;
+  border-radius: 50%;
+  background:
+    radial-gradient(circle, #fff 0 1px, transparent 2px) 7% 25% / 5px 5px no-repeat,
+    radial-gradient(circle, #b8efff 0 1px, transparent 2px) 93% 37% / 5px 5px no-repeat,
+    radial-gradient(circle, #fff 0 1px, transparent 2px) 14% 82% / 5px 5px no-repeat;
+  content: "";
+  opacity: 0;
+  pointer-events: none;
+  animation: core-spark 3.8s steps(1, end) infinite;
+}
+
+.core-frame {
+  z-index: 1;
+  border-color: rgb(48 69 81 / 40%);
+}
+
+.core-overline,
+.core-name {
+  position: relative;
+  z-index: 2;
+  color: #1d2b33;
+}
+
+.core-subtitle {
+  position: relative;
+  z-index: 2;
+  color: #145d7d;
+}
+
+.core-mark {
+  position: relative;
+  z-index: 2;
+  filter: drop-shadow(0 0 0.8rem rgb(239 251 255 / 95%));
+}
+
+.core-pin {
+  z-index: 2;
+  background: #e8fbff;
+  box-shadow: 0 0 0.65rem rgb(49 183 230 / 95%);
+}
+
+.motherboard-layout::before {
+  background: linear-gradient(180deg, transparent, #e8faff 7%, #54b9e2 50%, #dff8ff 92%, transparent);
+  box-shadow: 0 0 0.8rem rgb(55 176 222 / 48%);
+}
+
+.product-chip {
+  border-color: #788b95;
+  background:
+    linear-gradient(115deg, rgb(255 255 255 / 62%), transparent 55%),
+    repeating-linear-gradient(100deg, rgb(255 255 255 / 18%) 0 1px, transparent 1px 5px),
+    linear-gradient(145deg, #dce3e6, #aeb9bf 57%, #d0d8dc);
+  box-shadow:
+    0 1.2rem 2rem rgb(41 54 62 / 22%),
+    inset 0 1px #fff,
+    inset 0 -1rem 1.5rem rgb(54 69 78 / 9%);
+  color: #1b2930;
+}
+
+.product-chip:hover,
+.product-chip.is-selected {
+  border-color: #167eae;
+  box-shadow:
+    0 0 0 1px rgb(22 126 174 / 36%),
+    0 1.4rem 2.5rem rgb(38 54 63 / 27%),
+    0 0 1.3rem rgb(65 177 222 / 32%),
+    inset 0 1px #fff;
+}
+
+.chip-topline,
+.chip-description,
+.chip-select-prompt {
+  color: #34464f;
+}
+
+.chip-name {
+  color: #17232a;
+}
+
+.chip-status {
+  color: #07577e;
+}
+
+.product-detail {
+  border-color: #89979e;
+  background:
+    linear-gradient(110deg, rgb(255 255 255 / 58%), transparent 45%),
+    repeating-linear-gradient(100deg, rgb(255 255 255 / 18%) 0 1px, transparent 1px 5px),
+    linear-gradient(135deg, #e5e9eb, #c2cbd0 58%, #dce2e5);
+  box-shadow: inset 0 1px #fff, 0 0.8rem 2rem rgb(40 54 63 / 12%);
+}
+
+.detail-kicker,
+.detail-label {
+  color: #3a4b54;
+}
+
+.detail-overview h2 {
+  color: #19262d;
+}
+
+.detail-kicker span,
+.detail-overview > p:last-child {
+  color: #354750;
+}
+
+.detail-status {
+  color: #1d3039;
+}
+
+.detail-meta {
+  border-left-color: rgb(61 80 91 / 29%);
+}
+
+.detail-link {
+  border-color: #7d929e;
+  background: linear-gradient(180deg, #f7f9fa, #cbd5da);
+  color: #213944 !important;
+}
+
+.detail-link:hover {
+  border-color: #1679a4;
+  background: linear-gradient(180deg, #fff, #d7edf5);
+}
+
+.detail-link-primary {
+  border-color: #155e7b;
+  background: linear-gradient(180deg, #287d9f, #145d7b);
+  color: #fff !important;
+}
+
+.detail-link-primary:hover {
+  background: linear-gradient(180deg, #176b8d, #104e69);
+}
+
+.software-ecosystem-section {
+  border-block-color: #a7b3b9;
+  background:
+    radial-gradient(ellipse at 85% 50%, rgb(255 255 255 / 54%), transparent 38%),
+    repeating-linear-gradient(95deg, rgb(255 255 255 / 12%) 0 1px, transparent 1px 5px),
+    linear-gradient(140deg, #dce2e5, #c4cdd2 57%, #e0e5e7);
+}
+
+.ecosystem-heading h2,
+.products-heading h2 {
+  color: #19262d;
+}
+
+.ecosystem-principles > div {
+  border-color: #aab6bc;
+}
+
+.ecosystem-principles span {
+  color: #07577e;
+}
+
+.ecosystem-principles strong {
+  color: #26363e;
+}
+
+.software-products-section {
+  border-block: 1px solid #8e9da5;
+  background:
+    radial-gradient(ellipse at 50% 0%, rgb(255 255 255 / 56%), transparent 55%),
+    repeating-linear-gradient(100deg, rgb(255 255 255 / 12%) 0 1px, transparent 1px 5px),
+    linear-gradient(145deg, #cbd3d7, #b9c3c8 55%, #d7dde0);
+}
+
+.showcase-product {
+  border-color: #8c9ba2;
+  background:
+    linear-gradient(112deg, rgb(255 255 255 / 70%), transparent 42%),
+    repeating-linear-gradient(100deg, rgb(255 255 255 / 13%) 0 1px, transparent 1px 5px),
+    linear-gradient(145deg, #e3e8ea, #c6cfd3 60%, #dbe1e4);
+  box-shadow: 0 0.7rem 1.5rem rgb(32 46 55 / 13%), inset 0 1px #fff, inset 0 -1rem 1.5rem rgb(73 89 98 / 6%);
+}
+
+.showcase-product::before {
+  background:
+    radial-gradient(circle, #334650 0 1px, #f2f6f7 1.2px 2px, #8b9aa1 2.4px 3px, transparent 3.5px) 8px 8px / 8px 8px no-repeat,
+    radial-gradient(circle, #334650 0 1px, #f2f6f7 1.2px 2px, #8b9aa1 2.4px 3px, transparent 3.5px) calc(100% - 16px) 8px / 8px 8px no-repeat,
+    radial-gradient(circle, #334650 0 1px, #f2f6f7 1.2px 2px, #8b9aa1 2.4px 3px, transparent 3.5px) 8px calc(100% - 16px) / 8px 8px no-repeat,
+    radial-gradient(circle, #334650 0 1px, #f2f6f7 1.2px 2px, #8b9aa1 2.4px 3px, transparent 3.5px) calc(100% - 16px) calc(100% - 16px) / 8px 8px no-repeat;
+  opacity: 0.9;
+}
+
+.showcase-product:hover,
+.showcase-product:focus-within {
+  border-color: #167ba8;
+  box-shadow: 0 1rem 2rem rgb(35 51 60 / 18%), inset 0 1px #fff, 0 0 1rem rgb(61 173 216 / 25%);
+}
+
+.showcase-product-topline,
+.showcase-product-footer {
+  color: #3a4b54;
+}
+
+.showcase-product-number,
+.showcase-product-status {
+  color: #07577e;
+}
+
+.showcase-product h3 {
+  color: #17242b;
+}
+
+.showcase-product > p {
+  color: #35464f;
+}
+
+.showcase-product-footer {
+  border-top-color: rgb(57 75 85 / 25%);
+}
+
+.showcase-product-link {
+  color: #164c67 !important;
+  text-decoration-color: #257fa4;
+}
+
+.showcase-product-link:hover {
+  color: #07577e !important;
+}
+
+.software-services-section,
+.software-technologies-section,
+.software-future-section,
+.software-footer {
+  background:
+    linear-gradient(112deg, rgb(255 255 255 / 48%), transparent 46%),
+    repeating-linear-gradient(100deg, rgb(255 255 255 / 14%) 0 1px, transparent 1px 5px),
+    linear-gradient(145deg, #d8dfe2, #c4cdd1 58%, #e0e5e7);
+}
+
+.service-card,
+.technology-group,
+.services-cta {
+  border-color: #a2afb5;
+  background:
+    linear-gradient(115deg, rgb(255 255 255 / 72%), transparent 43%),
+    repeating-linear-gradient(100deg, rgb(255 255 255 / 14%) 0 1px, transparent 1px 5px),
+    linear-gradient(145deg, #e9edef, #d1d9dd 58%, #e1e6e8);
+  box-shadow: inset 0 1px #fff, 0 0.65rem 1.4rem rgb(38 53 62 / 9%);
+}
+
+.service-card:hover {
+  border-color: #728994;
+  box-shadow: inset 0 1px #fff, 0 1rem 2rem rgb(38 53 62 / 15%);
+}
+
+.service-card-icon {
+  border-color: #8c9da6;
+  background: linear-gradient(145deg, #fbfcfc, #c5d0d5);
+  color: #155f7e;
+}
+
+.service-card-index,
+.technology-group h3 {
+  color: #3d515c;
+}
+
+.service-card h3,
+.services-cta h3,
+.technologies-heading h2 {
+  color: #1b272e;
+}
+
+.service-card-description,
+.service-card ul,
+.technologies-note {
+  color: #35464f;
+}
+
+.service-card ul {
+  border-top-color: #abb8bf;
+}
+
+.service-card li::before {
+  border-color: #426d83;
+}
+
+.service-card-link {
+  border-color: #82949e;
+  background: linear-gradient(180deg, #fbfcfc, #d2dce0);
+  color: #244454;
+}
+
+.service-card-link:hover {
+  border-color: #28789b;
+  background: #f4fafc;
+}
+
+.services-cta {
+  border-color: #98a7ae;
+}
+
+.services-cta-link {
+  border-color: #154e67;
+  background: linear-gradient(180deg, #28738f, #174c64);
+  color: #fff;
+}
+
+.services-cta-link:hover {
+  background: #103f55;
+}
+
+.software-technologies-section,
+.software-future-section {
+  border-color: #a4b0b6;
+}
+
+.technology-grid li {
+  border-color: #a9b5bb;
+  background: linear-gradient(180deg, #f9fbfc, #d4dde1);
+  color: #243740;
+  box-shadow: inset 0 1px #fff, 0 0.15rem 0.35rem rgb(37 51 60 / 8%);
+}
+
+.future-mark {
+  border-color: #899ba4;
+  background:
+    repeating-linear-gradient(95deg, rgb(255 255 255 / 20%) 0 1px, transparent 1px 5px),
+    linear-gradient(145deg, #e8edef, #c3cdd2);
+  color: #234452;
+  box-shadow: inset 0 0 1.5rem rgb(255 255 255 / 35%), 0 0.5rem 1.2rem rgb(39 54 63 / 9%);
+}
+
+.future-mark::before,
+.future-mark::after {
+  border-color: #8fa0a8;
+}
+
+.future-mark-core,
+.future-index {
+  color: #314751;
+}
+
+.future-mark i {
+  background: #167ca6;
+  box-shadow: 0 0 0.7rem rgb(48 153 194 / 42%);
+}
+
+.footer-brand > p,
+.footer-meta {
+  color: #3a4a53;
+}
+
+.footer-product-links a span {
+  color: #09577e;
+}
+
+.footer-meta {
+  border-top-color: #a7b3b9;
+}
+
+.software-mobile-menu summary {
+  border-color: #82929a;
+  color: #21313a;
+}
+
+.software-mobile-menu nav {
+  border-color: #9eabb2;
+  background: linear-gradient(145deg, #f2f5f6, #d3dbe0);
+}
+
+.software-mobile-menu nav a {
+  color: #2e414b;
+}
+
+.software-mobile-menu nav a:hover {
+  background: #e4ecef;
+}
+
+@keyframes circuit-energy-flow {
+  to { stroke-dashoffset: -122; }
+}
+
+@keyframes core-light-bloom {
+  0%, 100% { opacity: 0.65; transform: scale(0.92); }
+  50% { opacity: 1; transform: scale(1.08); }
+}
+
+@keyframes core-spark {
+  0%, 10%, 12%, 46%, 49%, 100% { opacity: 0; }
+  11%, 47% { opacity: 0.9; }
+}
+
+@media (max-width: 38rem) {
+  .circuit-pulse {
+    display: initial;
+  }
+
+  .circuit-highlight {
+    stroke-width: 2.5;
+    animation-duration: 3s;
+  }
+
+  .motherboard-core::before {
+    filter: blur(0.25rem);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .circuit-highlight,
+  .motherboard-core,
+  .motherboard-core::before,
+  .motherboard-core::after,
+  .core-mark {
+    animation: none !important;
+  }
+
+  .circuit-pulse {
+    display: none !important;
+  }
+
+  .motherboard-core::before {
+    opacity: 0.9;
+    transform: none;
+  }
+
+  .motherboard-core::after {
+    opacity: 0.18;
+  }
+}

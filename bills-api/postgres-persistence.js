@@ -984,8 +984,6 @@ function createPostgresPersistence(connectionString, PoolConstructor, environmen
     getOrderByPaymentReference: async () => { throw new Error("Bills PostgreSQL persistence is not configured."); },
     updateOrderPaymentState: async () => { throw new Error("Bills PostgreSQL persistence is not configured."); },
     updateOrderFulfillmentState: async () => { throw new Error("Bills PostgreSQL persistence is not configured."); },
-    prepareSogoOperation: async () => { throw new Error("Bills PostgreSQL persistence is not configured."); },
-    updateSogoOperation: async () => { throw new Error("Bills PostgreSQL persistence is not configured."); },
     createPaymentAttempt: async () => { throw new Error("Bills PostgreSQL persistence is not configured."); },
     getPaymentAttemptByMerchantReference: async () => { throw new Error("Bills PostgreSQL persistence is not configured."); },
     recordVerifiedPaymentAttemptStateChange: async () => { throw new Error("Bills PostgreSQL persistence is not configured."); },
@@ -1960,102 +1958,6 @@ function createPostgresPersistence(connectionString, PoolConstructor, environmen
     });
   }
 
-  async function prepareSogoOperation(input) {
-    if (!input || typeof input !== "object" || Array.isArray(input)) {
-      throw persistenceError("A Sogo operation is required.", "invalid_input");
-    }
-    const orderReference = validateText(input.orderReference, "orderReference");
-    const idempotencyKey = validateText(input.idempotencyKey, "idempotencyKey");
-    if (!/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(idempotencyKey)) {
-      throw persistenceError("Sogo idempotency key must be a UUID v4.", "invalid_input");
-    }
-    return withTransaction(async (transactionQuery) => {
-      const found = await transactionQuery(`
-        SELECT * FROM public.bill_orders
-        WHERE order_reference = $1
-        FOR UPDATE
-      `, [orderReference]);
-      const order = found.rows[0];
-      if (!order) throw persistenceError("Order was not found.", "order_not_found");
-      if (order.payment_status !== "paid") {
-        throw persistenceError("Verified Monnify payment is required before Sogo vending.", "payment_not_confirmed");
-      }
-
-      const metadata = getOrderMetadata(order);
-      const existingOperation = metadata.sogo;
-      if (existingOperation?.idempotencyKey) {
-        return { claimed: false, idempotencyKey: existingOperation.idempotencyKey, order: sanitizeOrder(order) };
-      }
-      if (order.fulfilment_status !== "not_started") {
-        throw persistenceError("Sogo operation state is uncertain and requires reconciliation.", "sogo_reconciliation_required");
-      }
-      assertTransition(FULFILMENT_TRANSITIONS, order.fulfilment_status, "processing", "fulfilment");
-      const operation = {
-        idempotencyKey,
-        status: "prepared",
-        preparedAt: new Date().toISOString(),
-        reconciliationStatus: "not_started"
-      };
-      const nextMetadata = validateMetadata({ ...metadata, sogo: operation });
-      const result = await transactionQuery(`
-        UPDATE public.bill_orders
-        SET fulfilment_status = 'processing',
-            metadata = $2::jsonb,
-            updated_at = NOW()
-        WHERE id = $1
-          AND payment_status = 'paid'
-          AND fulfilment_status = 'not_started'
-        RETURNING *
-      `, [order.id, JSON.stringify(nextMetadata)]);
-      if (!result.rows[0]) {
-        throw persistenceError("Sogo operation could not be durably claimed.", "state_conflict");
-      }
-      return {
-        claimed: true,
-        idempotencyKey,
-        order: sanitizeOrder(result.rows[0])
-      };
-    });
-  }
-
-  async function updateSogoOperation(input) {
-    if (!input || typeof input !== "object" || Array.isArray(input)) {
-      throw persistenceError("A Sogo operation update is required.", "invalid_input");
-    }
-    const orderReference = validateText(input.orderReference, "orderReference");
-    const idempotencyKey = validateText(input.idempotencyKey, "idempotencyKey");
-    const patch = validateMetadata(input.patch, "Sogo operation metadata");
-    return withTransaction(async (transactionQuery) => {
-      const found = await transactionQuery(`
-        SELECT * FROM public.bill_orders
-        WHERE order_reference = $1
-        FOR UPDATE
-      `, [orderReference]);
-      const order = found.rows[0];
-      if (!order) throw persistenceError("Order was not found.", "order_not_found");
-      const metadata = getOrderMetadata(order);
-      if (metadata.sogo?.idempotencyKey !== idempotencyKey) {
-        throw persistenceError("Sogo idempotency key does not match the stored operation.", "state_conflict");
-      }
-      const nextMetadata = validateMetadata({
-        ...metadata,
-        sogo: { ...metadata.sogo, ...patch }
-      });
-      const updated = await transactionQuery(`
-        UPDATE public.bill_orders
-        SET metadata = $2::jsonb,
-            provider_transaction_reference = COALESCE(NULLIF($3, ''), provider_transaction_reference),
-            updated_at = NOW()
-        WHERE id = $1
-        RETURNING *
-      `, [order.id, JSON.stringify(nextMetadata), typeof patch.providerReference === "string" ? patch.providerReference : ""]);
-      if (!updated.rows[0]) {
-        throw persistenceError("Sogo operation update was not persisted.", "write_not_confirmed");
-      }
-      return sanitizeOrder(updated.rows[0]);
-    });
-  }
-
   async function createPaymentAttempt(input) {
     if (!input || typeof input !== "object" || Array.isArray(input)) {
       throw persistenceError("A payment attempt is required.", "invalid_input");
@@ -2391,8 +2293,6 @@ function createPostgresPersistence(connectionString, PoolConstructor, environmen
     getOrderByPaymentReference,
     updateOrderPaymentState,
     updateOrderFulfillmentState,
-    prepareSogoOperation,
-    updateSogoOperation,
     createPaymentAttempt,
     getPaymentAttemptByMerchantReference,
     recordVerifiedPaymentAttemptStateChange,
