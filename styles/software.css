@@ -2443,3 +2443,722 @@ body.software-page {
     display: none;
   }
 }
+
+body.software-page {
+  --software-bg: #d7dce0;
+  --software-panel: #e8ecef;
+  --software-raised: #f3f5f6;
+  --software-ink: #20282e;
+  --software-muted: #505d67;
+  --software-dim: #68757f;
+  --software-accent: #7898b0;
+  --software-green: #7898b0;
+  --software-line: rgb(39 52 63 / 17%);
+  --color-product-default: var(--software-accent);
+  --color-product-electronyos: var(--software-accent);
+  --color-product-istylist: var(--software-accent);
+  --color-product-bills: var(--software-accent);
+  background:
+    repeating-linear-gradient(90deg, rgb(255 255 255 / 13%) 0 1px, transparent 1px 4px),
+    linear-gradient(145deg, #e1e5e8, #cbd1d6);
+  color: var(--software-ink);
+  color-scheme: light;
+}
+
+.software-page a:focus-visible,
+.software-page button:focus-visible,
+.software-page summary:focus-visible {
+  outline: 2px solid #263640;
+  outline-offset: 3px;
+  box-shadow: 0 0 0 5px #a9c5d8;
+}
+
+.software-skip-link {
+  background: #f8fafb;
+  color: #20282e !important;
+}
+
+.software-header {
+  border-bottom-color: #bac3c9;
+  background:
+    repeating-linear-gradient(95deg, rgb(255 255 255 / 16%) 0 1px, transparent 1px 5px),
+    linear-gradient(180deg, rgb(248 250 251 / 97%), rgb(221 226 230 / 96%));
+  box-shadow: 0 0.4rem 1.4rem rgb(26 39 48 / 9%);
+}
+
+.software-wordmark-divider {
+  background: #aab4bb;
+}
+
+.software-wordmark-label {
+  color: #46535d;
+}
+
+.software-navigation a,
+.footer-navigation a,
+.footer-product-links a {
+  color: #46525b;
+}
+
+.software-navigation a:hover,
+.footer-navigation a:hover,
+.footer-product-links a:hover,
+.software-navigation a[aria-current="page"] {
+  color: #111a20;
+}
+
+.software-navigation .software-header-cta,
+.mobile-menu-cta {
+  border-color: #9daab3;
+  background: linear-gradient(180deg, #f8fafb, #dce2e6);
+  color: #25313a;
+  box-shadow: inset 0 1px #fff;
+}
+
+.software-header-cta:hover,
+.mobile-menu-cta:hover {
+  border-color: #728ea2;
+  background: #e8eef2;
+}
+
+.software-hero {
+  background:
+    repeating-linear-gradient(0deg, rgb(255 255 255 / 12%) 0 1px, transparent 1px 4px),
+    linear-gradient(145deg, #e7ebee 0%, #d2d8dd 54%, #e1e5e8 100%);
+}
+
+.software-hero::before {
+  background-image:
+    linear-gradient(rgb(54 72 86 / 4%) 1px, transparent 1px),
+    linear-gradient(90deg, rgb(54 72 86 / 4%) 1px, transparent 1px);
+}
+
+.software-eyebrow {
+  color: #596773;
+}
+
+.software-eyebrow > span {
+  background: #6f94ad;
+  box-shadow: 0 0 0.6rem rgb(100 143 173 / 32%);
+}
+
+.software-hero h1 {
+  color: #20282e;
+}
+
+.software-hero h1 span,
+.ecosystem-heading h2 span,
+.future-copy h2 span,
+.services-heading h2 span,
+.technologies-lead span {
+  color: #61798b;
+}
+
+.software-hero-intro p,
+.services-heading > p:last-child {
+  color: #4e5b65;
+}
+
+.software-primary-link {
+  border-color: #aeb9c1;
+  background: linear-gradient(180deg, #fbfcfd, #dfe4e8);
+  color: #25313a !important;
+  box-shadow: inset 0 1px #fff, 0 0.35rem 1rem rgb(32 45 55 / 8%);
+}
+
+.software-primary-link:hover {
+  border-color: #7895aa;
+  background: #eef2f5;
+}
+
+.motherboard {
+  border-color: #8998a2;
+  background:
+    radial-gradient(ellipse at 50% 0%, rgb(221 231 237 / 15%), transparent 48%),
+    repeating-linear-gradient(112deg, rgb(255 255 255 / 3%) 0 1px, transparent 1px 5px),
+    linear-gradient(145deg, #465159 0%, #293239 48%, #39434a 100%);
+  box-shadow:
+    0 1.5rem 3.5rem rgb(28 39 47 / 23%),
+    inset 0 1px rgb(255 255 255 / 36%),
+    inset 0 -1rem 2rem rgb(12 20 25 / 25%);
+}
+
+.motherboard::before {
+  background-image:
+    radial-gradient(rgb(219 231 237 / 16%) 0.7px, transparent 0.8px),
+    linear-gradient(90deg, transparent 49.8%, rgb(211 228 238 / 6%) 50%, transparent 50.2%);
+  opacity: 0.5;
+}
+
+.motherboard::after {
+  border-color: rgb(224 233 238 / 14%);
+}
+
+.board-topline,
+.board-bottomline {
+  color: #c1cbd1;
+}
+
+.board-online i {
+  background: #a9c6d9;
+  box-shadow: 0 0 0.55rem rgb(169 198 217 / 50%);
+}
+
+.circuit-traces path {
+  stroke: #9aabb7;
+  opacity: 0.7;
+}
+
+.circuit-nodes circle {
+  fill: #b6c8d3;
+  filter: drop-shadow(0 0 3px rgb(159 194 216 / 45%));
+}
+
+.circuit-highlight {
+  stroke: rgb(177 215 237 / 56%);
+  filter: drop-shadow(0 0 3px rgb(120 177 210 / 28%));
+}
+
+.circuit-pulse {
+  fill: #edf7fd;
+  opacity: 0.9;
+  filter: drop-shadow(0 0 3px rgb(172 215 239 / 64%));
+}
+
+.circuit-pulse-return {
+  fill: #c7d7e1;
+}
+
+.motherboard-core {
+  border-color: #f2f5f6;
+  background:
+    linear-gradient(112deg, rgb(255 255 255 / 80%), transparent 30%, rgb(255 255 255 / 19%) 51%, transparent 73%),
+    repeating-linear-gradient(95deg, rgb(41 55 65 / 4%) 0 1px, transparent 1px 4px),
+    linear-gradient(145deg, #f1f4f5 0%, #adb8c0 52%, #e8edef 100%);
+  box-shadow:
+    0 0 0 0.4rem rgb(37 47 54 / 90%),
+    0 0 0 0.48rem rgb(205 216 223 / 48%),
+    0 1rem 2.5rem rgb(8 14 18 / 32%),
+    inset 0 1px #fff,
+    inset 0 -1rem 1.6rem rgb(80 96 107 / 12%);
+}
+
+.core-frame {
+  border-color: rgb(60 77 89 / 18%);
+}
+
+.core-overline,
+.core-subtitle {
+  color: #52616b;
+}
+
+.core-mark {
+  filter: drop-shadow(0 0.3rem 0.6rem rgb(32 46 56 / 18%));
+}
+
+.core-name {
+  color: #202a31;
+}
+
+.core-subtitle {
+  color: #506b7e;
+}
+
+.core-pin {
+  background: #9fc2d9;
+  box-shadow: 0 0 0.5rem rgb(138 190 220 / 50%);
+}
+
+.product-chip {
+  border-color: #8797a2;
+  background:
+    linear-gradient(116deg, rgb(219 232 240 / 10%), transparent 48%),
+    repeating-linear-gradient(100deg, rgb(255 255 255 / 3%) 0 1px, transparent 1px 4px),
+    linear-gradient(145deg, #56616a, #353f46 58%, #424c53);
+  box-shadow:
+    0 0.9rem 1.7rem rgb(7 13 17 / 30%),
+    inset 0 1px rgb(255 255 255 / 25%),
+    inset 0 -0.75rem 1.2rem rgb(11 18 23 / 20%);
+  color: #f3f6f7;
+}
+
+.product-chip::before,
+.product-chip::after {
+  border-color: #aec8d8;
+}
+
+.product-chip:hover,
+.product-chip.is-selected {
+  border-color: #c5dbea;
+  box-shadow:
+    0 0 0 1px rgb(175 208 228 / 34%),
+    0 1rem 2rem rgb(7 13 17 / 34%),
+    0 0 1rem rgb(117 174 207 / 16%),
+    inset 0 1px rgb(255 255 255 / 35%);
+}
+
+.chip-topline,
+.chip-select-prompt {
+  color: #c1cbd0;
+}
+
+.chip-name {
+  color: #f8fafb;
+}
+
+.chip-description {
+  color: #e0e6e9;
+}
+
+.chip-bottomline {
+  border-top-color: rgb(239 245 248 / 18%);
+}
+
+.chip-status {
+  color: #c1d9e8;
+}
+
+.chip-status.is-live::before {
+  background: #a9cadf;
+  box-shadow: 0 0 0.4rem rgb(154 198 225 / 48%);
+}
+
+.board-bottomline {
+  border-top-color: rgb(232 240 244 / 19%);
+}
+
+.product-detail {
+  border-color: #bac4cb;
+  background:
+    repeating-linear-gradient(95deg, rgb(255 255 255 / 15%) 0 1px, transparent 1px 5px),
+    linear-gradient(125deg, #f1f3f4, #d6dce0 55%, #e8ecee);
+  box-shadow: 0 0.65rem 1.8rem rgb(9 17 22 / 20%), inset 0 1px #fff;
+}
+
+.detail-accent {
+  background: #7898b0;
+  box-shadow: 0 0 0.7rem rgb(104 151 182 / 38%);
+}
+
+.detail-kicker,
+.detail-label {
+  color: #5b6973;
+}
+
+.detail-kicker span {
+  color: #687781;
+}
+
+.detail-overview h2 {
+  color: #20282e;
+}
+
+.detail-overview > p:last-child {
+  color: #4e5b65;
+}
+
+.detail-meta {
+  border-left-color: #bfc8ce;
+}
+
+.detail-status {
+  color: #29353d;
+}
+
+.detail-link {
+  border-color: #aab6be;
+  color: #2b3942 !important;
+}
+
+.detail-link:hover {
+  border-color: #718fa4;
+  background: rgb(255 255 255 / 52%);
+}
+
+.detail-link-primary {
+  border-color: #516d81;
+  background: linear-gradient(180deg, #607f95, #405a6b);
+  color: #fff !important;
+}
+
+.detail-link-primary:hover {
+  border-color: #354c5c;
+  background: #354c5c;
+}
+
+.software-noscript {
+  color: #46545e;
+}
+
+.software-ecosystem-section {
+  border-block-color: #c2cbd1;
+  background:
+    repeating-linear-gradient(0deg, rgb(255 255 255 / 12%) 0 1px, transparent 1px 5px),
+    linear-gradient(135deg, #e8ecee, #d6dce0 60%, #e3e7e9);
+}
+
+.ecosystem-heading h2,
+.products-heading h2,
+.services-heading h2,
+.technologies-heading h2 {
+  color: #20282e;
+}
+
+.ecosystem-copy p {
+  color: #4f5b64;
+}
+
+.ecosystem-copy .ecosystem-lead {
+  color: #2c3941;
+}
+
+.ecosystem-principles,
+.ecosystem-principles > div {
+  border-color: #bfc9cf;
+}
+
+.ecosystem-principles span {
+  color: #536f83;
+}
+
+.ecosystem-principles strong {
+  color: #303c44;
+}
+
+.software-products-section {
+  background:
+    repeating-linear-gradient(100deg, rgb(255 255 255 / 2.5%) 0 1px, transparent 1px 5px),
+    linear-gradient(145deg, #424c53, #272f35 55%, #363f46);
+}
+
+.products-heading h2 {
+  color: #f2f5f6;
+}
+
+.products-heading > p {
+  color: #d0d8dd;
+}
+
+.showcase-product {
+  border-color: #74838d;
+  background:
+    linear-gradient(112deg, rgb(255 255 255 / 7%), transparent 38%),
+    repeating-linear-gradient(100deg, rgb(255 255 255 / 2%) 0 1px, transparent 1px 5px),
+    linear-gradient(145deg, #505b63, #39434a 60%, #424d54);
+  box-shadow: 0 0.7rem 1.5rem rgb(10 16 20 / 19%), inset 0 1px rgb(255 255 255 / 17%);
+}
+
+.showcase-product::before {
+  height: 1px;
+  background: linear-gradient(90deg, transparent, #bed0dc, transparent);
+}
+
+.showcase-product-topline,
+.showcase-product-footer {
+  color: #c4cdd2;
+}
+
+.showcase-product-number,
+.showcase-product-status {
+  color: #c0d8e7;
+}
+
+.showcase-product h3 {
+  color: #f4f6f7;
+}
+
+.showcase-product > p {
+  color: #d5dde1;
+}
+
+.showcase-product-footer {
+  border-top-color: rgb(244 248 250 / 18%);
+}
+
+.showcase-product-link {
+  color: #eff5f8 !important;
+  text-decoration-color: #a9c5d6;
+}
+
+.showcase-product-link:hover {
+  color: #c6dfef !important;
+}
+
+.software-services-section {
+  background:
+    repeating-linear-gradient(95deg, rgb(255 255 255 / 11%) 0 1px, transparent 1px 5px),
+    linear-gradient(140deg, #d9dee2, #cbd2d7 55%, #e3e7e9);
+}
+
+.services-heading h2 {
+  color: #5c6a74;
+}
+
+.services-headline {
+  color: #20282e;
+}
+
+.services-headline span {
+  color: #60798b;
+}
+
+.services-heading > p:last-child {
+  color: #4d5962;
+}
+
+.service-card {
+  border-color: #b8c2c9;
+  background:
+    linear-gradient(115deg, rgb(255 255 255 / 75%), transparent 40%),
+    repeating-linear-gradient(100deg, rgb(53 68 79 / 2.5%) 0 1px, transparent 1px 5px),
+    linear-gradient(145deg, #f0f3f4, #dce2e5 58%, #e9edef);
+  box-shadow:
+    0 0.75rem 1.8rem rgb(32 45 54 / 10%),
+    inset 0 1px #fff,
+    inset 0 -0.5rem 1rem rgb(93 109 119 / 5%);
+}
+
+.service-card-icon {
+  border-color: #aebbc4;
+  background: linear-gradient(145deg, #f9fafb, #cfd7dc);
+  color: #4f6c80;
+  box-shadow: inset 0 1px #fff, 0 0.3rem 0.8rem rgb(43 58 68 / 9%);
+}
+
+.service-card-index {
+  color: #5f6e78;
+}
+
+.service-card h3 {
+  color: #20282e;
+}
+
+.service-card-description {
+  color: #4f5b64;
+}
+
+.service-card ul {
+  border-top-color: #c2cbd0;
+  color: #354149;
+}
+
+.service-card li::before {
+  border-color: #718b9d;
+}
+
+.service-card-link {
+  display: inline-flex;
+  min-height: 2.75rem;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.7rem;
+  padding: 0.7rem 0.85rem;
+  margin-top: 1rem;
+  border: 1px solid #aebbc3;
+  background: linear-gradient(180deg, rgb(255 255 255 / 65%), rgb(210 218 223 / 70%));
+  color: #344957;
+  font-size: 0.76rem;
+  font-weight: 600;
+  text-decoration: none;
+  transition: border-color 160ms ease, background-color 160ms ease, transform 160ms ease;
+}
+
+.service-card-link:hover {
+  transform: translateY(-2px);
+  border-color: #708ca1;
+  background: #f4f7f8;
+}
+
+.services-cta {
+  border-color: #aeb9c1;
+  background:
+    repeating-linear-gradient(100deg, rgb(255 255 255 / 10%) 0 1px, transparent 1px 5px),
+    linear-gradient(120deg, #d1d8dd, #e5e9eb);
+  box-shadow: inset 0 1px rgb(255 255 255 / 75%);
+}
+
+.services-cta h3 {
+  color: #20282e;
+}
+
+.services-cta-link {
+  border: 1px solid #657783;
+  background: linear-gradient(180deg, #485963, #303b43);
+  box-shadow: inset 0 1px rgb(255 255 255 / 25%), 0 0.3rem 0.8rem rgb(31 42 49 / 14%);
+}
+
+.services-cta-link:hover {
+  background: #26343d;
+}
+
+.software-technologies-section {
+  border-top-color: #c1cbd1;
+  background:
+    repeating-linear-gradient(0deg, rgb(255 255 255 / 12%) 0 1px, transparent 1px 5px),
+    linear-gradient(145deg, #e5e9eb, #d4dade 60%, #e4e8ea);
+}
+
+.technologies-heading h2 {
+  color: #20282e;
+}
+
+.technologies-lead {
+  color: #34424a;
+}
+
+.technologies-note {
+  color: #53616a;
+}
+
+.technology-group {
+  border-color: #bac4ca;
+  background:
+    linear-gradient(115deg, rgb(255 255 255 / 66%), transparent 45%),
+    linear-gradient(145deg, #f0f3f4, #dce2e5);
+  box-shadow: inset 0 1px #fff, 0 0.45rem 1.1rem rgb(42 56 65 / 6%);
+}
+
+.technology-group h3 {
+  color: #43515a;
+}
+
+.technology-grid li {
+  min-height: 2.5rem;
+  padding: 0.55rem 0.8rem;
+  border-color: #bdc8cf;
+  background: linear-gradient(180deg, #fafbfc, #e1e6e9);
+  color: #2f3c44;
+  box-shadow: inset 0 1px #fff, 0 0.15rem 0.35rem rgb(37 51 60 / 5%);
+}
+
+.software-future-section {
+  border-top-color: #606d76;
+  background:
+    repeating-linear-gradient(100deg, rgb(255 255 255 / 3%) 0 1px, transparent 1px 5px),
+    linear-gradient(145deg, #3c464d, #252d33 58%, #343e45);
+}
+
+.software-future-section .software-eyebrow,
+.future-index {
+  color: #c5d0d6;
+}
+
+.future-copy h2 {
+  color: #f3f6f7;
+}
+
+.future-copy h2 span {
+  color: #b5cddd;
+}
+
+.future-copy > p:last-child {
+  color: #d2dbe0;
+}
+
+.future-mark {
+  border-color: #97a8b2;
+  background:
+    repeating-linear-gradient(100deg, rgb(255 255 255 / 4%) 0 1px, transparent 1px 5px),
+    linear-gradient(145deg, #59656d, #39434a);
+  color: #e5edf1;
+  box-shadow: inset 0 1px rgb(255 255 255 / 20%), inset 0 0 1.5rem rgb(12 20 26 / 20%);
+}
+
+.future-mark::before,
+.future-mark::after {
+  border-color: #9aaab4;
+}
+
+.future-mark-core {
+  color: #f0f4f6;
+}
+
+.future-mark i {
+  background: #b4d1e2;
+  box-shadow: 0 0 0.55rem rgb(162 201 225 / 40%);
+}
+
+.software-footer {
+  border-top-color: #aeb9c0;
+  background:
+    repeating-linear-gradient(95deg, rgb(255 255 255 / 11%) 0 1px, transparent 1px 5px),
+    linear-gradient(145deg, #e1e5e8, #cfd6db);
+}
+
+.footer-brand > p {
+  color: #4f5b64;
+}
+
+.footer-product-links a span {
+  color: #526f83;
+}
+
+.footer-meta {
+  border-top-color: #b5c0c6;
+  color: #596772;
+}
+
+.software-mobile-menu summary {
+  border-color: #aeb9c1;
+  color: #28353d;
+}
+
+.software-mobile-menu nav {
+  border-color: #b9c3c9;
+  background: linear-gradient(145deg, #f4f6f7, #dce2e5);
+  box-shadow: 0 1rem 2.4rem rgb(25 39 48 / 18%);
+}
+
+.software-mobile-menu nav a {
+  color: #34414a;
+}
+
+.software-mobile-menu nav a:hover {
+  background: #e5eaed;
+}
+
+.software-mobile-menu nav .mobile-menu-cta {
+  border-color: #9daab3;
+}
+
+.motherboard-layout::before {
+  background: linear-gradient(180deg, transparent, #adc9db 7%, #839eaf 92%, transparent);
+  box-shadow: 0 0 0.6rem rgb(144 185 210 / 25%);
+}
+
+.product-chip::after {
+  background: #a6c4d6;
+  box-shadow: 0 0 0.45rem rgb(143 185 210 / 35%);
+}
+
+@media (max-width: 68rem) {
+  .service-card:last-child:nth-child(odd) {
+    grid-column: 1 / -1;
+    width: min(100%, 36rem);
+    justify-self: center;
+  }
+}
+
+@media (max-width: 52rem) {
+  .service-card:last-child:nth-child(odd) {
+    grid-column: auto;
+    width: 100%;
+  }
+}
+
+@media (max-width: 38rem) {
+  .software-services-section,
+  .software-technologies-section {
+    background-size: 100% 5px, auto;
+  }
+
+  .services-cta {
+    background: linear-gradient(120deg, #d1d8dd, #e5e9eb);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .circuit-pulse {
+    display: none;
+  }
+}
