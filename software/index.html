@@ -79,14 +79,20 @@
               <svg class="board-circuit board-circuit-desktop" viewBox="0 0 1200 650" preserveAspectRatio="none" aria-hidden="true">
                 <defs>
                   <linearGradient id="trace-glow" x1="0" x2="1" y1="0" y2="1">
-                    <stop offset="0" stop-color="#a7bac8" stop-opacity=".22"></stop>
-                    <stop offset=".5" stop-color="#8ed8ff" stop-opacity=".92"></stop>
-                    <stop offset="1" stop-color="#a7bac8" stop-opacity=".22"></stop>
+                    <stop offset="0" stop-color="#647784" stop-opacity=".42"></stop>
+                    <stop offset=".48" stop-color="#e7f2f7" stop-opacity=".95"></stop>
+                    <stop offset="1" stop-color="#8295a1" stop-opacity=".5"></stop>
                   </linearGradient>
                   <radialGradient id="trace-node">
                     <stop offset="0" stop-color="#ffffff"></stop>
-                    <stop offset="1" stop-color="#77cfff"></stop>
+                    <stop offset=".62" stop-color="#d7e8f0"></stop>
+                    <stop offset="1" stop-color="#728896"></stop>
                   </radialGradient>
+                  <linearGradient id="trace-energy" x1="0" x2="1">
+                    <stop offset="0" stop-color="#a8e8ff" stop-opacity=".15"></stop>
+                    <stop offset=".5" stop-color="#ffffff"></stop>
+                    <stop offset="1" stop-color="#65c8f4" stop-opacity=".8"></stop>
+                  </linearGradient>
                 </defs>
                 <g class="circuit-traces">
                   <path d="M470 330H400V145H300"></path>
@@ -103,6 +109,42 @@
                   <path d="M460 100H520V65H680V100"></path>
                   <path d="M460 590H520V625H680V590"></path>
                 </g>
+                <g class="circuit-traces circuit-traces-fine">
+                  <path d="M470 315H426V250H375V174H280V132H205V92H148"></path>
+                  <path d="M470 323H416V258H365V182H270V140H195V100H132"></path>
+                  <path d="M470 338H412V292H322V250H255V212H180V185H104"></path>
+                  <path d="M470 347H402V300H312V258H245V220H170V193H88"></path>
+                  <path d="M470 355H428V376H354V410H294V455H225V492H155"></path>
+                  <path d="M470 364H438V385H365V419H305V464H236V501H170"></path>
+                  <path d="M470 372H418V395H340V435H282V477H205V535H130"></path>
+                  <path d="M730 315H774V250H825V174H920V132H995V92H1052"></path>
+                  <path d="M730 323H784V258H835V182H930V140H1005V100H1068"></path>
+                  <path d="M730 338H788V292H878V250H945V212H1020V185H1096"></path>
+                  <path d="M730 347H798V300H888V258H955V220H1030V193H1112"></path>
+                  <path d="M730 355H772V376H846V410H906V455H975V492H1045"></path>
+                  <path d="M730 364H762V385H835V419H895V464H964V501H1030"></path>
+                  <path d="M730 372H782V395H860V435H918V477H995V535H1070"></path>
+                  <path d="M570 265V205H535V150H490V112H438"></path>
+                  <path d="M580 265V198H545V143H500V105H452"></path>
+                  <path d="M630 265V205H665V150H710V112H762"></path>
+                  <path d="M620 265V198H655V143H700V105H748"></path>
+                  <path d="M570 395V444H535V490H490V548H430V584H368"></path>
+                  <path d="M580 395V452H545V498H500V556H440V592H382"></path>
+                  <path d="M630 395V444H665V490H710V548H770V584H832"></path>
+                  <path d="M620 395V452H655V498H700V556H760V592H818"></path>
+                  <path d="M300 145H240V116H205V78H128"></path>
+                  <path d="M900 145H960V116H995V78H1072"></path>
+                  <path d="M250 178H205V155H152V126H82"></path>
+                  <path d="M950 178H995V155H1048V126H1118"></path>
+                  <path d="M200 390H160V410H112V448H62"></path>
+                  <path d="M1000 390H1040V410H1088V448H1138"></path>
+                  <path d="M340 560H278V580H230V610H165"></path>
+                  <path d="M860 560H922V580H970V610H1035"></path>
+                  <path d="M55 300H125V278H170V252H220"></path>
+                  <path d="M1145 300H1075V278H1030V252H980"></path>
+                  <path d="M55 520H115V540H180V565H245"></path>
+                  <path d="M1145 520H1085V540H1020V565H955"></path>
+                </g>
                 <g class="circuit-nodes">
                   <circle cx="300" cy="145" r="5"></circle>
                   <circle cx="900" cy="145" r="5"></circle>
@@ -117,26 +159,105 @@
                   <circle cx="1090" cy="430" r="3"></circle>
                   <circle cx="520" cy="65" r="3"></circle>
                   <circle cx="680" cy="625" r="3"></circle>
+                  <circle cx="205" cy="92" r="3"></circle>
+                  <circle cx="995" cy="92" r="3"></circle>
+                  <circle cx="170" cy="193" r="3"></circle>
+                  <circle cx="1030" cy="193" r="3"></circle>
+                  <circle cx="225" cy="492" r="3"></circle>
+                  <circle cx="975" cy="492" r="3"></circle>
+                  <circle cx="490" cy="112" r="3"></circle>
+                  <circle cx="710" cy="112" r="3"></circle>
+                  <circle cx="490" cy="548" r="3"></circle>
+                  <circle cx="710" cy="548" r="3"></circle>
+                  <circle cx="128" cy="78" r="3"></circle>
+                  <circle cx="1072" cy="78" r="3"></circle>
+                  <circle cx="62" cy="448" r="3"></circle>
+                  <circle cx="1138" cy="448" r="3"></circle>
+                  <circle cx="165" cy="610" r="3"></circle>
+                  <circle cx="1035" cy="610" r="3"></circle>
                 </g>
-                <path class="circuit-highlight" d="M470 330H400V145H300M730 330H800V145H900M600 395V520"></path>
+                <g class="board-components" aria-hidden="true">
+                  <g class="board-component board-component-ic" transform="translate(30 205)">
+                    <rect class="component-body" width="72" height="48" rx="3"></rect>
+                    <rect class="component-inset" x="8" y="7" width="56" height="34" rx="2"></rect>
+                    <path class="component-detail" d="M18 17h36M18 24h24M18 31h30"></path>
+                    <path class="component-leads" d="M8 5V0M20 5V0M32 5V0M44 5V0M56 5V0M8 43v5m12-5v5m12-5v5m12-5v5m12-5v5M5 10H0m5 10H0m5 10H0m62-20h5m-5 10h5m-5 10h5"></path>
+                  </g>
+                  <g class="board-component board-component-ic" transform="translate(1098 205)">
+                    <rect class="component-body" width="72" height="48" rx="3"></rect>
+                    <rect class="component-inset" x="8" y="7" width="56" height="34" rx="2"></rect>
+                    <path class="component-detail" d="M18 17h36M18 24h24M18 31h30"></path>
+                    <path class="component-leads" d="M8 5V0M20 5V0M32 5V0M44 5V0M56 5V0M8 43v5m12-5v5m12-5v5m12-5v5m12-5v5M5 10H0m5 10H0m5 10H0m62-20h5m-5 10h5m-5 10h5"></path>
+                  </g>
+                  <g class="board-component board-component-passive" transform="translate(66 332)">
+                    <rect class="component-body" width="62" height="20" rx="2"></rect>
+                    <path class="component-detail" d="M8 4v12m46-12v12M18 10h26"></path>
+                    <path class="component-leads" d="M0 10h8m46 0h8"></path>
+                  </g>
+                  <g class="board-component board-component-passive" transform="translate(1072 332)">
+                    <rect class="component-body" width="62" height="20" rx="2"></rect>
+                    <path class="component-detail" d="M8 4v12m46-12v12M18 10h26"></path>
+                    <path class="component-leads" d="M0 10h8m46 0h8"></path>
+                  </g>
+                  <g class="board-component board-component-ic" transform="translate(36 472)">
+                    <rect class="component-body" width="58" height="40" rx="3"></rect>
+                    <rect class="component-inset" x="8" y="7" width="42" height="26" rx="2"></rect>
+                    <circle class="component-detail-fill" cx="29" cy="20" r="5"></circle>
+                    <path class="component-leads" d="M10 4V0m12 4V0m12 4V0m12 4V0m-36 36v4m12-4v4m12-4v4m12-4v4M5 10H0m5 10H0m48-10h5m-5 10h5"></path>
+                  </g>
+                  <g class="board-component board-component-ic" transform="translate(1106 472)">
+                    <rect class="component-body" width="58" height="40" rx="3"></rect>
+                    <rect class="component-inset" x="8" y="7" width="42" height="26" rx="2"></rect>
+                    <circle class="component-detail-fill" cx="29" cy="20" r="5"></circle>
+                    <path class="component-leads" d="M10 4V0m12 4V0m12 4V0m12 4V0m-36 36v4m12-4v4m12-4v4m12-4v4M5 10H0m5 10H0m48-10h5m-5 10h5"></path>
+                  </g>
+                  <g class="board-component board-component-passive" transform="translate(185 82)">
+                    <rect class="component-body" width="42" height="18" rx="2"></rect>
+                    <path class="component-detail" d="M13 3v12m16-12v12"></path>
+                    <path class="component-leads" d="M0 9h8m26 0h8"></path>
+                  </g>
+                  <g class="board-component board-component-passive" transform="translate(973 82)">
+                    <rect class="component-body" width="42" height="18" rx="2"></rect>
+                    <path class="component-detail" d="M13 3v12m16-12v12"></path>
+                    <path class="component-leads" d="M0 9h8m26 0h8"></path>
+                  </g>
+                  <g class="board-mounts">
+                    <circle cx="28" cy="34" r="13"></circle><circle cx="28" cy="34" r="5"></circle><path d="M24 34h8"></path>
+                    <circle cx="1172" cy="34" r="13"></circle><circle cx="1172" cy="34" r="5"></circle><path d="M1168 34h8"></path>
+                    <circle cx="28" cy="616" r="13"></circle><circle cx="28" cy="616" r="5"></circle><path d="M24 616h8"></path>
+                    <circle cx="1172" cy="616" r="13"></circle><circle cx="1172" cy="616" r="5"></circle><path d="M1168 616h8"></path>
+                  </g>
+                  <g class="junction-sparks">
+                    <circle cx="300" cy="145" r="4"></circle>
+                    <circle cx="900" cy="145" r="4"></circle>
+                    <circle cx="420" cy="560" r="3.5"></circle>
+                    <circle cx="780" cy="560" r="3.5"></circle>
+                  </g>
+                </g>
+                <g class="circuit-energy-lines">
+                  <path class="circuit-highlight" d="M470 330H400V145H300"></path>
+                  <path class="circuit-highlight" d="M730 330H800V145H900"></path>
+                  <path class="circuit-highlight" d="M600 395V520"></path>
+                  <path class="circuit-highlight circuit-highlight-branch" d="M470 347H402V300H312V258H245V220H170"></path>
+                  <path class="circuit-highlight circuit-highlight-branch" d="M730 347H798V300H888V258H955V220H1030"></path>
+                  <path class="circuit-highlight circuit-highlight-branch" d="M570 395V444H535V490H490V548"></path>
+                  <path class="circuit-highlight circuit-highlight-branch" d="M630 395V444H665V490H710V548"></path>
+                </g>
                 <g class="circuit-pulses">
                   <circle class="circuit-pulse" r="3.5">
                     <animateMotion dur="3.8s" begin="-1.2s" repeatCount="indefinite" path="M470 330H400V145H300"></animateMotion>
                   </circle>
-                  <circle class="circuit-pulse circuit-pulse-return" r="3">
-                    <animateMotion dur="4.3s" begin="-3s" repeatCount="indefinite" path="M300 145H400V330H470"></animateMotion>
-                  </circle>
                   <circle class="circuit-pulse" r="3.5">
                     <animateMotion dur="4.1s" begin="-2.1s" repeatCount="indefinite" path="M730 330H800V145H900"></animateMotion>
-                  </circle>
-                  <circle class="circuit-pulse circuit-pulse-return" r="3">
-                    <animateMotion dur="4.6s" begin="-0.8s" repeatCount="indefinite" path="M900 145H800V330H730"></animateMotion>
                   </circle>
                   <circle class="circuit-pulse" r="3.5">
                     <animateMotion dur="3.6s" begin="-2.7s" repeatCount="indefinite" path="M600 395V520"></animateMotion>
                   </circle>
-                  <circle class="circuit-pulse circuit-pulse-return" r="3">
-                    <animateMotion dur="4.8s" begin="-1.7s" repeatCount="indefinite" path="M600 520V395"></animateMotion>
+                  <circle class="circuit-pulse" r="3">
+                    <animateMotion dur="4.5s" begin="-1.7s" repeatCount="indefinite" path="M470 347H402V300H312V258H245V220H170"></animateMotion>
+                  </circle>
+                  <circle class="circuit-pulse" r="3">
+                    <animateMotion dur="4.7s" begin="-3.1s" repeatCount="indefinite" path="M730 347H798V300H888V258H955V220H1030"></animateMotion>
                   </circle>
                 </g>
               </svg>
@@ -152,6 +273,10 @@
                   <span class="core-pin core-pin-two" aria-hidden="true"></span>
                   <span class="core-pin core-pin-three" aria-hidden="true"></span>
                   <span class="core-pin core-pin-four" aria-hidden="true"></span>
+                  <span class="core-terminal core-terminal-top" aria-hidden="true"></span>
+                  <span class="core-terminal core-terminal-right" aria-hidden="true"></span>
+                  <span class="core-terminal core-terminal-bottom" aria-hidden="true"></span>
+                  <span class="core-terminal core-terminal-left" aria-hidden="true"></span>
                 </div>
                 <div class="motherboard-chips" id="motherboard-chips" aria-label="Software products"></div>
               </div>
