@@ -194,14 +194,6 @@ function copyAccountsFrontend() {
   }
 }
 
-function prepareSoftwareEntrypoint() {
-  let html = fs.readFileSync(path.join(projectRoot, "software", "index.html"), "utf8");
-  for (const directory of ["assets", "src", "styles"]) {
-    html = html.split(`../${directory}/`).join(`/${directory}/`);
-  }
-  return html;
-}
-
 function writeCrawlFiles(site) {
   const origin = publicOrigins[site];
   if (!origin) throw new Error(`No public origin is configured for the ${site} site.`);
@@ -238,7 +230,7 @@ function buildStaticSite(site) {
     if (site === "automobile") {
       fs.writeFileSync(path.join(outputDirectory, "index.html"), prepareAutomobileEntrypoint());
     } else if (site === "software") {
-      fs.writeFileSync(path.join(outputDirectory, "index.html"), prepareSoftwareEntrypoint());
+      fs.copyFileSync(path.join(projectRoot, "software", "index.html"), path.join(outputDirectory, "index.html"));
     } else {
       const entrypoint = site === "parent" ? "index.html" : path.join(site, "index.html");
       fs.copyFileSync(path.join(projectRoot, entrypoint), path.join(outputDirectory, "index.html"));
