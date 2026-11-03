@@ -59,6 +59,7 @@ class MockElement {
 function initializeSoftwarePage() {
   const elements = new Map([
     ["#motherboard-chips", new MockElement("div")],
+    ["#software-products", new MockElement("div")],
     ["#product-name", new MockElement("h3")],
     ["#product-description", new MockElement("p")],
     ["#product-status", new MockElement("span")],
@@ -84,13 +85,19 @@ function initializeSoftwarePage() {
 test("software product chips select accurate details and configured destinations", () => {
   const { elements, products } = initializeSoftwarePage();
   const chips = elements.get("#motherboard-chips").children;
+  const showcase = elements.get("#software-products").children;
   const detailLinks = elements.get("#product-links");
 
   assert.deepEqual(chips.map((chip) => chip.dataset.productId), ["electronyos", "istylist", "bills"]);
+  assert.deepEqual(showcase.map((product) => product.children[1].textContent), ["ElectronyOS", "iStylist", "Electrony Bills"]);
   assert.equal(chips[0].attributes["aria-pressed"], "true");
   assert.equal(elements.get("#product-name").textContent, "ElectronyOS");
   assert.equal(elements.get("#product-description").textContent, "Smart Estate Management Software.");
   assert.deepEqual(detailLinks.children.map((link) => link.href), [
+    "https://os.electrony.xyz",
+    "https://app.electrony.xyz"
+  ]);
+  assert.deepEqual(showcase[0].children.slice(4).map((link) => link.href), [
     "https://os.electrony.xyz",
     "https://app.electrony.xyz"
   ]);
@@ -110,6 +117,8 @@ test("software product chips select accurate details and configured destinations
   assert.equal(elements.get("#product-name").textContent, "Electrony Bills");
   assert.equal(elements.get("#product-status").textContent, "In development / integration stage");
   assert.deepEqual(detailLinks.children.map((link) => link.href), ["https://bills.electrony.xyz"]);
+  assert.equal(showcase[2].children[3].children[0].textContent, "In development / integration stage");
+  assert.deepEqual(showcase[2].children.slice(4).map((link) => link.href), ["https://bills.electrony.xyz"]);
   assert.equal(detailLinks.children[0].target, "_blank");
   assert.equal(detailLinks.children[0].rel, "noopener noreferrer");
   assert.equal(products.filter((product) => product.category === "Software").length, 3);

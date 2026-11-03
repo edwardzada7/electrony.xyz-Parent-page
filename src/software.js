@@ -4,15 +4,16 @@ const softwareProducts = window.ElectronyProducts
   .filter((product) => product.category === "Software")
   .sort((first, second) => (softwareProductOrder.get(first.id) ?? Infinity) - (softwareProductOrder.get(second.id) ?? Infinity));
 const chipContainer = document.querySelector("#motherboard-chips");
+const showcaseContainer = document.querySelector("#software-products");
 const productName = document.querySelector("#product-name");
 const productDescription = document.querySelector("#product-description");
 const productStatus = document.querySelector("#product-status");
 const productLinks = document.querySelector("#product-links");
 const detailIndex = document.querySelector("#detail-index");
 
-function createProductLink(label, url, primary = false) {
+function createProductLink(label, url, primary = false, className = "detail-link") {
   const link = document.createElement("a");
-  link.className = primary ? "detail-link detail-link-primary" : "detail-link";
+  link.className = `${className}${primary ? " detail-link-primary" : ""}`;
   link.href = url;
   link.target = "_blank";
   link.rel = "noopener noreferrer";
@@ -49,6 +50,10 @@ function selectProduct(product, index) {
   }
 }
 
+function getProductStatus(product) {
+  return product.ecosystemStatus || (product.status === "live" ? "Live" : product.status);
+}
+
 function createProductChip(product, index) {
   const button = document.createElement("button");
   button.className = "product-chip";
@@ -59,7 +64,7 @@ function createProductChip(product, index) {
   button.style.setProperty("--chip-accent", product.accentColor || "var(--color-product-default)");
   button.setAttribute("aria-controls", "product-detail");
   button.setAttribute("aria-pressed", "false");
-  button.setAttribute("aria-label", `${product.name}, ${product.ecosystemStatus || (product.status === "live" ? "Live" : product.status)}. Show product details.`);
+  button.setAttribute("aria-label", `${product.name}, ${getProductStatus(product)}. Show product details.`);
 
   const top = document.createElement("span");
   top.className = "chip-topline";
@@ -82,7 +87,7 @@ function createProductChip(product, index) {
   bottom.className = "chip-bottomline";
   const status = document.createElement("span");
   status.className = `chip-status${product.status === "live" ? " is-live" : ""}`;
-  status.textContent = product.ecosystemStatus || (product.status === "live" ? "Live" : product.status);
+  status.textContent = getProductStatus(product);
   const prompt = document.createElement("span");
   prompt.className = "chip-select-prompt";
   prompt.setAttribute("aria-hidden", "true");
@@ -94,10 +99,53 @@ function createProductChip(product, index) {
   return button;
 }
 
-if (chipContainer && softwareProducts.length > 0) {
-  softwareProducts.forEach((product, index) => {
-    chipContainer.append(createProductChip(product, index));
-  });
+function createShowcaseProduct(product, index) {
+  const article = document.createElement("article");
+  article.className = "showcase-product";
+  article.style.setProperty("--product-accent", product.accentColor || "var(--color-product-default)");
+
+  const topline = document.createElement("div");
+  topline.className = "showcase-product-topline";
+  const number = document.createElement("span");
+  number.className = "showcase-product-number";
+  number.textContent = `PROCESSOR / ${String(index + 1).padStart(2, "0")}`;
+  const indicator = document.createElement("span");
+  indicator.textContent = "ELECTRONY SOFTWARE";
+  topline.append(number, indicator);
+
+  const name = document.createElement("h3");
+  name.textContent = product.name;
+  const description = document.createElement("p");
+  description.textContent = product.ecosystemDescription || product.description;
+
+  const footer = document.createElement("div");
+  footer.className = "showcase-product-footer";
+  const status = document.createElement("span");
+  status.className = "showcase-product-status";
+  status.textContent = getProductStatus(product);
+  footer.append(status);
+
+  article.append(topline, name, description, footer);
+  if (product.landingPageUrl) {
+    article.append(createProductLink(`Visit ${product.name}`, product.landingPageUrl, false, "showcase-product-link"));
+  }
+  if (product.appUrl && product.appUrl !== product.landingPageUrl) {
+    article.append(createProductLink(`Open ${product.name} application`, product.appUrl, false, "showcase-product-link"));
+  }
+
+  return article;
+}
+
+if (!chipContainer || !showcaseContainer || !productName || !productDescription || !productStatus || !productLinks || !detailIndex) {
+  throw new Error("The software page is missing required product interface elements.");
+}
+
+softwareProducts.forEach((product, index) => {
+  chipContainer.append(createProductChip(product, index));
+  showcaseContainer.append(createShowcaseProduct(product, index));
+});
+
+if (softwareProducts.length > 0) {
   selectProduct(softwareProducts[0], 0);
 }
 })();
