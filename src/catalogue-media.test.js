@@ -101,25 +101,33 @@ test("Hardware source catalogue contains traceable products without source price
   assert.equal(productByModel.get("BRACKETUNIVERSAL").category, "consumer-electronics");
 });
 
-test("ROX uploads join its existing showcase without changing vehicle or pickup records", () => {
+test("ROX uploads retain verified model attribution and keep other media shared", () => {
   const catalogue = loadCatalogueScript("automobile-catalogue.js").ElectronyAutomobileData;
   assert.equal(catalogue.vehicles.length, 17);
   const pickups = catalogue.vehicles.filter((vehicle) => vehicle.category === "Pickup");
   assert.equal(pickups.length, 4);
   assert.ok(pickups.every((vehicle) => vehicle.priceLabel === "Price on Request"));
 
-  const rox = catalogue.legacyShowcaseVehicles.find((vehicle) => vehicle.id === "rox-01");
-  assert.ok(rox);
-  assert.equal(rox.images.length, 6);
-  assert.equal(rox.videos.length, 3);
-  assert.equal(rox.galleryTitle, "ROX Motor media");
+  const rox01 = catalogue.legacyShowcaseVehicles.find((vehicle) => vehicle.id === "rox-01");
+  const adamas = catalogue.legacyShowcaseVehicles.find((vehicle) => vehicle.id === "rox-adamas");
+  const roxMedia = catalogue.roxMotorSharedMedia;
+  assert.ok(rox01);
+  assert.ok(adamas);
+  assert.deepEqual(Array.from(rox01.images), ["../assets/automobile/vehicles/rox-01.jpg"]);
+  assert.equal(rox01.videos.length, 0);
+  assert.equal(adamas.images.length, 0);
+  assert.equal(adamas.videos.length, 0);
+  assert.equal(roxMedia.images.length, 5);
+  assert.equal(roxMedia.videos.length, 3);
+  assert.equal(roxMedia.sharedBrandMedia, true);
   const z9 = pickups.find((vehicle) => vehicle.id === "dongfeng-z9");
   assert.ok(z9);
   assert.equal(z9.videos.length, 2);
   for (const assetUrl of [
-    ...rox.images,
-    ...rox.videos.map((video) => video.src),
-    ...rox.videos.map((video) => video.poster),
+    ...rox01.images,
+    adamas.cardImage,
+    ...roxMedia.images,
+    ...roxMedia.videos.map((video) => video.src),
     ...z9.videos.map((video) => video.src)
   ]) {
     assert.ok(fs.existsSync(resolvePageAsset("automobile", assetUrl)), assetUrl);

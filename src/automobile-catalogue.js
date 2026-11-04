@@ -486,46 +486,115 @@ const automobileVehicles = [
   }
 ];
 
+const roxComparisonRows = [
+  { label: "Model position", rox01: "Original model", adamas: "Newer/upgraded model" },
+  { label: "Power", rox01: "Approximately 470 hp", adamas: "Approximately 469–476 hp" },
+  { label: "Torque", rox01: "740 Nm", adamas: "740 Nm" },
+  { label: "Suspension", rox01: "Electronic multi-link", adamas: "Height-adjustable air suspension" },
+  { label: "Ground clearance", rox01: "Lower/fixed", adamas: "Adjustable, up to approximately 270–285 mm depending on version" },
+  { label: "Doors", rox01: "Normal doors", adamas: "Soft-close doors" },
+  { label: "Interior", rox01: "More simple/minimalist", adamas: "More luxurious, with Nappa and comfort features" },
+  { label: "Infotainment", rox01: "Approximately 13-inch screen", adamas: "Larger approximately 15–16-inch system; rear-entertainment options depending on version" },
+  { label: "Cool box", rox01: "Not present in the supplied comparison", adamas: "Present in the supplied comparison" },
+  { label: "Software/connectivity", rox01: "Older system", adamas: "Newer connected/cloud features" },
+  { label: "Seating", rox01: "7-seat available in some versions", adamas: "7-seat available in some markets/configurations" },
+  { label: "Off-road capability", rox01: "Very good", adamas: "Better equipment for serious off-road use" }
+];
+
+const roxMotorSharedMedia = {
+  id: "rox-motor-media",
+  brand: "ROX Motor",
+  name: "ROX Motor media",
+  sharedBrandMedia: true,
+  galleryTitle: "ROX Motor media · model not identified",
+  images: [
+    "../assets/automobile/vehicles/roxmotor1/IMG-20260918-WA0049.jpg",
+    "../assets/automobile/vehicles/roxmotor1/IMG-20260918-WA0050.jpg",
+    "../assets/automobile/vehicles/roxmotor1/IMG-20260918-WA0052.jpg",
+    "../assets/automobile/vehicles/roxmotor1/IMG-20260918-WA0056.jpg",
+    "../assets/automobile/vehicles/roxmotor1/IMG-20260918-WA0060.jpg"
+  ],
+  imageAlts: [
+    "ROX Motor SUV side view; specific model not verified.",
+    "ROX Motor SUV front three-quarter view; specific model not verified.",
+    "ROX Motor SUV front passenger-side cabin and center console; specific model not verified.",
+    "ROX Motor SUV steering wheel and driver display; specific model not verified.",
+    "ROX Motor SUV front lighting detail; specific model not verified."
+  ],
+  videos: [
+    {
+      src: "../assets/automobile/vehicles/roxmotor1/VID-20260918-WA0048.mp4",
+      title: "ROX Motor video · model not identified"
+    },
+    {
+      src: "../assets/automobile/vehicles/roxmotor1/VID-20260918-WA0054.mp4",
+      title: "ROX Motor video · model not identified"
+    },
+    {
+      src: "../assets/automobile/vehicles/roxmotor1/VID-20260918-WA0063.mp4",
+      title: "ROX Motor video · model not identified"
+    }
+  ]
+};
+
 const legacyShowcaseVehicles = [
   {
     id: "rox-01",
     brand: "ROX Motor",
-    name: "ROX 01 SUV",
-    galleryTitle: "ROX Motor media",
-    images: [
-      "../assets/automobile/vehicles/rox-01.jpg",
-      "../assets/automobile/vehicles/roxmotor1/IMG-20260918-WA0049.jpg",
-      "../assets/automobile/vehicles/roxmotor1/IMG-20260918-WA0050.jpg",
-      "../assets/automobile/vehicles/roxmotor1/IMG-20260918-WA0052.jpg",
-      "../assets/automobile/vehicles/roxmotor1/IMG-20260918-WA0056.jpg",
-      "../assets/automobile/vehicles/roxmotor1/IMG-20260918-WA0060.jpg"
+    name: "ROX 01",
+    category: "ROX Motor Collection",
+    vehicleType: "ROX Motor model",
+    powertrain: "",
+    priceLabel: "",
+    statusLabel: "",
+    description: "The original ROX model, with the supplied comparison describing a simpler interior and very good off-road capability.",
+    images: ["../assets/automobile/vehicles/rox-01.jpg"],
+    imageAlts: ["ROX 01 SUV in the existing Electrony Automobile showcase image."],
+    videos: [],
+    sharedMedia: roxMotorSharedMedia,
+    cardImage: "../assets/automobile/vehicles/rox-01.jpg",
+    cardImageAlt: "ROX 01 SUV in the existing Electrony Automobile showcase image.",
+    cardImageNote: "",
+    headlineSpecifications: ["Approximately 470 hp", "740 Nm torque", "Electronic multi-link suspension"],
+    specificationGroups: [
+      { title: "Model overview", items: ["Position: Original model"] },
+      { title: "Power & torque", items: ["Power: Approximately 470 hp", "Torque: 740 Nm"] },
+      { title: "Comfort & interior", items: ["Doors: Normal doors", "Interior: More simple/minimalist", "Cool box: Not present in the supplied comparison"] },
+      { title: "Technology & infotainment", items: ["Infotainment: Approximately 13-inch screen", "Software/connectivity: Older system"] },
+      { title: "Suspension & capability", items: ["Suspension: Electronic multi-link", "Ground clearance: Lower/fixed", "Off-road capability: Very good"] },
+      { title: "Seating", items: ["7-seat available in some versions"] }
     ],
-    imageAlts: [
-      "Existing ROX 01 SUV showcase photograph.",
-      "ROX Motor SUV shown from the side.",
-      "ROX Motor SUV shown from a front three-quarter angle.",
-      "ROX Motor SUV front passenger-side cabin and center console.",
-      "ROX Motor SUV steering wheel and driver display.",
-      "ROX Motor SUV front lighting detail."
+    specificationNote: "Specifications are based on the supplied comparison and may vary by market, model year and vehicle configuration. Confirm the exact vehicle specification before purchase.",
+    detailBackHref: "#rox"
+  },
+  {
+    id: "rox-adamas",
+    brand: "ROX Motor",
+    name: "ROX ADAMAS",
+    category: "ROX Motor Collection",
+    vehicleType: "ROX Motor model",
+    powertrain: "",
+    priceLabel: "",
+    statusLabel: "",
+    description: "A newer, upgraded ROX model, with the supplied comparison noting additional luxury and capability equipment; fitment depends on version and market.",
+    images: [],
+    imageAlts: [],
+    videos: [],
+    sharedMedia: roxMotorSharedMedia,
+    cardImage: "../assets/automobile/vehicles/roxmotor1/IMG-20260918-WA0049.jpg",
+    cardImageAlt: "ROX Motor SUV; the exact model is not verified for this repository image.",
+    cardImageNote: "ROX Motor image · model not verified",
+    headlineSpecifications: ["Approximately 469–476 hp", "740 Nm torque", "Height-adjustable air suspension"],
+    specificationGroups: [
+      { title: "Model overview", items: ["Position: Newer/upgraded model"] },
+      { title: "Power & torque", items: ["Power: Approximately 469–476 hp", "Torque: 740 Nm"] },
+      { title: "Comfort & interior", items: ["Doors: Soft-close doors", "Interior: More luxurious, with Nappa and comfort features", "Cool box: Present in the supplied comparison"] },
+      { title: "Technology & infotainment", items: ["Infotainment: Larger approximately 15–16-inch system", "Rear-entertainment options depending on version", "Software/connectivity: Newer connected/cloud features"] },
+      { title: "Suspension & capability", items: ["Suspension: Height-adjustable air suspension", "Ground clearance: Adjustable, up to approximately 270–285 mm depending on version", "Off-road capability: Better equipment for serious off-road use"] },
+      { title: "Seating", items: ["7-seat available in some markets/configurations"] }
     ],
-    videos: [
-      {
-        src: "../assets/automobile/vehicles/roxmotor1/VID-20260918-WA0048.mp4",
-        title: "ROX Motor video 1",
-        poster: "../assets/automobile/vehicles/roxmotor1/IMG-20260918-WA0049.jpg"
-      },
-      {
-        src: "../assets/automobile/vehicles/roxmotor1/VID-20260918-WA0054.mp4",
-        title: "ROX Motor video 2",
-        poster: "../assets/automobile/vehicles/roxmotor1/IMG-20260918-WA0049.jpg"
-      },
-      {
-        src: "../assets/automobile/vehicles/roxmotor1/VID-20260918-WA0063.mp4",
-        title: "ROX Motor video 3",
-        poster: "../assets/automobile/vehicles/roxmotor1/IMG-20260918-WA0049.jpg"
-      }
-    ],
-    fallbackImage: "../assets/automobile/vehicles/rox-01.svg"
+    specificationNote: "Specifications are based on the supplied comparison and may vary by market, model year and vehicle configuration. Confirm the exact vehicle specification before purchase.",
+    detailBackHref: "#rox"
   },
   {
     id: "voyah-free",
@@ -568,6 +637,8 @@ function getYouTubeVideoId(value) {
 window.ElectronyAutomobileData = Object.freeze({
   vehicles: automobileVehicles,
   legacyShowcaseVehicles,
+  roxComparisonRows,
+  roxMotorSharedMedia,
   featuredVideos: [],
   getYouTubeVideoId
 });

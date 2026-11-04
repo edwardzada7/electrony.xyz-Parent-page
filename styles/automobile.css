@@ -198,18 +198,49 @@
 .automobile-lightbox .automobile-gallery__arrow--previous { left: 1rem; }
 .automobile-lightbox .automobile-gallery__arrow--next { right: 1rem; }
 
-.automobile-rox { position: relative; overflow: hidden; background: var(--automobile-charcoal); color: var(--automobile-white); }
-.automobile-rox::after { position: absolute; right: -10rem; bottom: -13rem; width: 35rem; height: 35rem; border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 50%; content: ""; }
-.automobile-rox__inner { position: relative; z-index: 1; display: grid; grid-template-columns: minmax(0, 0.75fr) minmax(0, 1.25fr); gap: clamp(2rem, 6vw, 6rem); align-items: center; }
-.automobile-rox__copy { max-width: 34rem; }
-.automobile-rox__copy h2 { margin-bottom: 1.25rem; font-family: var(--font-display); font-size: clamp(3.2rem, 6vw, 6.7rem); line-height: 0.86; letter-spacing: -0.07em; }
-.automobile-rox__copy > p:not(.automobile-kicker) { color: rgba(255, 255, 255, 0.67); line-height: 1.75; }
-.automobile-rox__lead { color: var(--automobile-white) !important; font-size: 1.2rem; }
-.automobile-rox__meta { display: flex; flex-wrap: wrap; gap: 0.6rem; margin: 1.7rem 0 2rem; }
-.automobile-rox__meta span { display: inline-flex; min-height: 2.35rem; align-items: center; padding: 0.5rem 0.8rem; border: 1px solid rgba(255, 255, 255, 0.15); font-family: var(--font-label); font-size: 0.55rem; letter-spacing: 0.08em; text-transform: uppercase; }
-.automobile-rox__visual { margin: 0; }
-.automobile-rox__visual img { width: 100%; aspect-ratio: 4 / 3; object-fit: cover; }
-.automobile-rox__visual figcaption { padding-top: 0.8rem; color: rgba(255, 255, 255, 0.5); font-family: var(--font-label); font-size: 0.54rem; letter-spacing: 0.1em; text-transform: uppercase; }
+.automobile-rox { position: relative; overflow: hidden; background: linear-gradient(135deg, #151515 0%, #090909 70%); color: var(--automobile-white); }
+.automobile-rox::after { position: absolute; right: -11rem; bottom: 20rem; width: 34rem; height: 34rem; border: 1px solid rgba(255, 255, 255, 0.07); border-radius: 50%; content: ""; pointer-events: none; }
+.automobile-rox > .container { position: relative; z-index: 1; }
+.automobile-rox__heading { margin-bottom: clamp(2.5rem, 5vw, 4rem); }
+.automobile-rox__heading .automobile-kicker { color: rgba(255, 255, 255, 0.58); }
+.automobile-rox__heading h2 { color: var(--automobile-white); }
+.automobile-rox__heading > p { color: rgba(255, 255, 255, 0.68); font-size: clamp(1rem, 1.5vw, 1.2rem); line-height: 1.7; }
+.automobile-rox__grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: clamp(1rem, 2.5vw, 2rem); }
+.automobile-rox-card { min-width: 0; overflow: hidden; border: 1px solid rgba(255, 255, 255, 0.13); background: linear-gradient(155deg, #202020, #111); transition: transform 220ms ease, border-color 220ms ease, box-shadow 220ms ease; }
+.automobile-rox-card:hover { transform: translateY(-4px); border-color: rgba(215, 25, 32, 0.7); box-shadow: 0 1.5rem 3rem rgba(0, 0, 0, 0.28); }
+.automobile-rox-card__visual { position: relative; margin: 0; overflow: hidden; background: #080808; }
+.automobile-rox-card__visual img { width: 100%; aspect-ratio: 16 / 10; object-fit: cover; transition: transform 500ms ease; }
+.automobile-rox-card:hover .automobile-rox-card__visual img { transform: scale(1.025); }
+.automobile-rox-card__visual figcaption { position: absolute; right: 0; bottom: 0; left: 0; padding: 0.6rem 0.9rem; background: linear-gradient(transparent, rgba(0, 0, 0, 0.82)); color: rgba(255, 255, 255, 0.86); font-family: var(--font-label); font-size: 0.56rem; letter-spacing: 0.08em; text-transform: uppercase; }
+.automobile-rox-card__body { display: grid; gap: 1rem; padding: clamp(1.2rem, 2.6vw, 2rem); }
+.automobile-rox-card__eyebrow { margin: 0; color: #e36469; font-family: var(--font-label); font-size: 0.58rem; letter-spacing: 0.12em; text-transform: uppercase; }
+.automobile-rox-card h3 { margin: -0.55rem 0 0; font-family: var(--font-display); font-size: clamp(2.15rem, 4vw, 3.8rem); line-height: 0.95; letter-spacing: -0.06em; }
+.automobile-rox-card__description { max-width: 40rem; margin: 0; color: rgba(255, 255, 255, 0.7); line-height: 1.7; }
+.automobile-rox-card__specs { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 10rem), 1fr)); gap: 0.6rem; margin: 0; padding: 0; list-style: none; }
+.automobile-rox-card__specs li { padding: 0.8rem; border: 1px solid rgba(255, 255, 255, 0.1); color: rgba(255, 255, 255, 0.9); font-size: 0.83rem; }
+.automobile-rox-card__actions { display: flex; flex-wrap: wrap; align-items: center; gap: 0.65rem; padding-top: 0.25rem; }
+.automobile-rox-card__actions .automobile-button { min-height: 3rem; padding: 0.75rem 1rem; }
+.automobile-rox-card__actions .automobile-button--ghost { border-color: rgba(255, 255, 255, 0.23); color: var(--automobile-white); }
+.automobile-rox-card__actions .automobile-button--ghost:hover { border-color: var(--automobile-white); background: rgba(255, 255, 255, 0.08); }
+.automobile-rox-card__media { min-height: 2.8rem; padding: 0.4rem 0.15rem; border: 0; background: transparent; color: rgba(255, 255, 255, 0.68); font-family: var(--font-label); font-size: 0.58rem; letter-spacing: 0.08em; text-align: left; text-transform: uppercase; cursor: pointer; }
+.automobile-rox-card__media:hover { color: var(--automobile-white); }
+.automobile-rox-card__visual.is-unavailable { min-height: 12rem; }
+.automobile-rox-card__visual.is-unavailable img { display: none; }
+.automobile-rox__media-note { max-width: 70rem; margin: 1rem 0 0; color: rgba(255, 255, 255, 0.52); font-size: 0.76rem; line-height: 1.65; }
+.automobile-rox-comparison { margin-top: clamp(4rem, 8vw, 7rem); padding-top: clamp(2rem, 4vw, 3.5rem); border-top: 1px solid rgba(255, 255, 255, 0.14); }
+.automobile-rox-comparison__heading { margin-bottom: 1.6rem; }
+.automobile-rox-comparison__heading .automobile-kicker { margin-bottom: 0.8rem; color: rgba(255, 255, 255, 0.58); }
+.automobile-rox-comparison__heading h3 { margin: 0; font-family: var(--font-display); font-size: clamp(2rem, 4vw, 3.5rem); line-height: 1; letter-spacing: -0.06em; }
+.automobile-rox-comparison__table-wrap { overflow-x: auto; border: 1px solid rgba(255, 255, 255, 0.14); }
+.automobile-rox-comparison__table { width: 100%; min-width: 44rem; border-collapse: collapse; text-align: left; }
+.automobile-rox-comparison__table th, .automobile-rox-comparison__table td { padding: 0.9rem 1rem; border-bottom: 1px solid rgba(255, 255, 255, 0.11); vertical-align: top; }
+.automobile-rox-comparison__table thead th { background: rgba(255, 255, 255, 0.07); color: var(--automobile-white); font-family: var(--font-label); font-size: 0.68rem; letter-spacing: 0.09em; text-transform: uppercase; }
+.automobile-rox-comparison__table tbody th { width: 20%; color: rgba(255, 255, 255, 0.72); font-size: 0.82rem; font-weight: 500; }
+.automobile-rox-comparison__table td { width: 40%; color: rgba(255, 255, 255, 0.9); font-size: 0.84rem; line-height: 1.55; }
+.automobile-rox-comparison__table tbody tr:last-child th, .automobile-rox-comparison__table tbody tr:last-child td { border-bottom: 0; }
+.automobile-rox-comparison__table tbody tr:hover { background: rgba(255, 255, 255, 0.035); }
+.automobile-rox-comparison__mobile { display: none; }
+.automobile-rox-comparison__note { max-width: 68rem; margin: 1rem 0 0; color: rgba(255, 255, 255, 0.52); font-size: 0.76rem; line-height: 1.65; }
 
 .automobile-powertrain { background: #e4dfd7; }
 .automobile-power-grid { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); border-top: 1px solid var(--automobile-border); border-bottom: 1px solid var(--automobile-border); }
@@ -505,6 +536,29 @@
   object-fit: contain;
 }
 
+.automobile-detail-gallery__empty {
+  display: grid;
+  min-height: 12rem;
+  place-content: center;
+  justify-items: start;
+  gap: 0.8rem;
+  padding: clamp(1.2rem, 3vw, 2rem);
+  border: 1px dashed var(--automobile-border);
+  background: #e9e5de;
+  color: var(--color-gray-700);
+}
+
+.automobile-detail-gallery__empty button {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--automobile-red-deep);
+  font: inherit;
+  text-align: left;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
 .automobile-detail-highlights {
   margin-bottom: 3rem;
   padding: clamp(1.25rem, 3vw, 2rem);
@@ -566,6 +620,11 @@
   max-width: 64rem;
   margin-bottom: 3rem;
 }
+
+.automobile-detail-video-list { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 24rem), 1fr)); gap: 1rem; }
+.automobile-detail-video-item { min-width: 0; }
+.automobile-detail-video-item h3 { margin: 0 0 0.6rem; font-family: var(--font-label); font-size: 0.76rem; letter-spacing: 0.04em; }
+.automobile-detail-video__qualification { margin: 0 0 1rem; color: var(--color-gray-700); font-size: 0.86rem; }
 
 .automobile-detail-local-video {
   display: block;
@@ -689,7 +748,20 @@
   .automobile-search-filters,
   .automobile-detail-specifications,
   .automobile-enquiry-form__fields { grid-template-columns: 1fr; }
+  .automobile-rox__grid { grid-template-columns: 1fr; }
+  .automobile-rox-card__visual img { aspect-ratio: 4 / 3; }
+  .automobile-rox-card__actions .automobile-button { flex: 1 1 9rem; }
+  .automobile-rox-card__media { flex-basis: 100%; }
+  .automobile-rox-comparison__table-wrap { display: none; }
+  .automobile-rox-comparison__mobile { display: grid; gap: 1rem; }
+  .automobile-rox-comparison__model { min-width: 0; padding: 1.1rem; border: 1px solid rgba(255, 255, 255, 0.14); background: rgba(255, 255, 255, 0.035); }
+  .automobile-rox-comparison__model h4 { margin: 0 0 0.5rem; color: var(--automobile-white); font-family: var(--font-display); font-size: 1.5rem; letter-spacing: -0.04em; }
+  .automobile-rox-comparison__model dl { margin: 0; }
+  .automobile-rox-comparison__model dl > div { display: grid; grid-template-columns: minmax(7rem, 0.8fr) minmax(0, 1.2fr); gap: 0.7rem; padding: 0.65rem 0; border-top: 1px solid rgba(255, 255, 255, 0.1); }
+  .automobile-rox-comparison__model dt { color: rgba(255, 255, 255, 0.58); font-size: 0.75rem; }
+  .automobile-rox-comparison__model dd { margin: 0; color: rgba(255, 255, 255, 0.9); font-size: 0.8rem; line-height: 1.5; }
   .automobile-detail { padding-top: calc(var(--automobile-section-space) + 3.5rem) !important; }
   .automobile-detail-gallery { grid-template-columns: 1fr; }
+  .automobile-detail-video-list { grid-template-columns: 1fr; }
   .automobile-enquiry-form__message { grid-column: auto; }
 }

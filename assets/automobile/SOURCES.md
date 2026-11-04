@@ -51,7 +51,7 @@ videos: [
 
 The existing photo/media gallery renders registered videos with native controls and uses the vehicle's first registered photograph as the poster when available. Leave `videos: []` for vehicles without videos. This is a static site: browsers cannot discover files in repository folders automatically, and unregistered files are not displayed.
 
-The two MP4 files in `dongfeng-z9/` are registered with the existing Z9 entry. The five photographs and three MP4 clips in `roxmotor1/` are registered with the existing ROX Motor showcase; their specific ROX trim is not asserted by the available source material.
+The two MP4 files in `dongfeng-z9/` are registered with the existing Z9 entry. `vehicles/rox-01.jpg` is the existing ROX 01 showcase image. The five photos and three MP4 clips in `vehicles/roxmotor1/` are shared ROX Motor media; their specific ROX trim is not asserted by the available source material. The ROX ADAMAS detail card uses one of these photos only as an explicitly model-unverified ROX Motor image. No repository photo or video is currently verified as specific to ROX ADAMAS, and the shared clips are not attributed to either model.
 
 ## Existing vehicle artwork
 
