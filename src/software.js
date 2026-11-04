@@ -54,6 +54,18 @@ function getProductStatus(product) {
   return product.ecosystemStatus || (product.status === "live" ? "Live" : product.status);
 }
 
+function initializeWhatsAppContacts() {
+  const whatsappNumber = String(window.ElectronyConfig?.whatsappNumber || "").replace(/\D/g, "");
+  if (!/^[1-9]\d{7,14}$/.test(whatsappNumber)) {
+    throw new Error("The Software page requires a valid international WhatsApp number in src/config.js.");
+  }
+
+  const whatsappUrl = `https://wa.me/${whatsappNumber}?text=${encodeURIComponent("Hello Electrony.xyz, I would like to make an enquiry.")}`;
+  document.querySelectorAll("[data-whatsapp-contact]").forEach((link) => {
+    link.href = whatsappUrl;
+  });
+}
+
 function createProductChip(product, index) {
   const button = document.createElement("button");
   button.className = "product-chip";
@@ -139,6 +151,8 @@ function createShowcaseProduct(product, index) {
 if (!chipContainer || !showcaseContainer || !productName || !productDescription || !productStatus || !productLinks || !detailIndex) {
   throw new Error("The software page is missing required product interface elements.");
 }
+
+initializeWhatsAppContacts();
 
 softwareProducts.forEach((product, index) => {
   chipContainer.append(createProductChip(product, index));

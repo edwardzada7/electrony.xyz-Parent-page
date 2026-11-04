@@ -5008,3 +5008,178 @@ body.software-page {
     transform: none;
   }
 }
+
+.software-hero h1 {
+  color: #e7eef1;
+}
+
+.software-hero-metal {
+  display: inline-block;
+  color: #e7eef1;
+  background-image: linear-gradient(180deg, #ffffff 0%, #dce5e9 42%, #aebbc2 78%, #f5f8f9 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  white-space: nowrap;
+}
+
+.software-hero-accent {
+  color: #35d875 !important;
+  -webkit-text-fill-color: #35d875;
+  text-shadow: 0 0 1.1rem rgb(53 216 117 / 19%);
+  white-space: nowrap;
+}
+
+.software-wordmark-label,
+.software-navigation a,
+.software-mobile-menu nav a {
+  color: #dce5e9;
+}
+
+.software-hero h1,
+.detail-overview h2,
+.ecosystem-heading h2,
+.products-heading h2,
+.services-heading h2,
+.technologies-heading h2,
+.future-copy h2,
+.showcase-product h3,
+.service-card h3,
+.services-cta h3,
+.technology-group h3 {
+  text-shadow: 0 1px rgb(255 255 255 / 62%), 0 -1px rgb(34 49 57 / 8%);
+}
+
+.detail-overview h2,
+.ecosystem-heading h2,
+.products-heading h2,
+.services-heading h2,
+.technologies-heading h2,
+.future-copy h2,
+.showcase-product h3,
+.service-card h3,
+.services-cta h3,
+.technology-group h3 {
+  color: #273740;
+}
+
+.software-hero-metal,
+.software-hero-accent {
+  text-shadow: none;
+}
+
+.software-whatsapp-float {
+  position: fixed;
+  z-index: 35;
+  right: calc(1.25rem + env(safe-area-inset-right));
+  bottom: calc(1.25rem + env(safe-area-inset-bottom));
+  display: inline-flex;
+  width: 3.75rem;
+  height: 3.75rem;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid rgb(255 255 255 / 55%);
+  border-radius: 50%;
+  background: #25d366;
+  box-shadow: 0 0.8rem 1.8rem rgb(10 25 17 / 30%), inset 0 1px rgb(255 255 255 / 40%);
+  color: #fff;
+  text-decoration: none;
+  transition: transform 180ms ease, box-shadow 180ms ease;
+}
+
+.software-whatsapp-float:hover {
+  transform: translateY(-2px) scale(1.03);
+  box-shadow: 0 1rem 2rem rgb(10 25 17 / 38%), inset 0 1px rgb(255 255 255 / 45%);
+}
+
+.software-whatsapp-float:focus-visible,
+.software-whatsapp-footer:focus-visible {
+  outline: 3px solid #177b43;
+  outline-offset: 4px;
+}
+
+.software-whatsapp-float svg {
+  width: 1.8rem;
+  height: 1.8rem;
+  fill: currentColor;
+}
+
+.software-whatsapp-float::after {
+  position: absolute;
+  right: 0;
+  bottom: calc(100% + 0.65rem);
+  width: max-content;
+  max-width: min(17rem, calc(100vw - 2rem));
+  padding: 0.55rem 0.75rem;
+  border: 1px solid rgb(255 255 255 / 15%);
+  border-radius: 0.45rem;
+  background: #10191d;
+  color: #fff;
+  content: attr(data-tooltip);
+  font: 500 0.75rem/1.3 var(--software-body);
+  opacity: 0;
+  pointer-events: none;
+  transform: translateY(0.25rem);
+  transition: opacity 160ms ease, transform 160ms ease;
+}
+
+.software-whatsapp-float:hover::after,
+.software-whatsapp-float:focus-visible::after {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.software-whatsapp-footer {
+  display: inline-flex;
+  min-height: 3rem;
+  align-items: center;
+  gap: 0.7rem;
+  padding: 0.55rem 0.9rem;
+  margin-top: 1rem;
+  border: 1px solid #9aa8ae;
+  border-radius: 999px;
+  background: linear-gradient(145deg, #f8fafb, #d0d8dc);
+  box-shadow: inset 0 1px #fff, 0 0.35rem 0.9rem rgb(38 53 62 / 10%);
+  color: #24343c;
+  font-size: 0.85rem;
+  font-weight: 600;
+  text-decoration: none;
+  transition: border-color 160ms ease, background-color 160ms ease, transform 160ms ease;
+}
+
+.software-whatsapp-footer:hover {
+  border-color: #5a9070;
+  background: linear-gradient(145deg, #fff, #d8e8dd);
+  transform: translateY(-1px);
+}
+
+.software-whatsapp-footer svg {
+  width: 1.45rem;
+  height: 1.45rem;
+  flex: 0 0 auto;
+  fill: #159447;
+}
+
+.software-footer {
+  padding-bottom: calc(6rem + env(safe-area-inset-bottom));
+}
+
+@media (max-width: 22rem) {
+  .software-hero h1 {
+    font-size: 2.1rem;
+  }
+}
+
+@media (hover: none) {
+  .software-whatsapp-float::after {
+    display: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .software-whatsapp-float,
+  .software-whatsapp-float::after,
+  .software-whatsapp-footer {
+    transition: none;
+  }
+}

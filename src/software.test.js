@@ -57,6 +57,7 @@ class MockElement {
 }
 
 function initializeSoftwarePage() {
+  const whatsappLinks = [new MockElement("a"), new MockElement("a")];
   const elements = new Map([
     ["#motherboard-chips", new MockElement("div")],
     ["#software-products", new MockElement("div")],
@@ -70,6 +71,7 @@ function initializeSoftwarePage() {
   const window = {};
   const document = {
     querySelector: (selector) => elements.get(selector),
+    querySelectorAll: (selector) => selector === "[data-whatsapp-contact]" ? whatsappLinks : [],
     createElement: (tagName) => new MockElement(tagName)
   };
   const context = { window, document };
@@ -79,11 +81,11 @@ function initializeSoftwarePage() {
     vm.runInNewContext(fs.readFileSync(path.join(sourceRoot, file), "utf8"), context, { filename: file });
   }
 
-  return { elements, products: window.ElectronyProducts };
+  return { elements, products: window.ElectronyProducts, whatsappLinks, window };
 }
 
 test("software product chips select accurate details and configured destinations", () => {
-  const { elements, products } = initializeSoftwarePage();
+  const { elements, products, whatsappLinks, window } = initializeSoftwarePage();
   const chips = elements.get("#motherboard-chips").children;
   const showcase = elements.get("#software-products").children;
   const detailLinks = elements.get("#product-links");
@@ -122,4 +124,16 @@ test("software product chips select accurate details and configured destinations
   assert.equal(detailLinks.children[0].target, "_blank");
   assert.equal(detailLinks.children[0].rel, "noopener noreferrer");
   assert.equal(products.filter((product) => product.category === "Software").length, 3);
+
+  const expectedWhatsAppUrl = `https://wa.me/${window.ElectronyConfig.whatsappNumber}?text=${encodeURIComponent("Hello Electrony.xyz, I would like to make an enquiry.")}`;
+  assert.deepEqual(whatsappLinks.map((link) => link.href), [expectedWhatsAppUrl, expectedWhatsAppUrl]);
+});
+
+test("software page uses the requested headline and accessible WhatsApp contacts", () => {
+  const html = fs.readFileSync(path.join(__dirname, "../software/index.html"), "utf8");
+
+  assert.match(html, /<span class="software-hero-metal">Bringing Ideas to<\/span><br><span class="software-hero-accent">Life<\/span>/);
+  assert.equal((html.match(/data-whatsapp-contact/g) || []).length, 2);
+  assert.match(html, /aria-label="Chat with Electrony on WhatsApp"/);
+  assert.match(html, /Chat with us on WhatsApp/);
 });
