@@ -31,6 +31,7 @@ function createAppContext(search = "?service=virtual-cards", fetchHandler = null
     }
   };
   const authStatus = { hidden: true, textContent: "" };
+  const assignments = [];
   const historyStatus = { hidden: true, textContent: "" };
   const checkoutPanel = {
     innerHTML: "",
@@ -68,7 +69,9 @@ function createAppContext(search = "?service=virtual-cards", fetchHandler = null
       protocol: "https:",
       search,
       pathname: "/bills/app/",
-      assign() {}
+      assign(url) {
+        assignments.push(url);
+      }
     },
     sessionStorage: {
       length: 0,
@@ -102,7 +105,8 @@ function createAppContext(search = "?service=virtual-cards", fetchHandler = null
     serviceList,
     accountsButton,
     authStatus,
-    historyStatus
+    historyStatus,
+    assignments
   };
 }
 
@@ -214,6 +218,22 @@ test("OAuth sign-in preserves the Bills page and displays cancellation without b
   assert.equal(authStatus.hidden, false);
   assert.match(authStatus.textContent, /Sign-in was cancelled/);
   assert.match(authStatus.textContent, /Guest checkout remains available/);
+});
+
+test("OAuth sign-in reports temporary unavailability and announces redirecting", async () => {
+  const { context, accountsButton, authStatus, assignments } = createAppContext(
+    "?auth=unavailable",
+    async () => ({ ok: false, json: async () => ({ ok: false }) }),
+    true
+  );
+
+  await context.initializeIdentitySignIn();
+  assert.match(authStatus.textContent, /temporarily unavailable/);
+  assert.match(authStatus.textContent, /Guest checkout remains available/);
+
+  await accountsButton.listeners[0].listener({ preventDefault() {} });
+  assert.match(authStatus.textContent, /Redirecting to Electrony Accounts/);
+  assert.equal(assignments[0], accountsButton.href);
 });
 
 test("verified Bills session can sign out and reports when provider revocation is unavailable", async () => {

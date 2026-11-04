@@ -20,7 +20,7 @@ Place the approved parent Electrony logo in `assets/brand/` when it is available
 
 ## Electrony Bills
 
-The public Electrony Bills product page remains available at `/bills/` as the product introduction. The guest purchasing experience is available at `/bills/app/` and remains available without registration. Utility catalogues, customer verification, payment, and vending display unavailable until their separate authorized providers and backend safeguards are verified.
+The public Electrony Bills product page remains available at `/bills/` as the product introduction. The guest purchasing experience is available at `/bills/app/` on the parent site and at `/` on the standalone `bills.electrony.xyz` deployment; both remain available without registration. Utility catalogues, customer verification, payment, and vending display unavailable until their separate authorized providers and backend safeguards are verified.
 
 ## Vercel deployments
 

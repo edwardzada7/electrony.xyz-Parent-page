@@ -1112,11 +1112,12 @@ async function initializeIdentitySignIn() {
   const authMessages = {
     required: "Sign in with Electrony Accounts for account features. Guest checkout remains available.",
     consent_required: "Review and approve the Electrony Bills access request in Electrony Accounts.",
-    verification_required: "Verify your Electrony Account email, then sign in again.",
+    verification_required: "Your Electrony Account email is not verified. Verify your email, then sign in again. Guest checkout remains available.",
     success: "Signed in with Electrony Accounts.",
     expired: "Your Electrony Accounts session expired. Sign in again.",
     cancelled: "Sign-in was cancelled. Guest checkout remains available.",
-    failed: "Sign-in could not be completed. Please try again; guest checkout remains available."
+    failed: "We couldn't verify your sign-in. Please try again; guest checkout remains available.",
+    unavailable: "Sign-in is temporarily unavailable. Please try again later. Guest checkout remains available."
   };
   const showAuthStatus = (message) => {
     if (!authStatus) return;
@@ -1137,6 +1138,7 @@ async function initializeIdentitySignIn() {
     button.addEventListener("click", async (event) => {
       event.preventDefault();
       if (!state.user) {
+        showAuthStatus("Redirecting to Electrony Accounts. Complete sign-in there; return to Bills when authentication is complete.");
         window.location.assign(button.href);
         return;
       }

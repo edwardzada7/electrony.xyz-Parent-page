@@ -137,7 +137,7 @@ test("OAuth start sends a secure-cookie 302 and callback provider errors stay re
       ELECTRONY_IDENTITY_SUPABASE_PUBLISHABLE_KEY: OAUTH_CONFIG.publishableKey,
       ELECTRONY_IDENTITY_OAUTH_CLIENT_ID: CLIENT_ID,
       BILLS_OAUTH_CALLBACK_URL: OAUTH_CONFIG.callbackUrl,
-      BILLS_APP_URL: "https://bills.electrony.xyz/bills/app/",
+      BILLS_APP_URL: "https://bills.electrony.xyz/",
       BILLS_JWT_SECRET: jwtSecret
     },
     stdio: ["ignore", "pipe", "pipe"]
@@ -145,7 +145,7 @@ test("OAuth start sends a secure-cookie 302 and callback provider errors stay re
 
   try {
     await waitForServer(child);
-    const appUrl = "https://bills.electrony.xyz/bills/app/";
+    const appUrl = "https://bills.electrony.xyz/";
     const startOAuth = async (returnTo = appUrl) => fetch(
       `http://127.0.0.1:${port}/api/auth/oauth/start?return_to=${encodeURIComponent(returnTo)}`,
       { redirect: "manual" }
@@ -174,9 +174,22 @@ test("OAuth start sends a secure-cookie 302 and callback provider errors stay re
       `http://127.0.0.1:${port}/api/auth/oauth/start?return_to=${encodeURIComponent("https://attacker.example/")}`,
       { redirect: "manual" }
     );
-    assert.equal(invalidReturnResponse.status, 400);
+    assert.equal(invalidReturnResponse.status, 302);
+    const invalidReturnUrl = new URL(invalidReturnResponse.headers.get("location"));
+    assert.equal(invalidReturnUrl.origin, "https://bills.electrony.xyz");
+    assert.equal(invalidReturnUrl.pathname, "/");
+    assert.equal(invalidReturnUrl.searchParams.get("auth"), "unavailable");
 
-    const returnTo = "https://bills.electrony.xyz/bills/app/?service=data";
+    const unavailableReturnResponse = await fetch(
+      `http://127.0.0.1:${port}/api/auth/oauth/start?return_to=${encodeURIComponent("https://bills.electrony.xyz/bills/app/")}`,
+      { redirect: "manual" }
+    );
+    assert.equal(unavailableReturnResponse.status, 302);
+    const unavailableReturnUrl = new URL(unavailableReturnResponse.headers.get("location"));
+    assert.equal(unavailableReturnUrl.pathname, "/");
+    assert.equal(unavailableReturnUrl.searchParams.get("auth"), "unavailable");
+
+    const returnTo = "https://bills.electrony.xyz/?service=data";
     const startResponse = await fetch(
       `http://127.0.0.1:${port}/api/auth/oauth/start?return_to=${encodeURIComponent(returnTo)}`,
       { redirect: "manual" }
@@ -220,7 +233,7 @@ test("OAuth start sends a secure-cookie 302 and callback provider errors stay re
     assert.equal(callbackBody.includes("access_denied"), false);
     const cancelledUrl = new URL(callbackResponse.headers.get("location"));
     assert.equal(cancelledUrl.origin, "https://bills.electrony.xyz");
-    assert.equal(cancelledUrl.pathname, "/bills/app/");
+    assert.equal(cancelledUrl.pathname, "/");
     assert.equal(cancelledUrl.searchParams.get("service"), "data");
     assert.equal(cancelledUrl.searchParams.get("auth"), "cancelled");
 
@@ -233,7 +246,16 @@ test("OAuth start sends a secure-cookie 302 and callback provider errors stay re
     assert.equal(failedUrl.searchParams.get("auth"), "failed");
     assert.equal(failedUrl.searchParams.get("service"), "data");
 
-    const successStart = await startOAuth("https://bills.electrony.xyz/bills/app/?service=airtime");
+    const missingStateResponse = await fetch(
+      `http://127.0.0.1:${port}/api/auth/oauth/callback?code=not-used`,
+      { headers: { Cookie: cookiePair }, redirect: "manual" }
+    );
+    assert.equal(missingStateResponse.status, 302);
+    const missingStateUrl = new URL(missingStateResponse.headers.get("location"));
+    assert.equal(missingStateUrl.pathname, "/");
+    assert.equal(missingStateUrl.searchParams.get("auth"), "failed");
+
+    const successStart = await startOAuth("https://bills.electrony.xyz/?service=airtime");
     const successOAuth = getOAuthCookie(successStart);
     const successCode = `authorization:${successOAuth.payload.nonce}:${successOAuth.payload.verifier}`;
     const successCallback = await callCallback(successOAuth, successCode);
@@ -461,13 +483,14 @@ test("unverified Supabase accounts are not accepted as Bills customers", () => {
 });
 
 test("Bills OAuth return URL is limited to the configured app route", () => {
-  const appUrl = "https://bills.electrony.xyz/bills/app/";
+  const appUrl = "https://bills.electrony.xyz/";
   assert.equal(
     validateBillsReturnUrl(`${appUrl}?service=data`, appUrl).href,
     `${appUrl}?service=data`
   );
   assert.equal(validateBillsReturnUrl("https://attacker.example/collect", appUrl), null);
-  assert.equal(validateBillsReturnUrl("https://bills.electrony.xyz/other/", appUrl), null);
+  assert.equal(validateBillsReturnUrl("https://bills.electrony.xyz/bills/app/", appUrl), null);
+  assert.equal(validateBillsReturnUrl("https://other.bills.electrony.xyz/", appUrl), null);
   assert.equal(validateBillsReturnUrl(`${appUrl}#fragment`, appUrl), null);
 });
 
@@ -496,6 +519,15 @@ test("unexpected callback path is rejected", () => {
   ), null);
 });
 
+test("production callback must use the exact registered URI", () => {
+  assert.equal(validateOAuthCallback(
+    "https://electronyxyz-parent-page-production.up.railway.app/api/auth/oauth/callback/", "production"
+  ), null);
+  assert.equal(validateOAuthCallback(
+    "https://electronyxyz-parent-page-production.up.railway.app/api/auth/callback", "production"
+  ), null);
+});
+
 test("HTTP origin is rejected in production", () => {
   assert.throws(() => getAllowedOrigins({
     nodeEnv: "production",
@@ -507,7 +539,7 @@ test("HTTP origin is rejected in production", () => {
 test("unapproved credentialed CORS origin is rejected", () => {
   const allowed = getAllowedOrigins({
     nodeEnv: "production",
-    billsAppUrl: "https://bills.electrony.xyz/bills/app/",
+    billsAppUrl: "https://bills.electrony.xyz/",
     allowedOrigins: "https://other.electrony.xyz"
   });
   assert.equal(allowed.has("https://evil.example"), false);
@@ -516,7 +548,7 @@ test("unapproved credentialed CORS origin is rejected", () => {
 test("valid configured HTTPS production origin is accepted", () => {
   const allowed = getAllowedOrigins({
     nodeEnv: "production",
-    billsAppUrl: "https://bills.electrony.xyz/bills/app/",
+    billsAppUrl: "https://bills.electrony.xyz/",
     allowedOrigins: "https://admin.electrony.xyz"
   });
   assert.equal(allowed.has("https://bills.electrony.xyz"), true);

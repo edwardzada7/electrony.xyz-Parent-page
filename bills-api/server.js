@@ -51,7 +51,7 @@ function getValidatedBillsOAuthCallback() {
 function getValidatedBillsAppUrl() {
   const rawAppUrl = readEnv("BILLS_APP_URL").trim();
   const fallback = process.env.NODE_ENV === "production"
-    ? "https://bills.electrony.xyz/bills/app/"
+    ? "https://bills.electrony.xyz/"
     : "http://localhost:4173/bills/app/";
   try {
     const appUrl = new URL(rawAppUrl || fallback);
@@ -231,10 +231,7 @@ function redirectBillsAuthResult(response, rawReturnUrl, status) {
   const returnUrl = validateBillsReturnUrl(rawReturnUrl, appUrl?.href)
     || (appUrl ? new URL(appUrl.href) : null);
   if (!returnUrl) {
-    sendJson(response, 503, {
-      ok: false,
-      error: "The Bills application redirect is not configured safely."
-    });
+    sendOAuthUnavailablePage(response);
     return;
   }
   returnUrl.searchParams.delete("signed_in");
@@ -244,6 +241,29 @@ function redirectBillsAuthResult(response, rawReturnUrl, status) {
     "Cache-Control": "no-store"
   });
   response.end();
+}
+
+function sendOAuthUnavailablePage(response) {
+  response.writeHead(503, {
+    "Content-Type": "text/html; charset=utf-8",
+    "Cache-Control": "no-store",
+    "Content-Security-Policy": "default-src 'none'; base-uri 'none'; frame-ancestors 'none'",
+    "X-Content-Type-Options": "nosniff"
+  });
+  response.end(`<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Sign-in temporarily unavailable | Electrony Bills</title>
+  </head>
+  <body>
+    <main>
+      <h1>Sign-in temporarily unavailable</h1>
+      <p>We couldn't start sign-in with Electrony Accounts. Please try again later. Bills guest checkout remains available.</p>
+    </main>
+  </body>
+</html>`);
 }
 
 function signAuthToken(user) {
@@ -1663,14 +1683,15 @@ async function handleRequest(request, response) {
       nodeEnv: process.env.NODE_ENV
     });
     if (!oauthConfig.ok) {
-      redirectBillsAuthResult(response, returnUrl?.href, "failed");
+      redirectBillsAuthResult(response, returnUrl?.href || billsAppUrl?.href, "unavailable");
       return;
     }
-    if (!billsAppUrl || !returnUrl) {
-      sendJson(response, 400, {
-        ok: false,
-        error: "The Bills sign-in return page is invalid or unavailable."
-      });
+    if (!billsAppUrl) {
+      sendOAuthUnavailablePage(response);
+      return;
+    }
+    if (!returnUrl) {
+      redirectBillsAuthResult(response, billsAppUrl.href, "unavailable");
       return;
     }
     const oauthRequest = createOAuthAuthorizationRequest(oauthConfig);

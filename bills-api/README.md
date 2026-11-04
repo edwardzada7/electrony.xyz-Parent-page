@@ -28,7 +28,7 @@ The quote request accepts `service` and `amount`; `network` and `plan` are requi
 
 The frontend is a static site: browser JavaScript cannot read Railway/Vercel environment variables at runtime. Set the Vercel build environment variable `BILLS_API_BASE_URL` to the Railway API's HTTPS base URL (origin only, without an API path), then deploy or redeploy. The parent Vercel project runs `npm run build:vercel -- --site parent`; that build injects the public URL into the generated `dist/src/config.js`. Do not put credentials in this variable. Local development continues to use `http://localhost:4174`.
 
-On Railway, set `BILLS_APP_URL` to the exact deployed Bills app URL, including `/bills/app/`; the API permits that origin and the local development origins. For any other Vercel/custom frontend domains, set `BILLS_ALLOWED_ORIGINS` to a comma-separated list of exact origins. CORS does not permit wildcard origins or credentials. Changes to `BILLS_API_BASE_URL` require a new Vercel deployment because it is compiled into the static frontend at build time.
+On Railway, set `BILLS_APP_URL` to the exact URL of the deployed app route. The standalone Bills Vercel deployment serves `bills/app/index.html` at `https://bills.electrony.xyz/`; `/bills/app/` on that host is not the app route. The parent-site copy is served separately at `/bills/app/`. The API accepts only the configured origin and exact app path as a return destination, preserving the original page query; it does not trust the browser to choose another host or route. Set `BILLS_APP_URL=https://bills.electrony.xyz/` for the standalone Bills deployment. `BILLS_ALLOWED_ORIGINS` only controls exact CORS origins and does not expand OAuth return destinations. CORS does not permit wildcard origins or credentials. Changes to `BILLS_API_BASE_URL` require a new Vercel deployment because it is compiled into the static frontend at build time.
 
 The repository does not contain an actual Railway deployment URL or a Vercel project/domain configuration. Do not substitute a guessed URL; use the Railway service's assigned public HTTPS domain.
 
@@ -161,7 +161,7 @@ Supabase Auth is being used as an OAuth 2.1 authorization server according to th
 
 - Accounts sign-in: `https://accounts.electrony.xyz/`
 - Accounts consent: `https://accounts.electrony.xyz/oauth/consent/?authorization_id=<authorization_id>`
-- Bills app: `https://bills.electrony.xyz/bills/app/`
+- Bills app: `https://bills.electrony.xyz/`
 - Bills OAuth initiation: `GET https://<deployed-bills-api>/api/auth/oauth/start`
 - Bills OAuth callback: `GET https://<deployed-bills-api>/api/auth/oauth/callback`
 - Current identity: `GET /api/auth/me`
@@ -180,6 +180,11 @@ The callback URL registered in Supabase must exactly equal `BILLS_OAUTH_CALLBACK
 - Register Electrony Bills as a separate public OAuth client with the exact Railway callback URL.
 - The Authorization Code flow, PKCE S256, and exact redirect URI validation are required.
 - Use only scopes `openid email`; profile and phone are not required. The `nonce` is included in the authorization request.
+- Set the registered client ID to the value supplied as `ELECTRONY_IDENTITY_OAUTH_CLIENT_ID`; the repository does not contain the live client ID.
+- Set the client authentication method to `none` (public client); do not create or configure a client secret.
+- Keep the registered callback URI exactly `https://electronyxyz-parent-page-production.up.railway.app/api/auth/oauth/callback`. Do not register the Bills frontend URL as the OAuth callback.
+- The identity endpoints are derived from `ELECTRONY_IDENTITY_SUPABASE_URL`: authorization at `/auth/v1/oauth/authorize`, token exchange at `/auth/v1/oauth/token`, issuer `<project-url>/auth/v1`, and JWKS at `<project-url>/auth/v1/.well-known/jwks.json`. ID-token signature verification accepts RS256 and ES256.
+- The OAuth callback allowlist is the exact Railway URI above. The separate post-login destination is `BILLS_APP_URL=https://bills.electrony.xyz/`; only this exact Bills origin and path are accepted by default, with the original page query preserved. The parent-site mirror route `/bills/app/` is not a valid return destination unless the API is deliberately configured to that exact deployed frontend URL.
 - Configure `ELECTRONY_IDENTITY_SUPABASE_URL`, `ELECTRONY_IDENTITY_SUPABASE_PUBLISHABLE_KEY`, `ELECTRONY_IDENTITY_OAUTH_CLIENT_ID`, and `BILLS_OAUTH_CALLBACK_URL` in Railway.
 - `ELECTRONY_IDENTITY_SUPABASE_PUBLISHABLE_KEY` is public; never configure or expose a service-role/secret key in Bills or its frontend.
 
