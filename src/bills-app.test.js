@@ -6,7 +6,7 @@ const vm = require("node:vm");
 
 const appSource = fs.readFileSync(path.join(__dirname, "bills-app.js"), "utf8");
 
-function createAppContext(search = "?service=virtual-cards", fetchHandler = null, withIdentity = false) {
+function createAppContext(search = "?service=virtual-cards", fetchHandler = null, withIdentity = false, pageUrl = null) {
   const requests = [];
   const servicePanel = {
     innerHTML: "",
@@ -62,13 +62,14 @@ function createAppContext(search = "?service=virtual-cards", fetchHandler = null
       return [];
     }
   };
+  const currentUrl = new URL(pageUrl || `https://example.test/bills/app/${search}`);
   const window = {
     ElectronyConfig: { billsApiBaseUrl: "https://bills-api.example.test" },
     location: {
-      href: `https://example.test/bills/app/${search}`,
+      href: currentUrl.href,
       protocol: "https:",
-      search,
-      pathname: "/bills/app/",
+      search: currentUrl.search,
+      pathname: currentUrl.pathname,
       assign(url) {
         assignments.push(url);
       }
@@ -205,7 +206,8 @@ test("OAuth sign-in preserves the Bills page and displays cancellation without b
   const { context, accountsButton, authStatus } = createAppContext(
     "?service=data&auth=cancelled",
     async () => ({ ok: false, json: async () => ({ ok: false }) }),
-    true
+    true,
+    "https://bills.electrony.xyz/?service=data&auth=cancelled"
   );
 
   await context.initializeIdentitySignIn();
@@ -213,7 +215,8 @@ test("OAuth sign-in preserves the Bills page and displays cancellation without b
   const signInUrl = new URL(accountsButton.href);
   const returnTo = new URL(signInUrl.searchParams.get("return_to"));
   assert.equal(signInUrl.pathname, "/api/auth/oauth/start");
-  assert.equal(returnTo.pathname, "/bills/app/");
+  assert.equal(returnTo.origin, "https://bills.electrony.xyz");
+  assert.equal(returnTo.pathname, "/");
   assert.equal(returnTo.searchParams.get("service"), "data");
   assert.equal(authStatus.hidden, false);
   assert.match(authStatus.textContent, /Sign-in was cancelled/);

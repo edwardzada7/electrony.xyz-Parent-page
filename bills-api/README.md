@@ -30,6 +30,23 @@ The frontend is a static site: browser JavaScript cannot read Railway/Vercel env
 
 On Railway, set `BILLS_APP_URL` to the exact URL of the deployed app route. The standalone Bills Vercel deployment serves `bills/app/index.html` at `https://bills.electrony.xyz/`; `/bills/app/` on that host is not the app route. The parent-site copy is served separately at `/bills/app/`. The API accepts only the configured origin and exact app path as a return destination, preserving the original page query; it does not trust the browser to choose another host or route. Set `BILLS_APP_URL=https://bills.electrony.xyz/` for the standalone Bills deployment. `BILLS_ALLOWED_ORIGINS` only controls exact CORS origins and does not expand OAuth return destinations. CORS does not permit wildcard origins or credentials. Changes to `BILLS_API_BASE_URL` require a new Vercel deployment because it is compiled into the static frontend at build time.
 
+### Production Bills OAuth configuration and verification
+
+Inspect these exact variable names in the Railway Bills API service without sharing their values:
+
+- `BILLS_APP_URL` must be `https://bills.electrony.xyz/`. Production OAuth rejects any other origin or path, including `/bills/app/`.
+- `BILLS_OAUTH_CALLBACK_URL` must be `https://electronyxyz-parent-page-production.up.railway.app/api/auth/oauth/callback`.
+- `ELECTRONY_IDENTITY_SUPABASE_URL`
+- `ELECTRONY_IDENTITY_SUPABASE_PUBLISHABLE_KEY`
+- `ELECTRONY_IDENTITY_OAUTH_CLIENT_ID`
+- `BILLS_JWT_SECRET` must be a private random value of at least 32 characters. Never disclose or place it in frontend configuration.
+
+The callback is the exact Railway API URL registered as the Supabase OAuth redirect URI; it is not the Bills post-login destination. In the Electrony Identity/Supabase OAuth Server registration, confirm the Bills client ID matches `ELECTRONY_IDENTITY_OAUTH_CLIENT_ID`, the client is public with `token_endpoint_auth_method=none`, PKCE is enabled, and the callback allowlist contains the exact URL above. Keep the consent path set to `/oauth/consent/` and confirm that the published consent page is served by `https://accounts.electrony.xyz/`.
+
+After an authorized deployment and with an authorized Accounts test user, verify in a browser: (1) start sign-in from `https://bills.electrony.xyz/`; (2) confirm the Accounts consent page identifies Bills correctly; (3) approve consent; (4) confirm Supabase returns to the exact Railway callback; (5) confirm the API completes server-side token verification and returns to `https://bills.electrony.xyz/`; (6) refresh and confirm the session remains valid; (7) sign out and confirm the Bills session is invalidated; and (8) repeat the flow and cancel consent, confirming a clear cancellation message on the Bills root. Confirm guest checkout remains available. Do not test payments or vending as part of OAuth verification.
+
+Do not change Railway variables, Accounts registration, DNS, or deployment settings without explicit authorization. A local test or successful redirect alone does not establish production authentication.
+
 The repository does not contain an actual Railway deployment URL or a Vercel project/domain configuration. Do not substitute a guessed URL; use the Railway service's assigned public HTTPS domain.
 
 ### Hardware and Energy contact enquiries

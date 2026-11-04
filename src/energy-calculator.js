@@ -6,6 +6,8 @@ const applianceRows = document.querySelector("#energy-appliance-rows");
 const applianceTemplate = document.querySelector("#energy-appliance-template");
 const calculatorValidation = document.querySelector("#energy-calculator-validation");
 const calculatorResults = document.querySelector("#energy-calculator-results");
+const energyCalculatorSection = document.querySelector(".energy-calculator--hero");
+const energyCalculatorWorkspace = document.querySelector(".energy-calculator__workspace");
 const breakdownBody = document.querySelector("#energy-appliance-breakdown");
 const recommendationProducts = document.querySelector("#energy-recommendation-products");
 const recommendationFallback = document.querySelector("#energy-recommendation-fallback");
@@ -515,3 +517,29 @@ document.querySelector("#energy-results-enquiry").addEventListener("click", () =
 });
 
 resetCalculator();
+
+energyCalculatorWorkspace.addEventListener("focusin", () => {
+  energyCalculatorSection.classList.add("is-engaged");
+});
+energyCalculatorWorkspace.addEventListener("focusout", (event) => {
+  if (!(event.relatedTarget instanceof Node) || !energyCalculatorWorkspace.contains(event.relatedTarget)) {
+    energyCalculatorSection.classList.remove("is-engaged");
+  }
+});
+energyCalculatorWorkspace.addEventListener("pointerdown", () => {
+  energyCalculatorSection.classList.add("is-engaged");
+});
+energyCalculatorWorkspace.addEventListener("pointerleave", () => {
+  if (!energyCalculatorWorkspace.contains(document.activeElement)) {
+    energyCalculatorSection.classList.remove("is-engaged");
+  }
+});
+
+if (typeof window.IntersectionObserver === "function") {
+  const energyCalculatorObserver = new IntersectionObserver(([entry]) => {
+    energyCalculatorSection.classList.toggle("is-visible", entry.isIntersecting);
+  }, { threshold: 0.1 });
+  energyCalculatorObserver.observe(energyCalculatorWorkspace);
+} else {
+  energyCalculatorSection.classList.add("is-visible");
+}

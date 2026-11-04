@@ -1942,6 +1942,164 @@
   margin: 0 0 1rem;
 }
 
+.energy-flow {
+  display: grid;
+  min-height: 7rem;
+  grid-template-columns: 5rem minmax(0, 1fr);
+  align-items: center;
+  margin: 0 0 0.35rem;
+  pointer-events: none;
+}
+
+.energy-flow__bulb {
+  z-index: 1;
+  display: block;
+  width: 5rem;
+  height: 6.9rem;
+  overflow: visible;
+  filter: drop-shadow(0 0 0.35rem rgb(224 197 116 / 18%));
+}
+
+.energy-flow__bulb-aura {
+  opacity: 0.46;
+  transform-origin: center;
+}
+
+.energy-flow__wire {
+  display: block;
+  width: 100%;
+  height: 7rem;
+  overflow: visible;
+}
+
+.energy-flow__wire--mobile {
+  display: none;
+}
+
+.energy-flow__wire-shadow {
+  fill: none;
+  stroke: #536f50;
+  stroke-linecap: round;
+  stroke-width: 4;
+  opacity: 0.28;
+  vector-effect: non-scaling-stroke;
+}
+
+.energy-flow__wire-core {
+  fill: none;
+  stroke: url("#energy-wire-metal");
+  stroke-linecap: round;
+  stroke-width: 2.2;
+  vector-effect: non-scaling-stroke;
+}
+
+.energy-flow__wire-highlight {
+  fill: none;
+  stroke: #f8fff0;
+  stroke-linecap: round;
+  stroke-width: 0.75;
+  opacity: 0.86;
+  vector-effect: non-scaling-stroke;
+}
+
+.energy-flow__pulse {
+  fill: none;
+  stroke: #f7e9a1;
+  stroke-dasharray: 20 1000;
+  stroke-dashoffset: 1020;
+  stroke-linecap: round;
+  stroke-width: 4;
+  opacity: 0;
+  filter: drop-shadow(0 0 0.18rem #fff0a8);
+  vector-effect: non-scaling-stroke;
+}
+
+.energy-flow__terminal {
+  fill: #dce8d4;
+  stroke: #6b8465;
+  stroke-width: 2;
+  vector-effect: non-scaling-stroke;
+}
+
+.energy-calculator--hero.is-visible .energy-flow__pulse {
+  opacity: 0.9;
+  animation: energy-flow-travel 6.4s linear infinite;
+}
+
+.energy-calculator--hero.is-visible .energy-flow__filament {
+  animation: energy-filament-breathe 3.6s ease-in-out infinite;
+}
+
+.energy-calculator--hero.is-visible .energy-flow__bulb-aura {
+  animation: energy-bulb-breathe 3.6s ease-in-out infinite;
+}
+
+.energy-calculator--hero:focus-within .energy-flow__pulse,
+.energy-calculator--hero.is-engaged .energy-flow__pulse {
+  stroke-width: 5;
+  opacity: 1;
+  animation-duration: 3.8s;
+}
+
+.energy-calculator--hero:focus-within .energy-flow__bulb,
+.energy-calculator--hero.is-engaged .energy-flow__bulb {
+  filter: drop-shadow(0 0 0.65rem rgb(224 197 116 / 40%));
+}
+
+@keyframes energy-flow-travel {
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+@keyframes energy-filament-breathe {
+  0%,
+  100% {
+    filter: drop-shadow(0 0 0.12rem rgb(255 215 136 / 55%));
+    opacity: 0.82;
+  }
+
+  50% {
+    filter: drop-shadow(0 0 0.4rem rgb(255 221 148 / 95%));
+    opacity: 1;
+  }
+}
+
+@keyframes energy-bulb-breathe {
+  0%,
+  100% {
+    opacity: 0.38;
+    transform: scale(0.96);
+  }
+
+  50% {
+    opacity: 0.72;
+    transform: scale(1.04);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .energy-calculator--hero.is-visible .energy-flow__pulse,
+  .energy-calculator--hero.is-visible .energy-flow__filament,
+  .energy-calculator--hero.is-visible .energy-flow__bulb-aura {
+    animation: none;
+  }
+
+  .energy-flow__pulse {
+    display: none;
+  }
+
+  .energy-flow__filament {
+    filter: drop-shadow(0 0 0.2rem rgb(255 215 136 / 65%));
+    opacity: 1;
+  }
+
+  .energy-flow__bulb-aura {
+    opacity: 0.58;
+    transform: none;
+  }
+}
+
 .energy-calculator--hero .energy-calculator__workspace {
   grid-template-columns: minmax(0, 1fr);
 }
@@ -2091,6 +2249,30 @@
 }
 
 @media (max-width: 48rem) {
+  .energy-flow {
+    display: flex;
+    min-height: 0;
+    flex-direction: column;
+    align-items: stretch;
+    margin-bottom: 0.25rem;
+  }
+
+  .energy-flow__bulb {
+    width: 4.5rem;
+    height: 5.8rem;
+    margin-left: clamp(1.25rem, 10vw, 4.5rem);
+  }
+
+  .energy-flow__wire--wide {
+    display: none;
+  }
+
+  .energy-flow__wire--mobile {
+    display: block;
+    height: 3.9rem;
+    margin-top: -0.15rem;
+  }
+
   .energy-calculator__hero-heading {
     align-items: flex-start;
   }
@@ -2101,6 +2283,18 @@
 
   .energy-calculator__recommendation-grid {
     grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 32rem) {
+  .energy-flow__bulb {
+    width: 4rem;
+    height: 5.35rem;
+    margin-left: 1rem;
+  }
+
+  .energy-flow__wire--mobile {
+    height: 3.5rem;
   }
 }
 

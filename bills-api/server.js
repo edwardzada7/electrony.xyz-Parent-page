@@ -16,6 +16,8 @@ const {
   submitContactEnquiry
 } = require("./contact-enquiries");
 const {
+  PRODUCTION_BILLS_APP_URL,
+  validateBillsAppUrl,
   validateOAuthCallback,
   getAllowedOrigins: getSecurityAllowedOrigins,
   verifySupabaseIdToken,
@@ -51,20 +53,10 @@ function getValidatedBillsOAuthCallback() {
 function getValidatedBillsAppUrl() {
   const rawAppUrl = readEnv("BILLS_APP_URL").trim();
   const fallback = process.env.NODE_ENV === "production"
-    ? "https://bills.electrony.xyz/"
+    ? PRODUCTION_BILLS_APP_URL
     : "http://localhost:4173/bills/app/";
-  try {
-    const appUrl = new URL(rawAppUrl || fallback);
-    if (appUrl.username || appUrl.password || appUrl.search || appUrl.hash) return null;
-    if (process.env.NODE_ENV === "production"
-      && (!rawAppUrl || appUrl.protocol !== "https:" || appUrl.port)) return null;
-    if (!["http:", "https:"].includes(appUrl.protocol)) return null;
-    if (appUrl.protocol === "http:"
-      && !["localhost", "127.0.0.1"].includes(appUrl.hostname)) return null;
-    return appUrl;
-  } catch {
-    return null;
-  }
+  if (process.env.NODE_ENV === "production" && !rawAppUrl) return null;
+  return validateBillsAppUrl(rawAppUrl || fallback, process.env.NODE_ENV);
 }
 
 function paymentsBlocked() {
@@ -227,7 +219,8 @@ function clearIdentitySessionCookies(response) {
 }
 
 function redirectBillsAuthResult(response, rawReturnUrl, status) {
-  const appUrl = getValidatedBillsAppUrl();
+  const appUrl = getValidatedBillsAppUrl()
+    || (process.env.NODE_ENV === "production" ? new URL(PRODUCTION_BILLS_APP_URL) : null);
   const returnUrl = validateBillsReturnUrl(rawReturnUrl, appUrl?.href)
     || (appUrl ? new URL(appUrl.href) : null);
   if (!returnUrl) {
@@ -1687,7 +1680,7 @@ async function handleRequest(request, response) {
       return;
     }
     if (!billsAppUrl) {
-      sendOAuthUnavailablePage(response);
+      redirectBillsAuthResult(response, null, "unavailable");
       return;
     }
     if (!returnUrl) {

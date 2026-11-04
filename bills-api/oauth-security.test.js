@@ -7,6 +7,7 @@ const test = require("node:test");
 const { SignJWT } = require("jose");
 const {
   validateOAuthCallback,
+  validateBillsAppUrl,
   validateBillsReturnUrl,
   validateOAuthStartConfiguration,
   createOAuthAuthorizationRequest,
@@ -92,6 +93,15 @@ test("valid production OAuth configuration is accepted", () => {
   assert.equal(result.projectUrl, PROJECT_URL);
   assert.equal(result.clientId, CLIENT_ID);
   assert.equal(result.callbackUrl, OAUTH_CONFIG.callbackUrl);
+});
+
+test("production Bills app URL is restricted to the standalone root", () => {
+  assert.equal(
+    validateBillsAppUrl("https://bills.electrony.xyz/", "production").href,
+    "https://bills.electrony.xyz/"
+  );
+  assert.equal(validateBillsAppUrl("https://bills.electrony.xyz/bills/app/", "production"), null);
+  assert.equal(validateBillsAppUrl("https://attacker.example/", "production"), null);
 });
 
 test("OAuth authorization request uses Supabase endpoint, exact callback, scopes, state, nonce, and PKCE S256", () => {
@@ -254,6 +264,24 @@ test("OAuth start sends a secure-cookie 302 and callback provider errors stay re
     const missingStateUrl = new URL(missingStateResponse.headers.get("location"));
     assert.equal(missingStateUrl.pathname, "/");
     assert.equal(missingStateUrl.searchParams.get("auth"), "failed");
+
+    const expiredStateStart = await startOAuth();
+    const expiredStateOAuth = getOAuthCookie(expiredStateStart);
+    expiredStateOAuth.payload.expiresAt = Date.now() - 1;
+    const expiredStateBody = Buffer.from(JSON.stringify(expiredStateOAuth.payload)).toString("base64url");
+    const expiredStateSignature = crypto.createHmac("sha256", jwtSecret)
+      .update(expiredStateBody).digest("base64url");
+    const expiredStateCookie = `__Secure-electrony-bills-oauth=${encodeURIComponent(`${expiredStateBody}.${expiredStateSignature}`)}`;
+    const expiredStateCallback = await callCallback(
+      expiredStateOAuth,
+      "not-used",
+      expiredStateCookie
+    );
+    assert.equal(expiredStateCallback.status, 302);
+    const expiredStateUrl = new URL(expiredStateCallback.headers.get("location"));
+    assert.equal(expiredStateUrl.origin, "https://bills.electrony.xyz");
+    assert.equal(expiredStateUrl.pathname, "/");
+    assert.equal(expiredStateUrl.searchParams.get("auth"), "failed");
 
     const successStart = await startOAuth("https://bills.electrony.xyz/?service=airtime");
     const successOAuth = getOAuthCookie(successStart);

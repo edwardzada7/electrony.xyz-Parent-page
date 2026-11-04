@@ -3,6 +3,7 @@ const { createRemoteJWKSet, createLocalJWKSet, jwtVerify } = require("jose");
 
 const PRODUCTION_CALLBACK =
   "https://electronyxyz-parent-page-production.up.railway.app/api/auth/oauth/callback";
+const PRODUCTION_BILLS_APP_URL = "https://bills.electrony.xyz/";
 const ALLOWED_JWT_ALGORITHMS = ["RS256", "ES256"];
 
 const remoteJwks = new Map();
@@ -38,6 +39,23 @@ function validateOAuthCallback(rawCallbackUrl, nodeEnv = process.env.NODE_ENV) {
     if (callback.protocol !== "http:"
       || !["localhost", "127.0.0.1"].includes(callback.hostname)) return null;
     return callback;
+  } catch {
+    return null;
+  }
+}
+
+function validateBillsAppUrl(rawAppUrl, nodeEnv = process.env.NODE_ENV) {
+  if (typeof rawAppUrl !== "string" || !rawAppUrl.trim()) return null;
+  try {
+    const appUrl = new URL(rawAppUrl.trim());
+    if (appUrl.username || appUrl.password || appUrl.search || appUrl.hash) return null;
+    if (!["http:", "https:"].includes(appUrl.protocol)) return null;
+    if (nodeEnv === "production") {
+      return appUrl.href === PRODUCTION_BILLS_APP_URL ? appUrl : null;
+    }
+    if (appUrl.protocol === "http:"
+      && !["localhost", "127.0.0.1"].includes(appUrl.hostname)) return null;
+    return appUrl;
   } catch {
     return null;
   }
@@ -308,7 +326,9 @@ function isSupabaseEmailVerified(user) {
 
 module.exports = {
   PRODUCTION_CALLBACK,
+  PRODUCTION_BILLS_APP_URL,
   validateOAuthCallback,
+  validateBillsAppUrl,
   validateOAuthStartConfiguration,
   createOAuthAuthorizationRequest,
   validateBillsReturnUrl,
