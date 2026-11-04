@@ -39,6 +39,13 @@ const productPageSize = 12;
 let selectedProduct = null;
 let selectedProductCalculationSummary = "";
 let currentProductPage = 1;
+const packageSceneObserver = "IntersectionObserver" in window
+  ? new IntersectionObserver((entries) => {
+    entries.forEach((entry) => {
+      entry.target.classList.toggle("is-visible", entry.isIntersecting);
+    });
+  }, { rootMargin: "80px 0px" })
+  : null;
 
 function safeImageUrl(value) {
   if (typeof value !== "string" || !value.trim()) return null;
@@ -246,6 +253,7 @@ function createPackageCard(solarPackage, comparison = null) {
   );
   card.append(title, application);
   if (badge) card.appendChild(badge);
+  card.appendChild(createPackageScene(solarPackage.id));
   card.appendChild(summary);
   if (comparison) {
     const comparisonList = createElement("ul", "energy-package-card__comparison");
@@ -295,6 +303,174 @@ function createPackageCard(solarPackage, comparison = null) {
   card.append(source, footer);
   return card;
 }
+
+function createPackageScene(packageId) {
+  const sceneMarkup = packageSceneMarkup[packageId];
+  if (!sceneMarkup) {
+    throw new Error(`No solar package scene is configured for "${packageId}".`);
+  }
+  const scene = createElement("figure", `energy-package-scene energy-package-scene--${packageId}`);
+  scene.setAttribute("aria-hidden", "true");
+  scene.innerHTML = sceneMarkup;
+  if (packageSceneObserver) {
+    packageSceneObserver.observe(scene);
+  } else {
+    scene.classList.add("is-visible");
+  }
+  return scene;
+}
+
+const packageSceneMarkup = Object.freeze({
+  "basic-small-home-office": `
+    <svg class="energy-package-scene__art" viewBox="0 0 640 220" xmlns="http://www.w3.org/2000/svg" focusable="false">
+      <rect class="energy-package-scene__backdrop" width="640" height="220" rx="14"/>
+      <circle class="energy-package-scene__sun" cx="105" cy="40" r="20"/>
+      <circle class="energy-package-scene__sunlight" cx="105" cy="40" r="32"/>
+      <path class="energy-package-scene__ground" d="M22 190H618"/>
+      <g class="energy-package-scene__panel">
+        <path d="m27 83 75-14 14 42-75 14z"/>
+        <path class="energy-package-scene__panel-grid" d="m52 79 14 42m15-46 14 42M39 98l75-14m-68 34 75-14"/>
+        <path class="energy-package-scene__panel-glint" d="m31 83 75-14"/>
+      </g>
+      <rect class="energy-package-scene__equipment" x="48" y="139" width="54" height="37" rx="5"/>
+      <path class="energy-package-scene__equipment-detail" d="M61 151h28m-28 9h19"/>
+      <path class="energy-package-scene__cable-shadow" d="M102 159C164 159 175 174 240 174s66-7 114-7"/>
+      <path class="energy-package-scene__cable" d="M102 159C164 159 175 174 240 174s66-7 114-7"/>
+      <path class="energy-package-scene__pulse" d="M102 159C164 159 175 174 240 174s66-7 114-7"/>
+      <path class="energy-package-scene__building" d="m331 104 69-49 70 49v80H331z"/>
+      <path class="energy-package-scene__roof" d="m319 107 81-59 81 59"/>
+      <rect class="energy-package-scene__window energy-package-scene__window--one" x="348" y="117" width="25" height="23" rx="2"/>
+      <rect class="energy-package-scene__window energy-package-scene__window--two" x="390" y="117" width="25" height="23" rx="2"/>
+      <rect class="energy-package-scene__window energy-package-scene__window--three" x="432" y="117" width="25" height="23" rx="2"/>
+      <path class="energy-package-scene__window-frame" d="M360 117v23m42-23v23m42-23v23"/>
+      <path class="energy-package-scene__door" d="M386 151h29v33h-29z"/>
+      <path class="energy-package-scene__cable-entry" d="M354 167h10"/>
+      <g class="energy-package-scene__detail">
+        <path d="M478 125h23v10h-23zM482 135v8m15-8v8"/>
+        <path d="M487 82v20m-10-10h20m-17-7 14 14m0-14-14 14"/>
+        <rect x="513" y="115" width="22" height="34" rx="3"/>
+        <path d="M518 120h12m-12 5h12m-12 5h12"/>
+        <rect x="546" y="123" width="33" height="21" rx="2"/>
+        <path d="M555 149h15m-7-5v5"/>
+      </g>
+      <text class="energy-package-scene__label" x="28" y="207">SMALL HOME / OFFICE</text>
+      <text class="energy-package-scene__label" x="494" y="207">EVERYDAY LOADS</text>
+    </svg>`,
+  "medium-home-office": `
+    <svg class="energy-package-scene__art" viewBox="0 0 640 220" xmlns="http://www.w3.org/2000/svg" focusable="false">
+      <rect class="energy-package-scene__backdrop" width="640" height="220" rx="14"/>
+      <circle class="energy-package-scene__sun" cx="105" cy="40" r="20"/>
+      <circle class="energy-package-scene__sunlight" cx="105" cy="40" r="32"/>
+      <path class="energy-package-scene__ground" d="M22 190H618"/>
+      <g class="energy-package-scene__panel">
+        <path d="m24 75 82-14 13 40-82 14z"/>
+        <path class="energy-package-scene__panel-grid" d="m44 72 13 40m17-43 13 40m17-44 13 40M30 88l82-14m-70 35 82-14"/>
+        <path class="energy-package-scene__panel-glint" d="m28 75 82-14"/>
+      </g>
+      <rect class="energy-package-scene__equipment" x="42" y="139" width="58" height="37" rx="5"/>
+      <path class="energy-package-scene__equipment-detail" d="M55 151h31m-31 9h22"/>
+      <path class="energy-package-scene__cable-shadow" d="M100 159C160 159 181 174 239 174s64-8 103-8"/>
+      <path class="energy-package-scene__cable" d="M100 159C160 159 181 174 239 174s64-8 103-8"/>
+      <path class="energy-package-scene__pulse" d="M100 159C160 159 181 174 239 174s64-8 103-8"/>
+      <path class="energy-package-scene__building" d="m322 105 53-39 54 39v79H322z"/>
+      <path class="energy-package-scene__roof" d="m312 108 63-47 64 47"/>
+      <rect class="energy-package-scene__window energy-package-scene__window--one" x="337" y="116" width="25" height="25" rx="2"/>
+      <rect class="energy-package-scene__window energy-package-scene__window--two" x="378" y="116" width="25" height="25" rx="2"/>
+      <path class="energy-package-scene__window-frame" d="M349 116v25m41-25v25"/>
+      <path class="energy-package-scene__door" d="M361 151h29v33h-29z"/>
+      <path class="energy-package-scene__cable-entry" d="M339 166h10"/>
+      <path class="energy-package-scene__building energy-package-scene__building--office" d="M449 94h130v90H449z"/>
+      <path class="energy-package-scene__roof energy-package-scene__roof--office" d="M441 94h146"/>
+      <rect class="energy-package-scene__window energy-package-scene__window--three" x="463" y="108" width="24" height="24" rx="2"/>
+      <rect class="energy-package-scene__window energy-package-scene__window--four" x="500" y="108" width="24" height="24" rx="2"/>
+      <rect class="energy-package-scene__window energy-package-scene__window--five" x="537" y="108" width="24" height="24" rx="2"/>
+      <path class="energy-package-scene__window-frame" d="M475 108v24m37-24v24m37-24v24"/>
+      <path class="energy-package-scene__door" d="M497 148h32v36h-32z"/>
+      <g class="energy-package-scene__detail">
+        <rect x="300" y="135" width="15" height="32" rx="2"/>
+        <path d="M304 141h7m-7 5h7m-7 5h7m-7 5h7"/>
+        <rect x="283" y="143" width="13" height="24" rx="2"/>
+        <path d="M286 148h7m-7 5h7m-7 5h7"/>
+        <path d="M537 77v12m-9-6h18m-15-6 12 12m0-12-12 12"/>
+        <path d="M566 83h20v7h-20zM570 90v6m12-6v6"/>
+      </g>
+      <text class="energy-package-scene__label" x="28" y="207">STANDARD HOUSEHOLD</text>
+      <text class="energy-package-scene__label" x="460" y="207">MEDIUM OFFICE</text>
+    </svg>`,
+  "premium-executive-corporate": `
+    <svg class="energy-package-scene__art" viewBox="0 0 640 220" xmlns="http://www.w3.org/2000/svg" focusable="false">
+      <rect class="energy-package-scene__backdrop" width="640" height="220" rx="14"/>
+      <circle class="energy-package-scene__sun" cx="103" cy="39" r="20"/>
+      <circle class="energy-package-scene__sunlight" cx="103" cy="39" r="32"/>
+      <path class="energy-package-scene__ground" d="M22 190H618"/>
+      <g class="energy-package-scene__panel">
+        <path d="m22 72 85-14 14 42-85 14z"/>
+        <path class="energy-package-scene__panel-grid" d="m42 69 14 42m19-45 14 42m19-46 14 42M28 85l85-14m-72 35 85-14"/>
+        <path class="energy-package-scene__panel-glint" d="m26 72 85-14"/>
+      </g>
+      <rect class="energy-package-scene__equipment" x="41" y="138" width="62" height="39" rx="5"/>
+      <path class="energy-package-scene__equipment-detail" d="M55 150h34m-34 10h24"/>
+      <rect class="energy-package-scene__battery" x="111" y="128" width="31" height="49" rx="4"/>
+      <path class="energy-package-scene__battery-fill" d="M118 165h17v6h-17z"/>
+      <path class="energy-package-scene__cable-shadow" d="M103 158C168 158 187 173 248 173s52-7 81-7"/>
+      <path class="energy-package-scene__cable" d="M103 158C168 158 187 173 248 173s52-7 81-7"/>
+      <path class="energy-package-scene__pulse" d="M103 158C168 158 187 173 248 173s52-7 81-7"/>
+      <path class="energy-package-scene__building" d="M329 84h245v100H329z"/>
+      <path class="energy-package-scene__roof energy-package-scene__roof--office" d="M321 84h261"/>
+      <path class="energy-package-scene__building-detail" d="M329 149h245M411 84v100m82-100v100"/>
+      <rect class="energy-package-scene__window energy-package-scene__window--one" x="347" y="101" width="42" height="35" rx="2"/>
+      <rect class="energy-package-scene__window energy-package-scene__window--two" x="429" y="101" width="42" height="35" rx="2"/>
+      <rect class="energy-package-scene__window energy-package-scene__window--three" x="511" y="101" width="42" height="35" rx="2"/>
+      <rect class="energy-package-scene__window energy-package-scene__window--four" x="347" y="157" width="42" height="20" rx="2"/>
+      <rect class="energy-package-scene__window energy-package-scene__window--five" x="429" y="157" width="42" height="20" rx="2"/>
+      <rect class="energy-package-scene__window energy-package-scene__window--six" x="511" y="157" width="42" height="20" rx="2"/>
+      <path class="energy-package-scene__cable-entry" d="M329 166h11"/>
+      <g class="energy-package-scene__detail">
+        <path d="M354 73v9m-8-4h16m-13-6 10 10m0-10-10 10M436 73v9m-8-4h16m-13-6 10 10m0-10-10 10M518 73v9m-8-4h16m-13-6 10 10m0-10-10 10"/>
+        <path d="M267 161v-14h26v14m-31 3h36v6h-36z"/>
+        <path d="M278 147v-8m-7 4h14m-11-7 8 8m0-8-8 8"/>
+      </g>
+      <text class="energy-package-scene__label" x="28" y="207">12-PANEL ARRAY</text>
+      <text class="energy-package-scene__label" x="482" y="207">HOME / ENTERPRISE</text>
+    </svg>`,
+  "heavy-commercial-industrial": `
+    <svg class="energy-package-scene__art" viewBox="0 0 640 220" xmlns="http://www.w3.org/2000/svg" focusable="false">
+      <rect class="energy-package-scene__backdrop" width="640" height="220" rx="14"/>
+      <circle class="energy-package-scene__sun" cx="94" cy="38" r="20"/>
+      <circle class="energy-package-scene__sunlight" cx="94" cy="38" r="32"/>
+      <path class="energy-package-scene__ground" d="M22 190H618"/>
+      <g class="energy-package-scene__panel">
+        <path d="m20 69 91-14 13 40-91 14z"/>
+        <path class="energy-package-scene__panel-grid" d="m36 66 13 40m17-43 13 40m17-43 13 40M25 81l91-14m-80 32 91-14"/>
+        <path class="energy-package-scene__panel-glint" d="m24 69 91-14"/>
+      </g>
+      <rect class="energy-package-scene__equipment" x="37" y="135" width="57" height="42" rx="5"/>
+      <path class="energy-package-scene__equipment-detail" d="M49 148h32m-32 10h25"/>
+      <rect class="energy-package-scene__battery" x="101" y="126" width="22" height="51" rx="3"/>
+      <rect class="energy-package-scene__battery" x="128" y="126" width="22" height="51" rx="3"/>
+      <rect class="energy-package-scene__battery" x="155" y="126" width="22" height="51" rx="3"/>
+      <path class="energy-package-scene__battery-fill" d="M106 164h12v7h-12zm27 0h12v7h-12zm27 0h12v7h-12z"/>
+      <path class="energy-package-scene__cable-shadow" d="M94 157C170 157 191 174 260 174s49-8 84-8"/>
+      <path class="energy-package-scene__cable" d="M94 157C170 157 191 174 260 174s49-8 84-8"/>
+      <path class="energy-package-scene__pulse" d="M94 157C170 157 191 174 260 174s49-8 84-8"/>
+      <path class="energy-package-scene__building" d="M344 116 378 86l32 30 33-30 33 30 34-30 42 30v68H344z"/>
+      <path class="energy-package-scene__roof" d="m335 119 43-40 32 30 33-30 33 30 34-30 51 39"/>
+      <rect class="energy-package-scene__window energy-package-scene__window--one" x="365" y="126" width="35" height="28" rx="2"/>
+      <rect class="energy-package-scene__window energy-package-scene__window--two" x="421" y="126" width="35" height="28" rx="2"/>
+      <rect class="energy-package-scene__window energy-package-scene__window--three" x="477" y="126" width="35" height="28" rx="2"/>
+      <rect class="energy-package-scene__window energy-package-scene__window--four" x="533" y="126" width="35" height="28" rx="2"/>
+      <path class="energy-package-scene__window-frame" d="M382 126v28m56-28v28m56-28v28m56-28v28"/>
+      <path class="energy-package-scene__door" d="M470 157h35v27h-35z"/>
+      <path class="energy-package-scene__cable-entry" d="M344 166h11"/>
+      <g class="energy-package-scene__detail">
+        <path d="M549 58v45h12V58z"/>
+        <path d="M542 58h26m-26 7h26"/>
+        <path d="M383 69h28m-21 0v9m14-9v9m-21-9 7-11 7 11 7-11 7 11"/>
+      </g>
+      <text class="energy-package-scene__label" x="25" y="207">70-PANEL ARRAY · BATTERY BANK</text>
+      <text class="energy-package-scene__label" x="435" y="207">FACTORY / COMMERCIAL</text>
+    </svg>`
+});
 
 function formatPackageWatts(watts) {
   return `${new Intl.NumberFormat().format(watts)} W`;

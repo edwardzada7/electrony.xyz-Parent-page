@@ -2573,6 +2573,257 @@
   box-shadow: 0 0.5rem 1.5rem rgb(36 69 43 / 4%);
 }
 
+.energy-package-scene {
+  --scene-cycle: 8.5s;
+  --scene-delay: 0s;
+  width: 100%;
+  margin: 0;
+  overflow: hidden;
+  border: 1px solid rgb(77 139 87 / 14%);
+  border-radius: 0.75rem;
+  background: #f5f8f3;
+  transition: filter 240ms ease, transform 240ms ease;
+}
+
+.energy-package-card:hover .energy-package-scene,
+.energy-package-card:focus-within .energy-package-scene {
+  filter: saturate(1.08) brightness(1.025);
+}
+
+.energy-package-scene--medium-home-office {
+  --scene-cycle: 9.7s;
+  --scene-delay: 1.15s;
+}
+
+.energy-package-scene--premium-executive-corporate {
+  --scene-cycle: 10.8s;
+  --scene-delay: 2.35s;
+}
+
+.energy-package-scene--heavy-commercial-industrial {
+  --scene-cycle: 12s;
+  --scene-delay: 3.65s;
+}
+
+.energy-package-scene__art {
+  display: block;
+  width: 100%;
+  height: auto;
+  aspect-ratio: 640 / 220;
+}
+
+.energy-package-scene__backdrop {
+  fill: #f5f8f3;
+}
+
+.energy-package-scene__sun {
+  fill: #f2d27d;
+}
+
+.energy-package-scene__sunlight {
+  fill: #f2d27d;
+  opacity: 0.16;
+  transform-box: fill-box;
+  transform-origin: center;
+}
+
+.energy-package-scene__ground {
+  fill: none;
+  stroke: #b7c9b3;
+  stroke-linecap: round;
+  stroke-width: 1.5;
+}
+
+.energy-package-scene__panel path:first-child {
+  fill: #527d61;
+  stroke: #24452b;
+  stroke-linejoin: round;
+  stroke-width: 2;
+}
+
+.energy-package-scene__panel-grid {
+  fill: none;
+  stroke: #c4ddc4;
+  stroke-width: 1.2;
+}
+
+.energy-package-scene__panel-glint {
+  fill: none;
+  stroke: #fff9d8;
+  stroke-dasharray: 14 95;
+  stroke-linecap: round;
+  stroke-width: 3;
+  opacity: 0;
+}
+
+.energy-package-scene__equipment {
+  fill: #e3ebe0;
+  stroke: #56785a;
+  stroke-width: 2;
+}
+
+.energy-package-scene__equipment-detail {
+  fill: none;
+  stroke: #729173;
+  stroke-linecap: round;
+  stroke-width: 2;
+}
+
+.energy-package-scene__battery {
+  fill: #dce8da;
+  stroke: #527d61;
+  stroke-width: 2;
+}
+
+.energy-package-scene__battery-fill {
+  fill: #84aa72;
+}
+
+.energy-package-scene__cable-shadow {
+  fill: none;
+  stroke: #24452b;
+  stroke-linecap: round;
+  stroke-width: 6;
+}
+
+.energy-package-scene__cable {
+  fill: none;
+  stroke: #a4b99e;
+  stroke-linecap: round;
+  stroke-width: 3;
+}
+
+.energy-package-scene__pulse {
+  fill: none;
+  stroke: #f1d27c;
+  stroke-dasharray: 1 42;
+  stroke-linecap: round;
+  stroke-width: 4;
+  opacity: 0;
+}
+
+.energy-package-scene__building {
+  fill: #e5eee2;
+  stroke: #355b3a;
+  stroke-linejoin: round;
+  stroke-width: 2.5;
+}
+
+.energy-package-scene__building--office {
+  fill: #dce9dc;
+}
+
+.energy-package-scene__roof {
+  fill: none;
+  stroke: #24452b;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 3;
+}
+
+.energy-package-scene__roof--office {
+  stroke-width: 2.5;
+}
+
+.energy-package-scene__building-detail,
+.energy-package-scene__window-frame {
+  fill: none;
+  stroke: #9ab597;
+  stroke-width: 1.5;
+}
+
+.energy-package-scene__window {
+  fill: #dce6b8;
+  stroke: #789274;
+  stroke-width: 1.5;
+  transform-box: fill-box;
+  transform-origin: center;
+}
+
+.energy-package-scene__door {
+  fill: #bdcfba;
+  stroke: #527d61;
+  stroke-width: 1.5;
+}
+
+.energy-package-scene__cable-entry {
+  fill: none;
+  stroke: #a4b99e;
+  stroke-linecap: round;
+  stroke-width: 4;
+}
+
+.energy-package-scene__detail {
+  fill: none;
+  stroke: #66836a;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 2;
+}
+
+.energy-package-scene__label {
+  fill: #526954;
+  font-family: var(--font-label, sans-serif);
+  font-size: 8px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+}
+
+.energy-package-scene.is-visible .energy-package-scene__sunlight {
+  animation: energy-package-sun 7s ease-in-out infinite;
+  animation-delay: var(--scene-delay);
+}
+
+.energy-package-scene.is-visible .energy-package-scene__panel-glint {
+  animation: energy-package-panel 5.3s ease-in-out infinite;
+  animation-delay: calc(var(--scene-delay) + 0.45s);
+}
+
+.energy-package-scene.is-visible .energy-package-scene__pulse {
+  animation: energy-package-flow 2.2s linear infinite;
+  animation-delay: calc(var(--scene-delay) + 1.1s);
+}
+
+.energy-package-scene.is-visible .energy-package-scene__window {
+  animation: energy-package-room var(--scene-cycle) ease-in-out infinite;
+  animation-delay: calc(var(--scene-delay) + 1.8s);
+}
+
+.energy-package-scene.is-visible .energy-package-scene__window--two,
+.energy-package-scene.is-visible .energy-package-scene__window--four {
+  animation-delay: calc(var(--scene-delay) + 2.3s);
+}
+
+.energy-package-scene.is-visible .energy-package-scene__window--three,
+.energy-package-scene.is-visible .energy-package-scene__window--five {
+  animation-delay: calc(var(--scene-delay) + 2.8s);
+}
+
+.energy-package-scene.is-visible .energy-package-scene__window--six {
+  animation-delay: calc(var(--scene-delay) + 3.3s);
+}
+
+@keyframes energy-package-sun {
+  0%, 12%, 100% { opacity: 0.12; transform: scale(0.94); }
+  32%, 62% { opacity: 0.32; transform: scale(1.12); }
+}
+
+@keyframes energy-package-panel {
+  0%, 20%, 100% { opacity: 0; stroke-dashoffset: 0; }
+  36%, 50% { opacity: 0.85; stroke-dashoffset: -44; }
+}
+
+@keyframes energy-package-flow {
+  from { opacity: 0.12; stroke-dashoffset: 0; }
+  16%, 76% { opacity: 0.95; }
+  to { opacity: 0.12; stroke-dashoffset: -86; }
+}
+
+@keyframes energy-package-room {
+  0%, 16%, 100% { fill: #dce6b8; filter: none; }
+  26%, 82% { fill: #ffe8a6; filter: drop-shadow(0 0 4px rgb(246 213 126 / 75%)); }
+}
+
 .energy-package-card__title {
   margin: 0;
   color: var(--energy-ink);
@@ -2780,7 +3031,37 @@
     grid-template-columns: minmax(0, 1fr);
   }
 
+  .energy-package-scene__label {
+    font-size: 8.5px;
+  }
+
   .energy-catalogue-pagination {
     gap: 0.65rem;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .energy-package-scene {
+    transition: none;
+  }
+
+  .energy-package-scene__sunlight,
+  .energy-package-scene__panel-glint,
+  .energy-package-scene__pulse,
+  .energy-package-scene__window {
+    animation: none !important;
+  }
+
+  .energy-package-scene__sunlight {
+    opacity: 0.24;
+  }
+
+  .energy-package-scene__panel-glint,
+  .energy-package-scene__pulse {
+    opacity: 0;
+  }
+
+  .energy-package-scene__window {
+    fill: #ffe8a6;
   }
 }
