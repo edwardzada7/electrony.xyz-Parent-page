@@ -172,7 +172,8 @@ a:focus-visible {
 .security-card,
 .hero-panel,
 #service-panel,
-#checkout-panel {
+#checkout-panel,
+#customer-history-panel {
   padding: 1.25rem;
 }
 
@@ -373,8 +374,28 @@ a:focus-visible {
 }
 
 #service-panel,
-#checkout-panel {
+#checkout-panel,
+#customer-history-panel {
   min-height: 200px;
+}
+
+#customer-history-list {
+  display: grid;
+  gap: 0.75rem;
+  margin: 0;
+  padding-left: 1.25rem;
+}
+
+.customer-history-item {
+  padding: 0.8rem 1rem;
+  border: 1px solid rgba(154, 214, 181, 0.16);
+  border-radius: 0.85rem;
+  color: var(--bills-muted);
+}
+
+.customer-history-item strong {
+  display: block;
+  color: #f1f8f5;
 }
 
 .hidden {

@@ -22,7 +22,7 @@ Expected endpoints:
 - `GET /api/payments/status`
 - `POST /api/payments/webhook`
 
-The quote request accepts `service` and `amount`; `network` and `plan` are required for supported data bundles and plans. It returns `{ ok, quote, quoteToken }`; the quote includes `service`, `currency`, `serviceAmountMinor`, `platformFeeMinor`, `providerFeeMinor`, `providerFeeStatus`, and `totalBeforeProviderFeesMinor`. Electricity and airtime enforce their existing amount maxima, while data and TV bills enforce the configured plan prices. The quote contains Electrony's NGN 100 platform fee only; it does not invent a provider fee.
+The quote request is currently fail-closed with `503`; no customer payment is created while authorized vending, provider-fee handling, and prefunded VAS balance checks remain unverified. Product lists and product price/amount limits shown in the UI come from the authenticated Monnify catalogue, not locally configured biller options.
 
 ## Vercel frontend and Railway API
 
@@ -49,6 +49,8 @@ Do not change Railway variables, Accounts registration, DNS, or deployment setti
 
 The repository does not contain an actual Railway deployment URL or a Vercel project/domain configuration. Do not substitute a guessed URL; use the Railway service's assigned public HTTPS domain.
 
+The OAuth start route redirects to the canonical standalone Bills root after success or failure. If sign-in is unavailable, the deployed `/health` response reports missing or invalid OAuth variable names under `configuration.electronyAccountsOAuth`; it never includes their values. The health diagnostics added in this source must be deployed before they can describe the live Railway configuration. Transaction history is a separate authenticated endpoint backed by `bill_orders`; it returns only rows whose `customer_id` matches the verified Electrony Accounts subject. Database connectivity alone does not verify that production orders have been persisted.
+
 ### Hardware and Energy contact enquiries
 
 The combined Railway API and the Vercel function at `/api/contact` use the same server-side Resend delivery module. Configure `CONTACT_EMAIL` to the confirmed recipient, `CONTACT_FROM_EMAIL` to a sender address/domain verified in Resend, and `RESEND_API_KEY` as a private server-side variable. For the Vercel function, define the variables in Vercel's project environment settings; for the Railway route, define them in the Railway service variables. Do not add them to the static frontend or `BILLS_API_BASE_URL`.
@@ -61,9 +63,11 @@ This project is intentionally isolated from the parent Electrony site. Keep Bill
 
 Copy the sample variables from the repository root `.env.example` and update the values before running the Bills API.
 
-The example Monnify values are for local sandbox development only. When `NODE_ENV=production`, the API does not default the payment, redirect, or webhook URLs to sandbox/localhost. Configure `MONNIFY_BASE_URL` as an HTTPS non-sandbox endpoint and set `BILLS_PAYMENT_REDIRECT_URL` and `BILLS_WEBHOOK_BASE_URL` to HTTPS URLs. The API reports missing or unsafe payment configuration as unavailable; it does not select sandbox implicitly in production.
+The example Monnify values are for local sandbox development only. Set `MONNIFY_ENVIRONMENT=sandbox` with `MONNIFY_BASE_URL=https://sandbox.monnify.com` for sandbox; production requires the explicit pair `MONNIFY_ENVIRONMENT=production` and `MONNIFY_BASE_URL=https://api.monnify.com`. Any missing or mismatched environment/base URL is unavailable; the API never silently falls back to production. Keep the API key and secret server-side. The adapter uses Basic authentication at `/api/v1/auth/login`, caches the returned Bearer token until shortly before expiry, and uses that token for authenticated VAS requests. VAS catalogue and customer validation do not require a contract code, but the existing Collections checkout configuration does.
 
-Payment routes are blocked by default and remain blocked even if `PAYMENTS_BLOCKED=false`; a code-level contract-verification gate is intentionally false. The server contains transaction-query and webhook-processing code, but their complete Monnify contract and sandbox behavior have not been verified. Configuration alone does not make payments available.
+The Monnify Bills adapter reads live categories, billers, and products from `/api/v1/vas/bills-payment/biller-categories`, `/billers?category_code=...`, and `/biller-products?biller_code=...`; it validates customers with `POST /api/v1/vas/bills-payment/validate-customer`, vends with `POST /api/v1/vas/bills-payment/vend`, and requeries uncertain vending with `GET /api/v1/vas/bills-payment/requery?reference=...`. Catalogue and product responses are cached for five minutes. `requireValidationRef` and its returned validation reference are preserved by the adapter. An uncertain vend is not automatically repeated.
+
+The adapter and catalogue/validation API are implemented, but the payment-session and vending operations remain blocked, even if `PAYMENTS_BLOCKED=false`. Collections and VAS are separate: successful collection is not proof that the prefunded operational wallet can fund vending. Monnify's documented disbursement-wallet balance does not establish the VAS wallet balance, so the application does not issue vending requests or assume funding. No wallet endpoint or automatic funding check is claimed. Checkout, durable validation-reference persistence, webhook idempotency, and vending reconciliation still need verified contracts and end-to-end sandbox testing before operations can be enabled.
 
 ### Electrony identity and provider migration
 
@@ -81,10 +85,11 @@ Marplerad and Teloadly adapters are intentionally provider-independent and fail 
 
 ### Monnify sandbox variables
 
+- `MONNIFY_ENVIRONMENT` (`sandbox` or `production`, explicitly set)
 - `MONNIFY_API_KEY`
 - `MONNIFY_SECRET_KEY`
-- `MONNIFY_CONTRACT_CODE`
-- `MONNIFY_BASE_URL`
+- `MONNIFY_CONTRACT_CODE` (required for Collections checkout)
+- `MONNIFY_BASE_URL` (must exactly match the selected environment)
 
 ### Bills-specific configuration
 

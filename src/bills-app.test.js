@@ -240,12 +240,19 @@ test("OAuth sign-in reports temporary unavailability and announces redirecting",
 });
 
 test("verified Bills session can sign out and reports when provider revocation is unavailable", async () => {
-  let requestCount = 0;
-  const { context, accountsButton, authStatus } = createAppContext("", async () => {
-    requestCount += 1;
-    return requestCount === 1
-      ? { ok: true, json: async () => ({ ok: true, user: { id: "verified-user" }, csrfToken: "csrf" }) }
-      : { ok: true, json: async () => ({ ok: true, signedOut: true, providerRevoked: false }) };
+  const requests = [];
+  const { context, accountsButton, authStatus } = createAppContext("", async (url) => {
+    requests.push(url);
+    if (url.endsWith("/api/auth/me")) {
+      return { ok: true, json: async () => ({ ok: true, user: { id: "verified-user" }, csrfToken: "csrf" }) };
+    }
+    if (url.endsWith("/api/customer/transactions")) {
+      return { ok: true, json: async () => ({ ok: true, transactions: [] }) };
+    }
+    if (url.endsWith("/api/auth/logout")) {
+      return { ok: true, json: async () => ({ ok: true, signedOut: true, providerRevoked: false }) };
+    }
+    throw new Error(`Unexpected Bills API request: ${url}`);
   }, true);
 
   await context.initializeIdentitySignIn();
@@ -256,5 +263,5 @@ test("verified Bills session can sign out and reports when provider revocation i
   assert.equal(accountsButton.textContent, "Sign in with Electrony Accounts");
   assert.match(authStatus.textContent, /Signed out on this device/);
   await clickHandler({ preventDefault() {} });
-  assert.equal(requestCount, 2);
+  assert.equal(requests.length, 3);
 });

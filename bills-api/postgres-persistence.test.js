@@ -1427,3 +1427,29 @@ test("product and settings reads are parameterized and exclude inactive products
   await assert.rejects(persistence.getPlatformSetting("payment_secret"), { code: "sensitive_setting" });
   assert.equal(captured.queries.length, 2);
 });
+
+test("registered transaction history is scoped to the verified customer and ordered newest first", async () => {
+  const captured = {};
+  const persistence = configuredPersistence([
+    {
+      rows: [{
+        id: "order-id",
+        order_reference: "ELECBILLS-20261105-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
+        customer_id: "verified-user-id",
+        payment_status: "paid",
+        fulfilment_status: "pending",
+        metadata: { __guest_order_access_sha256: "hidden" }
+      }]
+    }
+  ], captured);
+
+  const orders = await persistence.getOrdersByCustomerId("verified-user-id");
+
+  assert.equal(orders.length, 1);
+  assert.equal(orders[0].customer_id, "verified-user-id");
+  assert.deepEqual(orders[0].metadata, {});
+  assert.match(captured.queries[0].text, /WHERE customer_id = \$1/);
+  assert.match(captured.queries[0].text, /ORDER BY created_at DESC, id DESC/);
+  assert.match(captured.queries[0].text, /LIMIT 50/);
+  assert.deepEqual(captured.queries[0].values, ["verified-user-id"]);
+});

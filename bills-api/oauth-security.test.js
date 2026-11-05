@@ -315,7 +315,10 @@ test("OAuth start sends a secure-cookie 302 and callback provider errors stay re
       headers: { Cookie: billsSessionCookie }
     });
     assert.equal(transactionResponse.status, 503);
-    assert.equal((await transactionResponse.json()).user.id, "5a64cc19-377f-4f4e-a0b1-38da49865004");
+    const transactionPayload = await transactionResponse.json();
+    assert.equal(transactionPayload.ok, false);
+    assert.equal(transactionPayload.status, "unavailable");
+    assert.match(transactionPayload.error, /transaction history is temporarily unavailable/i);
 
     const logoutResponse = await fetch(`http://127.0.0.1:${port}/api/auth/logout`, {
       method: "POST",

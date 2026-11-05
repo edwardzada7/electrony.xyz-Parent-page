@@ -169,7 +169,7 @@ function validatePhone(value) {
 
 function validateMeter(value) {
   const meter = String(value || "").trim();
-  return meter.length >= 6 && meter.length <= 14 && /^\d+$/.test(meter);
+  return meter.length > 0 && meter.length <= 64;
 }
 
 function renderServiceList() {
@@ -291,10 +291,8 @@ function renderServicePanel() {
       <form id="purchase-form" novalidate>
         ${providerSelect}
         ${serviceFields}
-        ${service.id === "electricity" || service.id === "bills" ? `
-          <button type="button" class="secondary-button" id="verify-customer-button">Verify ${service.id === "electricity" ? "meter" : "smartcard"}</button>
-          <div id="verified-customer" class="catalog-state" role="status" aria-live="polite">${renderVerifiedCustomer()}</div>
-        ` : ""}
+        <button type="button" class="secondary-button" id="verify-customer-button">Verify customer details</button>
+        <div id="verified-customer" class="catalog-state" role="status" aria-live="polite">${renderVerifiedCustomer()}</div>
         <div id="fee-preview" class="catalog-state">Checkout remains unavailable until a verified vending provider and payment configuration are in place.</div>
         <button type="submit" class="primary-button" disabled>Continue to payment</button>
       </form>
@@ -311,15 +309,32 @@ function renderServicePanel() {
       state.verifiedCustomer = null;
       state.verificationError = "";
       renderServicePanel();
-      if (service.id === "data" || service.id === "bills") void loadServicePlans(service.id, billerSelect.value);
     });
   }
+  const purchaseForm = panel.querySelector("#purchase-form");
+  purchaseForm?.querySelector('[name="plan"]')?.addEventListener("change", () => {
+    const plan = purchaseForm.querySelector('[name="plan"]')?.selectedOptions?.[0];
+    const amountInput = purchaseForm.querySelector('[name="amount"]');
+    if (!amountInput || !plan) return;
+    if (plan.dataset.fixedPrice === "true") {
+      amountInput.value = plan.dataset.amount || "";
+      amountInput.readOnly = true;
+    } else {
+      amountInput.value = "";
+      amountInput.readOnly = false;
+    }
+    state.verifiedCustomer = null;
+    state.verifiedFor = "";
+    state.verificationError = "";
+    const verified = panel.querySelector("#verified-customer");
+    if (verified) verified.textContent = "Verify your customer details before continuing.";
+  });
   panel.querySelector("#purchase-form")?.addEventListener("submit", (event) => {
     event.preventDefault();
     void handlePurchaseSubmission();
   });
   panel.querySelector("#purchase-form")?.addEventListener("input", (event) => {
-    if (!["meterNumber", "meterType", "customerId", "provider"].includes(event.target?.name)) return;
+    if (!["meterNumber", "customerId", "provider", "recipient", "plan"].includes(event.target?.name)) return;
     const form = panel.querySelector("#purchase-form");
     const values = form ? readPurchaseFormValues(form) : {};
     const currentVerification = verificationRequestKey(service.id, values);
@@ -335,9 +350,9 @@ function renderServicePanel() {
     void verifyBillCustomer(service.id);
   });
   panel.querySelector("#catalogue-retry")?.addEventListener("click", () => {
-    void loadServiceCatalogue();
+    void loadServiceCatalogue(true);
   });
-  if ((service.id === "data" || service.id === "bills")
+  if (service.id
     && selectedProvider
     && state.plansFor !== `${service.id}:${selectedProvider}`
     && !state.plansLoading) {
@@ -345,7 +360,7 @@ function renderServicePanel() {
   }
 }
 
-async function loadServiceCatalogue() {
+async function loadServiceCatalogue(forceRefresh = false) {
   if (!serviceCatalog[state.activeService]?.guestCheckout) return;
 
   state.catalogueLoading = true;
@@ -354,7 +369,7 @@ async function loadServiceCatalogue() {
   renderServicePanel();
 
   try {
-    const result = await fetchBillingApi("/api/services/catalog", {
+    const result = await fetchBillingApi(`/api/services/catalog${forceRefresh ? "?refresh=true" : ""}`, {
       signal: AbortSignal.timeout(12000)
     });
     if (!result || typeof result.categories !== "object" || result.categories === null) {
@@ -394,6 +409,7 @@ function getPlanRows(payload) {
 }
 
 function getPlanVariationCode(plan) {
+  if (typeof plan?.code === "string") return plan.code;
   return typeof plan?.variation_code === "string" ? plan.variation_code : "";
 }
 
@@ -403,54 +419,87 @@ function getPlanPrice(plan) {
   return Number.isFinite(amount) && amount > 0 ? amount : 0;
 }
 
+function getProductPriceType(product) {
+  return String(product?.priceType || "").toUpperCase();
+}
+
+function isFixedPriceProduct(product) {
+  return getProductPriceType(product) === "FIXED";
+}
+
+function getProductBound(product, key) {
+  const value = product?.[key];
+  if (value === null || value === undefined || value === "") return null;
+  const amount = Number(value);
+  return Number.isFinite(amount) && amount > 0 ? amount : null;
+}
+
 function getPlanLabel(plan) {
+  const metadata = plan?.metadata && typeof plan.metadata === "object" ? plan.metadata : {};
   const parts = [
     plan?.name,
-    plan?.allowance,
-    plan?.validity,
-    plan?.channels,
+    metadata.volume ? `${metadata.volume}${metadata.volumeUnit || ""}` : "",
+    metadata.duration ? `${metadata.duration}${metadata.durationUnit ? ` ${metadata.durationUnit}` : ""}` : "",
     getPlanPrice(plan) ? formatCurrency(getPlanPrice(plan)) : ""
   ].filter((value) => typeof value === "string" || typeof value === "number");
   return parts.length ? parts.join(" · ") : getPlanVariationCode(plan);
 }
 
 function renderGuestServiceFields(serviceId, provider) {
+  const products = state.plansFor === `${serviceId}:${provider}` ? getPlanRows(state.servicePlans) : [];
+  const planLabel = serviceId === "electricity"
+    ? "Electricity product"
+    : serviceId === "airtime"
+      ? "Airtime product or denomination"
+      : serviceId === "data"
+        ? "Data bundle"
+        : "TV package";
+  const planField = `
+    <label class="field"><span>${planLabel}</span><select name="plan" required>
+      <option value="">${state.plansLoading ? "Loading Monnify products…" : state.plansError || "Select a product returned by Monnify"}</option>
+      ${products.filter((product) => getPlanVariationCode(product)).map((product) => {
+        const fixedPrice = isFixedPriceProduct(product) && getPlanPrice(product) > 0;
+        const minAmount = getProductBound(product, "minAmount");
+        const maxAmount = getProductBound(product, "maxAmount");
+        return `
+          <option value="${escapeHtml(getPlanVariationCode(product))}"
+            ${fixedPrice ? `data-amount="${getPlanPrice(product)}"` : ""}
+            ${minAmount ? `data-min-amount="${minAmount}"` : ""}
+            ${maxAmount ? `data-max-amount="${maxAmount}"` : ""}
+            data-fixed-price="${fixedPrice}"
+            data-price-type="${escapeHtml(getProductPriceType(product))}">
+            ${escapeHtml(getPlanLabel(product))}
+          </option>
+        `;
+      }).join("")}
+    </select></label>
+  `;
   if (serviceId === "electricity") {
     return `
       <label class="field"><span>Meter number</span><input name="meterNumber" inputmode="numeric" autocomplete="off" required></label>
-      <label class="field"><span>Meter type</span><select name="meterType" required><option value="">Select meter type</option><option value="prepaid">Prepaid</option><option value="postpaid">Postpaid</option></select></label>
-      <label class="field"><span>Amount (NGN)</span><input name="amount" inputmode="decimal" type="number" min="1" step="1" required></label>
+      ${planField}
+      <label class="field"><span>Amount (NGN)</span><input name="amount" inputmode="decimal" type="number" min="0.01" step="0.01" required></label>
     `;
   }
   if (serviceId === "airtime") {
     return `
       <label class="field"><span>Recipient phone number</span><input name="recipient" inputmode="tel" autocomplete="tel" required></label>
-      <label class="field"><span>Amount (NGN)</span><input name="amount" inputmode="decimal" type="number" min="50" max="50000" step="1" required></label>
+      ${planField}
+      <label class="field"><span>Amount (NGN, when required by the product)</span><input name="amount" inputmode="decimal" type="number" min="0.01" step="0.01" required></label>
     `;
   }
   if (serviceId === "data") {
-    const plans = state.plansFor === `data:${provider}` ? getPlanRows(state.servicePlans) : [];
     return `
       <label class="field"><span>Recipient phone number</span><input name="recipient" inputmode="tel" autocomplete="tel" required></label>
-      <label class="field"><span>Data plan</span><select name="plan" required>
-        <option value="">${state.plansLoading ? "Loading plans…" : state.plansError || "Select a plan returned by the configured provider"}</option>
-        ${plans.filter((plan) => getPlanVariationCode(plan) && getPlanPrice(plan)).map((plan) => `
-          <option value="${escapeHtml(getPlanVariationCode(plan))}" data-amount="${getPlanPrice(plan)}">${escapeHtml(getPlanLabel(plan))}</option>
-        `).join("")}
-      </select></label>
+      ${planField}
+      <label class="field"><span>Amount (NGN, when required by the product)</span><input name="amount" inputmode="decimal" type="number" min="0.01" step="0.01" required></label>
     `;
   }
   if (serviceId === "bills") {
-    const plans = state.plansFor === `bills:${provider}` ? getPlanRows(state.servicePlans) : [];
     return `
       <label class="field"><span>Smartcard or decoder number</span><input name="customerId" inputmode="numeric" autocomplete="off" required></label>
-      <label class="field"><span>Subscription action</span><select name="subscriptionType" required><option value="">Select action</option><option value="renew">Renew</option><option value="change">Change package</option></select></label>
-      <label class="field"><span>Package</span><select name="plan" required>
-        <option value="">${state.plansLoading ? "Loading packages…" : state.plansError || "Select a package returned by the configured provider"}</option>
-        ${plans.filter((plan) => getPlanVariationCode(plan) && getPlanPrice(plan)).map((plan) => `
-          <option value="${escapeHtml(getPlanVariationCode(plan))}" data-amount="${getPlanPrice(plan)}">${escapeHtml(getPlanLabel(plan))}</option>
-        `).join("")}
-      </select></label>
+      ${planField}
+      <label class="field"><span>Amount (NGN, when required by the product)</span><input name="amount" inputmode="decimal" type="number" min="0.01" step="0.01" required></label>
     `;
   }
   return "";
@@ -460,14 +509,10 @@ function renderVerifiedCustomer() {
   if (state.verificationError) return escapeHtml(state.verificationError);
   const details = state.verifiedCustomer;
   if (!details) return "Verify your customer details before continuing.";
-  const fields = [
-    ["Customer", details.customer_name],
-    ["Address", details.address],
-    ["Meter type", details.meter_type],
-    ["Subscription status", details.subscription_status]
-  ].filter(([, value]) => typeof value === "string" && value.trim());
+  const fields = [["Customer", details.customer_name]]
+    .filter(([, value]) => typeof value === "string" && value.trim());
   return fields.map(([label, value]) => `<p><strong>${label}:</strong> ${escapeHtml(value)}</p>`).join("")
-  || "The provider returned no customer details.";
+  || "Monnify validated the customer; it did not return customer details.";
 }
 
 function readPurchaseFormValues(form) {
@@ -479,18 +524,35 @@ function readPurchaseFormValues(form) {
   return values;
 }
 
+function getSelectedProduct(serviceId, provider, productCode) {
+  if (!productCode || state.plansFor !== `${serviceId}:${provider}`) return null;
+  return getPlanRows(state.servicePlans)
+    .find((product) => getPlanVariationCode(product) === productCode) || null;
+}
+
+function validateSelectedProductAmount(product, amount) {
+  if (!product || !Number.isFinite(amount) || amount <= 0) return false;
+  const priceType = getProductPriceType(product);
+  if (priceType === "FIXED") return getPlanPrice(product) > 0 && amount === getPlanPrice(product);
+  if (priceType !== "OPEN") return false;
+  const minimum = getProductBound(product, "minAmount");
+  const maximum = getProductBound(product, "maxAmount");
+  return (minimum === null || amount >= minimum) && (maximum === null || amount <= maximum);
+}
+
 function verificationRequestKey(serviceId, values) {
   return JSON.stringify({
     service: serviceId,
     provider: values.provider || "",
     meterNumber: values.meterNumber || "",
-    meterType: values.meterType || "",
-    customerId: values.customerId || ""
+    customerId: values.customerId || "",
+    recipient: values.recipient || "",
+    productCode: values.plan || ""
   });
 }
 
 async function loadServicePlans(serviceId, provider) {
-  if (!provider || !["data", "bills"].includes(serviceId)) return;
+  if (!provider || !serviceCatalog[serviceId]?.guestCheckout) return;
   const requestId = `${serviceId}:${provider}`;
   state.plansFor = requestId;
   state.plansLoading = true;
@@ -499,13 +561,13 @@ async function loadServicePlans(serviceId, provider) {
   renderServicePanel();
   try {
     const query = new URLSearchParams({
-      service: serviceId === "bills" ? "cable-tv" : "data",
+      service: serviceId,
       provider
     });
     const result = await fetchBillingApi(`/api/services/plans?${query}`);
     state.servicePlans = result.plans;
-    if (!getPlanRows(result.plans).some((plan) => getPlanVariationCode(plan) && getPlanPrice(plan))) {
-      state.plansError = "The provider returned no selectable plans with a variation code and price.";
+    if (!getPlanRows(result.plans).some((product) => getPlanVariationCode(product))) {
+      state.plansError = "Monnify currently lists no products for this provider.";
     }
   } catch (error) {
     state.plansError = `Plans unavailable: ${error.message}`;
@@ -521,18 +583,23 @@ async function verifyBillCustomer(serviceId) {
   const form = document.querySelector("#purchase-form");
   if (!form) return;
   const values = readPurchaseFormValues(form);
-  const request = serviceId === "electricity"
-    ? {
-      service: "electricity",
-      provider: values.provider,
-      meter_number: values.meterNumber,
-      meter_type: values.meterType
-    }
-    : {
-      service: "cable-tv",
-      provider: values.provider,
-      smartcard_number: values.customerId
-    };
+  const customerId = serviceId === "electricity"
+    ? values.meterNumber
+    : ["airtime", "data"].includes(serviceId)
+      ? values.recipient
+      : values.customerId;
+  if (!values.provider || !values.plan || !customerId) {
+    state.verificationError = "Choose a provider and product and enter the customer identifier before validation.";
+    const resultElement = document.querySelector("#verified-customer");
+    if (resultElement) resultElement.textContent = state.verificationError;
+    return;
+  }
+  const request = {
+    service: serviceId,
+    provider: values.provider,
+    productCode: values.plan,
+    customerId
+  };
   state.verifiedCustomer = null;
   state.verifiedFor = "";
   state.verificationError = "Verifying with the configured provider…";
@@ -549,8 +616,9 @@ async function verifyBillCustomer(serviceId) {
         service: serviceId,
         provider: values.provider,
         meterNumber: values.meterNumber || "",
-        meterType: values.meterType || "",
-        customerId: values.customerId || ""
+        customerId: values.customerId || "",
+        recipient: values.recipient || "",
+        productCode: values.plan || ""
       })
       : "";
     state.verificationError = result.verification ? "" : "The provider did not return verified customer details.";
@@ -764,7 +832,7 @@ function createSummaryFromForm(serviceId, values) {
 
   if (serviceId === "electricity") {
     lines.push({ label: "DisCo", value: values.provider || "—" });
-    lines.push({ label: "Type", value: values.meterType || "—" });
+    lines.push({ label: "Product", value: document.querySelector('#purchase-form [name="plan"]')?.selectedOptions?.[0]?.textContent || values.plan || "—" });
     lines.push({ label: "Meter", value: values.meterNumber || "—" });
   }
 
@@ -782,7 +850,6 @@ function createSummaryFromForm(serviceId, values) {
   if (serviceId === "bills") {
     lines.push({ label: "Provider", value: values.provider || "—" });
     lines.push({ label: "Customer ID", value: values.customerId || "—" });
-    lines.push({ label: "Action", value: values.subscriptionType || "—" });
     lines.push({ label: "Package", value: document.querySelector('#purchase-form [name="plan"]')?.selectedOptions?.[0]?.textContent || values.plan || "—" });
   }
 
@@ -800,73 +867,26 @@ async function handlePurchaseSubmission() {
   if (!form) return;
 
   const values = readPurchaseFormValues(form);
-
-  if (state.activeService === "electricity") {
-    if (!validateMeter(values.meterNumber)) {
-      renderInlineMessage("Use a valid meter number before continuing.", "error");
-      return;
-    }
-    if (!values.provider || !["prepaid", "postpaid"].includes(values.meterType)) {
-      renderInlineMessage("Select a provider and meter type from the available catalogue.", "error");
-      return;
-    }
-    if (state.verifiedFor !== verificationRequestKey("electricity", values) || !state.verifiedCustomer) {
-      renderInlineMessage("Verify this meter with the configured provider before continuing.", "error");
-      return;
-    }
-    if (Number(values.amount) <= 0 || Number(values.amount) > 5000000) {
-      renderInlineMessage("Enter a valid electricity amount between ₦1 and ₦5,000,000.", "error");
-      return;
-    }
+  const selectedProduct = getSelectedProduct(state.activeService, values.provider, values.plan);
+  if (!selectedProduct || !validateSelectedProductAmount(selectedProduct, Number(values.amount))) {
+    renderInlineMessage("Select a current Monnify product and use its supplied price or amount limits.", "error");
+    return;
   }
-
-  if (state.activeService === "airtime") {
-    if (!values.provider) {
-      renderInlineMessage("Select a network from the configured provider catalogue.", "error");
-      return;
-    }
-    if (!validatePhone(values.recipient)) {
-      renderInlineMessage("Enter a valid Nigerian mobile number for the recipient.", "error");
-      return;
-    }
-    if (Number(values.amount) < 50 || Number(values.amount) > 50000) {
-      renderInlineMessage("Enter a valid airtime amount between ₦50 and ₦50,000.", "error");
-      return;
-    }
+  if (state.activeService === "electricity" && !validateMeter(values.meterNumber)) {
+    renderInlineMessage("Enter a meter number and validate it with Monnify before continuing.", "error");
+    return;
   }
-
-  if (state.activeService === "data") {
-    if (!values.provider) {
-      renderInlineMessage("Select a network from the configured provider catalogue.", "error");
-      return;
-    }
-    if (!validatePhone(values.recipient)) {
-      renderInlineMessage("Enter a valid phone number for the data bundle.", "error");
-      return;
-    }
-    if (!values.plan || !Number(values.amount)) {
-      renderInlineMessage("Select a valid data bundle before continuing.", "error");
-      return;
-    }
+  if (["airtime", "data"].includes(state.activeService) && !validatePhone(values.recipient)) {
+    renderInlineMessage("Enter a valid Nigerian mobile number for the recipient.", "error");
+    return;
   }
-
-  if (state.activeService === "bills") {
-    if (!values.provider) {
-      renderInlineMessage("Select a cable TV provider from the configured provider catalogue.", "error");
-      return;
-    }
-    if (!values.customerId || values.customerId.trim().length < 4) {
-      renderInlineMessage("Enter a valid smart card or decoder number.", "error");
-      return;
-    }
-    if (state.verifiedFor !== verificationRequestKey("bills", values) || !state.verifiedCustomer) {
-      renderInlineMessage("Verify this smartcard with the configured provider before continuing.", "error");
-      return;
-    }
-    if (!values.subscriptionType || !values.plan || !Number(values.amount)) {
-      renderInlineMessage("Select a supported package before continuing.", "error");
-      return;
-    }
+  if (state.activeService === "bills" && !values.customerId?.trim()) {
+    renderInlineMessage("Enter a smart card or decoder number.", "error");
+    return;
+  }
+  if (state.verifiedFor !== verificationRequestKey(state.activeService, values) || !state.verifiedCustomer) {
+    renderInlineMessage("Validate these customer details with Monnify before continuing.", "error");
+    return;
   }
 
   const amount = resolveOrderAmount(state.activeService, values);
@@ -899,14 +919,15 @@ async function handlePurchaseSubmission() {
       email: "guest@electrony.com",
       phone: values.phone || values.recipient || "",
       meterNumber: values.meterNumber || "",
-      meterType: values.meterType || "",
       disco: state.activeService === "electricity" ? values.provider || "" : "",
       network: ["data", "airtime"].includes(state.activeService) ? values.provider || "" : "",
       recipient: values.recipient || "",
       customerId: values.customerId || "",
       biller: state.activeService === "bills" ? values.provider || "" : "",
       plan: values.plan || "",
-      subscriptionType: values.subscriptionType || ""
+      productCode: values.plan || "",
+      validationReference: state.verifiedCustomer.validation_reference || "",
+      requireValidationRef: state.verifiedCustomer.require_validation_ref === true
     }
   };
 
@@ -1102,11 +1123,54 @@ function displayTransactionResult(message, details, status) {
   panel.appendChild(resultCard);
 }
 
+function getTransactionHistoryStatus(transaction) {
+  const paymentStatus = String(transaction.paymentStatus || "").toLowerCase();
+  const fulfilmentStatus = String(transaction.fulfilmentStatus || "").toLowerCase();
+  if (paymentStatus === "paid" && fulfilmentStatus === "fulfilled") return "Successful";
+  if (paymentStatus === "paid" && fulfilmentStatus === "failed") {
+    return "Payment confirmed; service delivery failed. Contact support; do not pay again.";
+  }
+  if (paymentStatus === "paid" && ["pending", "processing", "review_required"].includes(fulfilmentStatus)) {
+    return "Payment confirmed; service is pending or being reconciled.";
+  }
+  if (["pending", "initiated"].includes(paymentStatus)) return "Awaiting payment confirmation.";
+  if (["failed", "cancelled"].includes(paymentStatus)) return "Payment failed or was cancelled.";
+  if (paymentStatus === "refunded") return "Refund confirmed.";
+  return "Status pending confirmation.";
+}
+
+function renderCustomerTransactionHistory(panel, list, transactions) {
+  if (!panel || !list) return;
+  list.replaceChildren();
+  const serviceLabels = Object.fromEntries(
+    Object.values(serviceCatalog).map((service) => [service.id, service.label])
+  );
+  transactions.forEach((transaction) => {
+    const item = document.createElement("li");
+    item.className = "customer-history-item";
+    const title = document.createElement("strong");
+    title.textContent = serviceLabels[transaction.service] || "Bills transaction";
+    const reference = document.createElement("span");
+    reference.textContent = `Reference: ${transaction.reference}`;
+    const status = document.createElement("span");
+    status.textContent = getTransactionHistoryStatus(transaction);
+    const amount = document.createElement("span");
+    amount.textContent = Number.isSafeInteger(transaction.amountMinor)
+      ? formatMinorCurrency(transaction.amountMinor, transaction.currency)
+      : "Amount unavailable";
+    item.append(title, reference, status, amount);
+    list.appendChild(item);
+  });
+  panel.hidden = transactions.length === 0;
+}
+
 async function initializeIdentitySignIn() {
   const button = document.querySelector("#accounts-sign-in-button");
   if (!button) return;
   const authStatus = document.querySelector("#accounts-auth-status");
   const historyStatus = document.querySelector("#customer-history-status");
+  const historyPanel = document.querySelector("#customer-history-panel");
+  const historyList = document.querySelector("#customer-history-list");
   const authResult = new URLSearchParams(window.location.search).get("auth");
   let csrfToken = "";
   const authMessages = {
@@ -1163,6 +1227,9 @@ async function initializeIdentitySignIn() {
           ? "You have signed out of Electrony Accounts."
           : "Signed out on this device. The central account session may still be active.");
         if (historyStatus) historyStatus.hidden = true;
+        if (historyPanel) historyPanel.hidden = true;
+        if (historyList) historyList.replaceChildren();
+        state.transactions = [];
       } catch {
         showAuthStatus("Sign-out could not be confirmed. Please try again.");
       }
@@ -1182,15 +1249,45 @@ async function initializeIdentitySignIn() {
       button.href = "#";
       csrfToken = String(payload.csrfToken || "");
       if (historyStatus) {
-        historyStatus.textContent = "Registered transaction history unavailable";
+        historyStatus.textContent = "Loading registered transaction history…";
         historyStatus.hidden = false;
+      }
+      if (historyPanel) historyPanel.hidden = false;
+      try {
+        const history = await fetchBillingApi("/api/customer/transactions");
+        if (!Array.isArray(history.transactions)) throw new Error("Invalid transaction history response.");
+        state.transactions = history.transactions.filter((transaction) => (
+          transaction
+          && typeof transaction.reference === "string"
+          && typeof transaction.service === "string"
+          && typeof transaction.paymentStatus === "string"
+          && typeof transaction.fulfilmentStatus === "string"
+        ));
+        if (historyStatus) {
+          historyStatus.textContent = state.transactions.length
+            ? `${state.transactions.length} registered transaction${state.transactions.length === 1 ? "" : "s"}`
+            : "No registered transactions yet";
+          historyStatus.hidden = false;
+        }
+        renderCustomerTransactionHistory(historyPanel, historyList, state.transactions);
+      } catch {
+        state.transactions = [];
+        if (historyStatus) {
+          historyStatus.textContent = "Transaction history unavailable. Please try again later.";
+          historyStatus.hidden = false;
+        }
+        if (historyPanel) historyPanel.hidden = true;
       }
     } else {
       state.user = null;
+      if (historyStatus) historyStatus.hidden = true;
+      if (historyPanel) historyPanel.hidden = true;
       if (authResult === "success") showAuthStatus(authMessages.expired);
     }
   } catch {
     state.user = null;
+    if (historyStatus) historyStatus.hidden = true;
+    if (historyPanel) historyPanel.hidden = true;
     if (authResult === "success") showAuthStatus(authMessages.expired);
   }
 }

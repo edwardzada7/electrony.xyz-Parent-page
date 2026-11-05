@@ -979,6 +979,7 @@ function createPostgresPersistence(connectionString, PoolConstructor, environmen
     getFeeQuoteByReference: async () => { throw new Error("Bills PostgreSQL persistence is not configured."); },
     createOrderFromQuote: async () => { throw new Error("Bills PostgreSQL persistence is not configured."); },
     getOrderByReference: async () => { throw new Error("Bills PostgreSQL persistence is not configured."); },
+    getOrdersByCustomerId: async () => { throw new Error("Bills PostgreSQL persistence is not configured."); },
     getOrderByReferenceForInternalUse: async () => { throw new Error("Bills PostgreSQL persistence is not configured."); },
     getOrderByProviderTransactionReference: async () => { throw new Error("Bills PostgreSQL persistence is not configured."); },
     getOrderByPaymentReference: async () => { throw new Error("Bills PostgreSQL persistence is not configured."); },
@@ -1784,6 +1785,17 @@ function createPostgresPersistence(connectionString, PoolConstructor, environmen
     return sanitizeOrder(order);
   }
 
+  async function getOrdersByCustomerId(customerId) {
+    const ownerId = validateText(customerId, "customerId", { maxLength: 64 });
+    const result = await query(`
+      SELECT * FROM public.bill_orders
+      WHERE customer_id = $1
+      ORDER BY created_at DESC, id DESC
+      LIMIT 50
+    `, [ownerId]);
+    return result.rows.map(sanitizeOrder);
+  }
+
   async function getOrderByReferenceForInternalUse(orderReference) {
     const reference = validateText(orderReference, "orderReference");
     const result = await query(`
@@ -2288,6 +2300,7 @@ function createPostgresPersistence(connectionString, PoolConstructor, environmen
     getFeeQuoteByReference,
     createOrderFromQuote,
     getOrderByReference,
+    getOrdersByCustomerId,
     getOrderByReferenceForInternalUse,
     getOrderByProviderTransactionReference,
     getOrderByPaymentReference,

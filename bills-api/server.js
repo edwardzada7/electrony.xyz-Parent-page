@@ -5,9 +5,9 @@ const { promisify } = require("util");
 const os = require("os");
 const http = require("http");
 const { URL } = require("url");
-const { readEnv } = require("./provider-adapter");
+const { buildProviderAdapter, readEnv } = require("./provider-adapter");
 const { createPostgresPersistence } = require("./postgres-persistence");
-const { PLATFORM_FEE_RULES, createPlatformFeeQuote, parseMoneyToMinor } = require("./platform-fees");
+const { createPlatformFeeQuote, parseMoneyToMinor } = require("./platform-fees");
 const { createMarpleradAdapter } = require("./adapters/marplerad-adapter");
 const { createTeloadlyAdapter } = require("./adapters/teloadly-adapter");
 const {
@@ -40,12 +40,10 @@ const BILLS_REFRESH_SESSION_COOKIE = "__Secure-electrony-bills-refresh";
 const BILLS_CSRF_COOKIE = "__Secure-electrony-bills-csrf";
 const BILLS_OAUTH_COOKIE = "__Secure-electrony-bills-oauth";
 const MONNIFY_PAYMENT_CONTRACT_VERIFIED = false;
+const monnifyBillsAdapter = buildProviderAdapter();
 const marpleradAdapter = createMarpleradAdapter(readEnv);
 const teloadlyAdapter = createTeloadlyAdapter(readEnv);
 const scrypt = promisify(crypto.scrypt);
-const PRODUCTION_BILLS_OAUTH_CALLBACK_URL =
-  "https://electronyxyz-parent-page-production.up.railway.app/api/auth/oauth/callback";
-
 function getValidatedBillsOAuthCallback() {
   return validateOAuthCallback(readEnv("BILLS_OAUTH_CALLBACK_URL"));
 }
@@ -670,49 +668,20 @@ function parseJsonBody(rawBody) {
 }
 
 function getMonnifyConfig() {
-  const isProduction = process.env.NODE_ENV === "production";
   return {
     apiKey: readEnv("MONNIFY_API_KEY"),
     secretKey: readEnv("MONNIFY_SECRET_KEY"),
     contractCode: readEnv("MONNIFY_CONTRACT_CODE"),
     baseUrl: readEnv("MONNIFY_BASE_URL"),
-    redirectUrl: readEnv("BILLS_PAYMENT_REDIRECT_URL") || (isProduction ? "" : "http://localhost:4173/bills/app/?payment=success"),
-    webhookBaseUrl: readEnv("BILLS_WEBHOOK_BASE_URL") || (isProduction ? "" : "http://localhost:4174"),
-    appUrl: readEnv("BILLS_APP_URL") || (isProduction ? "" : "http://localhost:4173/bills/app/")
+    redirectUrl: readEnv("BILLS_PAYMENT_REDIRECT_URL"),
+    webhookBaseUrl: readEnv("BILLS_WEBHOOK_BASE_URL"),
+    appUrl: readEnv("BILLS_APP_URL")
   };
-}
-
-function toEnvName(key) {
-  return key.replace(/([a-z0-9])([A-Z])/g, "$1_$2").toUpperCase();
 }
 
 function getMissingMonnifyConfig() {
   const config = getMonnifyConfig();
-  const missing = [];
-
-  ["apiKey", "secretKey", "contractCode"].forEach((key) => {
-    if (!config[key] || /replace_with|change_me|example/i.test(config[key])) {
-      missing.push(`MONNIFY_${toEnvName(key)}`);
-    }
-  });
-
-  try {
-    const baseUrl = new URL(config.baseUrl);
-    const allowedHosts = process.env.NODE_ENV === "production"
-      ? ["api.monnify.com"]
-      : ["sandbox.monnify.com", "api.monnify.com"];
-    if (baseUrl.protocol !== "https:"
-      || !allowedHosts.includes(baseUrl.hostname)
-      || baseUrl.pathname !== "/"
-      || baseUrl.username
-      || baseUrl.password
-      || baseUrl.search
-      || baseUrl.hash) {
-      missing.push("MONNIFY_BASE_URL");
-    }
-  } catch {
-    missing.push("MONNIFY_BASE_URL");
-  }
+  const missing = [...monnifyBillsAdapter.getMissingConfiguration()];
 
   if (process.env.NODE_ENV === "production") {
     for (const [name, value] of [
@@ -732,29 +701,66 @@ function getMissingMonnifyConfig() {
   return missing;
 }
 
+function getElectronyAccountsOAuthConfiguration() {
+  const config = validateOAuthStartConfiguration({
+    projectUrl: readEnv("ELECTRONY_IDENTITY_SUPABASE_URL"),
+    publishableKey: readEnv("ELECTRONY_IDENTITY_SUPABASE_PUBLISHABLE_KEY"),
+    clientId: readEnv("ELECTRONY_IDENTITY_OAUTH_CLIENT_ID"),
+    callbackUrl: readEnv("BILLS_OAUTH_CALLBACK_URL"),
+    jwtSecret: readEnv("BILLS_JWT_SECRET"),
+    nodeEnv: process.env.NODE_ENV
+  });
+  const missingSettings = [...(config.missingSettings || [])];
+  const invalidSettings = [...(config.invalidSettings || [])];
+  const billsAppUrl = readEnv("BILLS_APP_URL");
+  if (!billsAppUrl) missingSettings.push("BILLS_APP_URL");
+  else if (!getValidatedBillsAppUrl()) invalidSettings.push("BILLS_APP_URL");
+  return {
+    ready: config.ok && missingSettings.length === 0 && invalidSettings.length === 0,
+    diagnosticCode: invalidSettings.length
+      ? "oauth_configuration_invalid"
+      : config.diagnosticCode || (missingSettings.length ? "oauth_configuration_missing" : ""),
+    missingSettings: [...new Set(missingSettings)],
+    invalidSettings: [...new Set(invalidSettings)]
+  };
+}
+
 function hasMonnifyConfig() {
   return getMissingMonnifyConfig().length === 0;
 }
 
-function getVendingCatalogueStatus() {
-  const message = "No authorized vending provider is configured for this service.";
+function getUnavailableVendingCatalogue(message, status) {
   const categories = ["electricity", "airtime", "data", "bills"].reduce((result, service) => {
     result[service] = {
       available: false,
-      status: "provider_unconfigured",
+      status,
       billers: [],
       products: [],
       message
     };
     return result;
   }, {});
-  return {
-    ok: true,
-    available: false,
-    status: "provider_unconfigured",
-    categories,
-    message
-  };
+  return { ok: false, available: false, status, categories, message };
+}
+
+async function getVendingCatalogueStatus() {
+  const missingVasConfiguration = monnifyBillsAdapter.getMissingConfiguration()
+    .filter((name) => name !== "MONNIFY_CONTRACT_CODE");
+  if (missingVasConfiguration.length) {
+    return getUnavailableVendingCatalogue(
+      `Monnify Bills catalogue is unavailable. Configure ${missingVasConfiguration.join(", ")}.`,
+      "provider_unconfigured"
+    );
+  }
+  try {
+    return await monnifyBillsAdapter.getCatalogue();
+  } catch (error) {
+    console.error("Monnify Bills catalogue request failed.", error?.code || "provider_unavailable");
+    return getUnavailableVendingCatalogue(
+      "The Monnify service catalogue is temporarily unavailable. Please try again later.",
+      "provider_unavailable"
+    );
+  }
 }
 
 function getMissingHealthConfiguration() {
@@ -994,25 +1000,7 @@ async function authenticateMonnify() {
   if (!hasMonnifyConfig()) {
     throw new Error("Monnify is not configured. Set the required payment-provider and Bills return/webhook URL values.");
   }
-
-  const config = getMonnifyConfig();
-  const endpoint = `${config.baseUrl.replace(/\/$/, "")}/api/v1/auth/login`;
-  const payload = await requestJson(endpoint, {
-    method: "POST",
-    headers: {
-      Authorization: `Basic ${Buffer.from(`${config.apiKey}:${config.secretKey}`).toString("base64")}`
-    }
-  });
-
-  const token = payload?.data?.accessToken || payload?.accessToken || payload?.token;
-  if (!token) {
-    throw new Error("Monnify authentication succeeded without returning an access token.");
-  }
-
-  return {
-    token,
-    config
-  };
+  return monnifyBillsAdapter.getAccessToken();
 }
 
 async function queryMonnifyTransaction(paymentReference) {
@@ -1028,7 +1016,7 @@ async function queryMonnifyTransaction(paymentReference) {
     throw error;
   }
   const { token, config } = authenticated;
-  const endpoint = new URL("/api/v1/merchant/transactions/query", config.baseUrl);
+  const endpoint = new URL("/api/v2/merchant/transactions/query", config.baseUrl);
   endpoint.searchParams.set("paymentReference", paymentReference);
   const payload = await requestJson(endpoint.toString(), {
     headers: {
@@ -1036,20 +1024,19 @@ async function queryMonnifyTransaction(paymentReference) {
     }
   });
 
-  if (payload?.requestSuccessful === false
-    || (payload?.responseCode && payload.responseCode !== "0")) {
+  if (payload?.requestSuccessful !== true || String(payload?.responseCode ?? "") !== "0") {
     const error = new Error("Monnify could not verify the payment reference.");
     error.code = "payment_verification_mismatch";
     throw error;
   }
 
-  const transaction = payload?.responseBody || payload?.data?.responseBody || payload?.data || payload;
+  const transaction = payload.responseBody;
   return {
     transaction,
-    status: extractMonnifyStatus({ data: transaction }),
-    paymentReference: transaction?.paymentReference || transaction?.customerReference || "",
+    status: extractMonnifyStatus(transaction),
+    paymentReference: transaction?.paymentReference || "",
     providerReference: transaction?.transactionReference || "",
-    amount: transaction?.amountPaid ?? transaction?.totalPayable ?? transaction?.amount,
+    amount: transaction?.amountPaid,
     currency: transaction?.currencyCode || transaction?.currency || ""
   };
 }
@@ -1090,7 +1077,7 @@ async function verifyMonnifyPayment(paymentReference, attempt) {
 
 async function createMonnifyReservation(transaction) {
   const { token, config } = await authenticateMonnify();
-  const endpoint = `${config.baseUrl.replace(/\/$/, "")}/api/v1/transactions/init-transaction`;
+  const endpoint = `${config.baseUrl.replace(/\/$/, "")}/api/v1/merchant/transactions/init-transaction`;
   const payload = {
     amount: Number(transaction.totalAmount),
     currencyCode: "NGN",
@@ -1118,8 +1105,11 @@ async function createMonnifyReservation(transaction) {
     body: payload
   });
 
-  const transactionReference = response?.data?.transactionReference || response?.transactionReference || response?.reference || "";
-  const checkoutUrl = response?.data?.checkoutUrl || response?.checkoutUrl || response?.paymentLink || response?.data?.paymentLink || response?.data?.authorizationUrl || "";
+  if (response?.requestSuccessful !== true || String(response?.responseCode ?? "") !== "0") {
+    throw new Error("Monnify could not initialize the checkout transaction.");
+  }
+  const transactionReference = response?.responseBody?.transactionReference || "";
+  const checkoutUrl = response?.responseBody?.checkoutUrl || "";
   let parsedCheckoutUrl;
   try {
     parsedCheckoutUrl = new URL(checkoutUrl);
@@ -1168,38 +1158,6 @@ function isValidNigerianPhone(value) {
   return /^(\+234|234|0)[789][01]\d{8}$/.test(number);
 }
 
-function getExpectedAmount(service, customer = {}) {
-  const amount = Number(customer.amount ?? 0);
-
-  if (service === "electricity" || service === "airtime") {
-    return Number.isFinite(amount) ? amount : 0;
-  }
-
-  return 0;
-}
-
-function makeBillFeeQuote(service, amount, network = "", plan = "") {
-  if (!ALLOWED_SERVICES.includes(service) || !PLATFORM_FEE_RULES[service]) {
-    throw new Error("Unsupported service type.");
-  }
-  const amountMinor = parseMoneyToMinor(amount);
-  const amountLimits = {
-    electricity: 5000000,
-    airtime: 500000
-  };
-  if (amountLimits[service] && amountMinor > amountLimits[service] * 100) {
-    throw new Error(`${service === "electricity" ? "Electricity" : "Airtime"} amount exceeds the supported maximum.`);
-  }
-
-  if (service === "data" || service === "bills") {
-    const expected = getExpectedAmount(service, { network, plan });
-    if (!expected || amountMinor !== expected * 100) {
-      throw new Error("The selected service option does not match its configured price.");
-    }
-  }
-  return createPlatformFeeQuote(service, amountMinor);
-}
-
 function validateServiceRequest(payload) {
   const service = normalizeService(payload.service);
   if (!service) {
@@ -1217,36 +1175,28 @@ function validateServiceRequest(payload) {
     email: String(payload.customerEmail || payload.email || "guest@electrony.com").trim(),
     phone: normalizePhoneNumber(payload.customerPhone || payload.phone || payload.recipient || ""),
     meterNumber: String(payload.meterNumber || "").trim(),
-    meterType: String(payload.meterType || "").trim(),
     disco: String(payload.disco || "").trim(),
     network: String(payload.network || payload.provider || "").trim(),
     recipient: normalizePhoneNumber(payload.recipient || payload.customerPhone || payload.phone || ""),
     customerId: String(payload.customerId || "").trim(),
     biller: String(payload.biller || (service === "bills" ? payload.provider : "") || "").trim(),
-    plan: String(payload.plan || "").trim(),
-    subscriptionType: String(payload.subscriptionType || "").trim()
+    plan: String(payload.plan || "").trim()
   };
   if (service === "electricity") customer.disco = String(payload.disco || payload.provider || "").trim();
 
   if (service === "electricity") {
-    if (!/^\d{6,14}$/.test(customer.meterNumber)) {
-      throw new Error("A valid meter number is required for electricity purchases.");
+    if (!customer.meterNumber || customer.meterNumber.length > 64) {
+      throw new Error("A valid meter identifier is required for electricity purchases.");
     }
-    if (rawAmount > 5000000) {
-      throw new Error("Electricity amount exceeds the supported maximum.");
-    }
-    if (!customer.disco || !["prepaid", "postpaid"].includes(customer.meterType)) {
-      throw new Error("Select a supported electricity provider and meter type.");
+    if (!customer.disco || !customer.plan) {
+      throw new Error("Select a supported electricity provider and product.");
     }
   }
 
   if (service === "airtime") {
-    if (!customer.network) throw new Error("Select a supported airtime network.");
+    if (!customer.network || !customer.plan) throw new Error("Select a supported airtime network and product.");
     if (!isValidNigerianPhone(customer.recipient || customer.phone)) {
       throw new Error("A valid phone number is required for airtime purchases.");
-    }
-    if (rawAmount < 50 || rawAmount > 50000) {
-      throw new Error("Airtime amount must be between ₦50 and ₦50,000.");
     }
   }
 
@@ -1259,11 +1209,11 @@ function validateServiceRequest(payload) {
   }
 
   if (service === "bills") {
-    if (!customer.customerId || customer.customerId.length < 4) {
+    if (!customer.customerId || customer.customerId.length > 64) {
       throw new Error("A valid smart card or decoder number is required.");
     }
-    if (!customer.biller || !customer.plan || !["renew", "change"].includes(customer.subscriptionType)) {
-      throw new Error("Select a cable provider, package, and subscription action.");
+    if (!customer.biller || !customer.plan) {
+      throw new Error("Select a cable provider and package.");
     }
   }
 
@@ -1452,7 +1402,8 @@ async function handleRequest(request, response) {
     const databaseReadiness = await postgresPersistence.getReadiness();
     const missingHealthConfiguration = getMissingHealthConfiguration();
     const databaseSecurityReady = databaseReadiness.securityStatus === "controls_verified";
-    const catalogueStatus = getVendingCatalogueStatus();
+    const catalogueStatus = await getVendingCatalogueStatus();
+    const electronyAccountsOAuth = getElectronyAccountsOAuthConfiguration();
     const catalogueReady = catalogueStatus.available === true;
     const databaseSecurityChecks = databaseReadiness.checks || {};
     const paymentBlockers = [
@@ -1617,6 +1568,7 @@ async function handleRequest(request, response) {
         monnify: hasMonnifyConfig(),
         missingMonnify: getMissingMonnifyConfig(),
         missingRequired: missingHealthConfiguration,
+        electronyAccountsOAuth,
         paymentsBlocked: paymentsBlocked(),
         paymentsBlockedConfigured: !missingHealthConfiguration.includes("PAYMENTS_BLOCKED"),
         monnifyPaymentVerification: false,
@@ -1676,10 +1628,20 @@ async function handleRequest(request, response) {
       nodeEnv: process.env.NODE_ENV
     });
     if (!oauthConfig.ok) {
+      console.error("Electrony Accounts OAuth configuration is unavailable.", {
+        diagnosticCode: oauthConfig.diagnosticCode,
+        missingSettings: oauthConfig.missingSettings,
+        invalidSettings: oauthConfig.invalidSettings
+      });
       redirectBillsAuthResult(response, returnUrl?.href || billsAppUrl?.href, "unavailable");
       return;
     }
     if (!billsAppUrl) {
+      console.error("Electrony Accounts OAuth configuration is unavailable.", {
+        diagnosticCode: "bills_app_url_invalid",
+        missingSettings: readEnv("BILLS_APP_URL") ? [] : ["BILLS_APP_URL"],
+        invalidSettings: readEnv("BILLS_APP_URL") ? ["BILLS_APP_URL"] : []
+      });
       redirectBillsAuthResult(response, null, "unavailable");
       return;
     }
@@ -1775,6 +1737,10 @@ async function handleRequest(request, response) {
       clearSecureCookie(response, BILLS_OAUTH_COOKIE);
       redirectBillsAuthResult(response, returnTo, "success");
     } catch (error) {
+      console.error("Electrony Accounts OAuth callback failed.", {
+        statusCode: Number.isInteger(error?.statusCode) ? error.statusCode : null,
+        code: error?.authStatus || "oauth_callback_failed"
+      });
       clearIdentitySessionCookies(response);
       redirectBillsAuthResult(response, returnTo, error.authStatus || "failed");
     }
@@ -1819,12 +1785,30 @@ async function handleRequest(request, response) {
       sendJson(response, 401, { ok: false, error: "Sign in with Electrony Accounts to view registered transaction history." });
       return;
     }
-    sendJson(response, 503, {
-      ok: false,
-      status: "unavailable",
-      error: "Registered transaction history is unavailable until customer-owned query authorization is verified.",
-      user: { id: user.id }
-    });
+    try {
+      const orders = await postgresPersistence.getOrdersByCustomerId(user.id);
+      sendJson(response, 200, {
+        ok: true,
+        transactions: orders.map((order) => ({
+          reference: order.order_reference,
+          service: order.service_type,
+          amountMinor: Number(order.total_amount_minor),
+          currency: order.currency,
+          paymentStatus: order.payment_status,
+          fulfilmentStatus: order.fulfilment_status,
+          createdAt: order.created_at,
+          paidAt: order.paid_at,
+          fulfilledAt: order.fulfilled_at
+        }))
+      });
+    } catch (error) {
+      console.error("Registered Bills transaction history query failed.", error?.code || "database_unavailable");
+      sendJson(response, 503, {
+        ok: false,
+        status: "unavailable",
+        error: "Registered transaction history is temporarily unavailable."
+      });
+    }
     return;
   }
 
@@ -1952,26 +1936,117 @@ async function handleRequest(request, response) {
   }
 
   if (request.method === "GET" && url.pathname === "/api/services/catalog") {
-    sendJson(response, 200, getVendingCatalogueStatus());
+    const catalogue = await getVendingCatalogueStatus();
+    sendJson(response, catalogue.ok ? 200 : 503, catalogue);
     return;
   }
 
   if (request.method === "GET" && url.pathname === "/api/services/plans") {
-    sendJson(response, 503, {
-      ok: false,
-      available: false,
-      status: "provider_unconfigured",
-      error: "Product catalogues are unavailable because no authorized vending provider is configured."
-    });
+    const service = normalizeService(url.searchParams.get("service"));
+    const provider = String(url.searchParams.get("provider") || "").trim();
+    if (!service || !provider) {
+      sendJson(response, 400, { ok: false, error: "A supported service and biller code are required." });
+      return;
+    }
+    try {
+      const catalogue = await getVendingCatalogueStatus();
+      const category = catalogue.categories?.[service];
+      if (!catalogue.ok) {
+        sendJson(response, 503, {
+          ok: false,
+          status: catalogue.status || "provider_unavailable",
+          error: catalogue.message || "The Monnify service catalogue is temporarily unavailable."
+        });
+        return;
+      }
+      if (!category?.billers?.some((biller) => biller.code === provider)) {
+        sendJson(response, 404, {
+          ok: false,
+          status: "unknown_biller",
+          error: "The selected provider is not in the current Monnify catalogue."
+        });
+        return;
+      }
+      const products = await monnifyBillsAdapter.getProducts(provider);
+      sendJson(response, 200, { ok: true, available: products.length > 0, plans: products });
+    } catch (error) {
+      console.error("Monnify Bills product catalogue request failed.", error?.code || "provider_unavailable");
+      sendJson(response, error?.statusCode === 400 ? 400 : 503, {
+        ok: false,
+        status: "provider_unavailable",
+        error: "The Monnify product catalogue is temporarily unavailable. Please try again later."
+      });
+    }
     return;
   }
 
   if (request.method === "POST" && url.pathname === "/api/services/verify") {
-    sendJson(response, 503, {
-      ok: false,
-      status: "provider_unconfigured",
-      error: "Customer verification is unavailable because no authorized vending provider is configured."
-    });
+    try {
+      const payload = await readPayload(request);
+      const service = normalizeService(payload.service);
+      const provider = String(payload.provider || "").trim();
+      const productCode = String(payload.productCode || "").trim();
+      const customerId = String(payload.customerId || "").trim();
+      if (!service || !provider || !productCode || !customerId) {
+        sendJson(response, 400, {
+          ok: false,
+          error: "A supported service, provider, product, and customer identifier are required."
+        });
+        return;
+      }
+      const catalogue = await getVendingCatalogueStatus();
+      const category = catalogue.categories?.[service];
+      if (!catalogue.ok) {
+        sendJson(response, 503, { ok: false, status: catalogue.status, error: catalogue.message });
+        return;
+      }
+      if (!category?.billers?.some((biller) => biller.code === provider)) {
+        sendJson(response, 400, { ok: false, error: "The selected provider is not in the current Monnify catalogue." });
+        return;
+      }
+      const products = await monnifyBillsAdapter.getProducts(provider);
+      if (!products.some((product) => product.code === productCode)) {
+        sendJson(response, 400, { ok: false, error: "The selected product is not in the current Monnify catalogue." });
+        return;
+      }
+      const validation = await monnifyBillsAdapter.validateCustomer({ productCode, customerId });
+      sendJson(response, 200, {
+        ok: true,
+        status: "validated",
+        verification: {
+          customer_name: validation.customerName,
+          product_code: validation.productCode,
+          price_type: validation.priceType,
+          price: validation.price,
+          require_validation_ref: validation.requireValidationRef,
+          ...(validation.requireValidationRef
+            ? { validation_reference: validation.validationReference }
+            : {})
+        }
+      });
+    } catch (error) {
+      console.error("Monnify Bills customer validation failed.", error?.code || "provider_unavailable");
+      const status = error?.code === "invalid_input"
+        ? 400
+        : error?.code === "unknown_biller" || error?.statusCode === 404
+          ? 404
+          : error?.statusCode === 400
+            ? 422
+            : 503;
+      sendJson(response, status, {
+        ok: false,
+        status: status === 422
+          ? "customer_validation_rejected"
+          : error?.code === "provider_unconfigured"
+            ? "provider_unconfigured"
+            : "validation_unavailable",
+        error: status === 422
+          ? "Monnify could not validate these customer details. Check them and try again."
+          : error?.code === "provider_unconfigured"
+            ? error.message
+            : "Customer validation is temporarily unavailable. Please try again later."
+      });
+    }
     return;
   }
 
