@@ -1942,161 +1942,274 @@
   margin: 0 0 1rem;
 }
 
-.energy-flow {
-  display: grid;
-  min-height: 7rem;
-  grid-template-columns: 5rem minmax(0, 1fr);
-  align-items: center;
-  margin: 0 0 0.35rem;
-  pointer-events: none;
+.energy-formula {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  margin: 0 0 0.3rem;
+  border: 1px solid rgb(89 117 91 / 22%);
+  background: linear-gradient(115deg, rgb(255 255 255 / 84%), rgb(247 250 246 / 92%));
+  box-shadow: 0 0.8rem 2rem rgb(36 69 43 / 5%), inset 0 1px rgb(255 255 255 / 90%);
 }
 
-.energy-flow__bulb {
+.energy-formula::after {
+  position: absolute;
   z-index: 1;
-  display: block;
-  width: 5rem;
-  height: 6.9rem;
-  overflow: visible;
-  filter: drop-shadow(0 0 0.35rem rgb(224 197 116 / 18%));
+  top: 2.8rem;
+  bottom: 1.4rem;
+  left: 0;
+  width: 15%;
+  background: linear-gradient(90deg, transparent, rgb(255 255 255 / 48%), transparent);
+  content: "";
+  opacity: 0;
+  pointer-events: none;
+  transform: translateX(-120%);
 }
 
-.energy-flow__bulb-aura {
-  opacity: 0.46;
-  transform-origin: center;
+.energy-calculator--hero.is-visible .energy-formula::after {
+  animation: energy-formula-scan 11s ease-in-out 1.4s infinite;
 }
 
-.energy-flow__wire {
+.energy-formula__header,
+.energy-formula__equations {
+  position: relative;
+  z-index: 2;
+}
+
+.energy-formula__header {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.75rem clamp(0.9rem, 2vw, 1.5rem);
+  border-bottom: 1px solid rgb(89 117 91 / 16%);
+  color: #64746a;
+  font-family: var(--font-mono, "DM Mono", monospace);
+  font-size: 0.65rem;
+  letter-spacing: 0.12em;
+}
+
+.energy-formula__header > span:last-child {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: var(--energy-forest);
+  letter-spacing: 0.08em;
+}
+
+.energy-formula__header i {
+  width: 0.38rem;
+  height: 0.38rem;
+  border-radius: 50%;
+  background: #6c9b64;
+  box-shadow: 0 0 0.55rem rgb(108 155 100 / 52%);
+}
+
+.energy-formula__equations {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.energy-formula__equation {
+  position: relative;
+  min-width: 0;
+  padding: 1rem clamp(0.75rem, 1.7vw, 1.35rem) 1.1rem;
+}
+
+.energy-formula__equation + .energy-formula__equation {
+  border-left: 1px solid rgb(89 117 91 / 14%);
+}
+
+.energy-calculator--hero.is-visible .energy-formula__equation {
+  animation: energy-formula-arrive 700ms cubic-bezier(0.2, 0.7, 0.25, 1) both;
+}
+
+.energy-calculator--hero.is-visible .energy-formula__equation:nth-child(2) {
+  animation-delay: 180ms;
+}
+
+.energy-calculator--hero.is-visible .energy-formula__equation:nth-child(3) {
+  animation-delay: 360ms;
+}
+
+.energy-calculator--hero.is-visible .energy-formula__equation:nth-child(4) {
+  animation-delay: 540ms;
+}
+
+.energy-formula__label,
+.energy-formula__units,
+.energy-formula__key {
+  margin: 0;
+}
+
+.energy-formula__label {
+  margin-bottom: 0.65rem;
+  color: #617468;
+  font-size: 0.72rem;
+  font-weight: 600;
+}
+
+.energy-formula__expression {
+  display: flex;
+  min-height: 1.8rem;
+  align-items: center;
+  gap: 0.34em;
+  margin: 0;
+  color: #213c2d;
+  font-family: var(--font-mono, "DM Mono", monospace);
+  font-size: clamp(0.83rem, 1.38vw, 1.08rem);
+  font-weight: 500;
+  letter-spacing: -0.07em;
+  white-space: nowrap;
+}
+
+.energy-formula__expression span {
+  display: inline-block;
+}
+
+.energy-calculator--hero.is-visible .energy-formula__expression span {
+  animation: energy-formula-symbol 520ms ease-out both;
+}
+
+.energy-calculator--hero.is-visible .energy-formula__expression span:nth-child(2) {
+  animation-delay: 90ms;
+}
+
+.energy-calculator--hero.is-visible .energy-formula__expression span:nth-child(3) {
+  animation-delay: 180ms;
+}
+
+.energy-calculator--hero.is-visible .energy-formula__expression span:nth-child(4) {
+  animation-delay: 270ms;
+}
+
+.energy-calculator--hero.is-visible .energy-formula__expression span:nth-child(5) {
+  animation-delay: 360ms;
+}
+
+.energy-formula__expression sub {
+  position: relative;
+  bottom: -0.08em;
+  font-size: 0.66em;
+}
+
+.energy-formula__units {
+  margin-top: 0.4rem;
+  color: #627568;
+  font-family: var(--font-mono, "DM Mono", monospace);
+  font-size: 0.68rem;
+}
+
+.energy-formula__key {
+  margin-top: 0.25rem;
+  color: #58695e;
+  font-size: 0.64rem;
+  line-height: 1.5;
+}
+
+.energy-formula__connector {
+  position: relative;
+  z-index: 2;
   display: block;
   width: 100%;
-  height: 7rem;
+  height: 2.1rem;
   overflow: visible;
 }
 
-.energy-flow__wire--mobile {
-  display: none;
-}
-
-.energy-flow__wire-shadow {
+.energy-formula__connector-track,
+.energy-formula__connector-pulse {
   fill: none;
-  stroke: #536f50;
   stroke-linecap: round;
-  stroke-width: 4;
-  opacity: 0.28;
   vector-effect: non-scaling-stroke;
 }
 
-.energy-flow__wire-core {
-  fill: none;
-  stroke: url("#energy-wire-metal");
-  stroke-linecap: round;
-  stroke-width: 2.2;
-  vector-effect: non-scaling-stroke;
+.energy-formula__connector-track {
+  stroke: #adc1a8;
+  stroke-width: 1.5;
 }
 
-.energy-flow__wire-highlight {
-  fill: none;
-  stroke: #f8fff0;
-  stroke-linecap: round;
-  stroke-width: 0.75;
-  opacity: 0.86;
-  vector-effect: non-scaling-stroke;
-}
-
-.energy-flow__pulse {
-  fill: none;
-  stroke: #f7e9a1;
-  stroke-dasharray: 20 1000;
-  stroke-dashoffset: 1020;
-  stroke-linecap: round;
-  stroke-width: 4;
+.energy-formula__connector-pulse {
+  stroke: #548451;
+  stroke-dasharray: 28 1000;
+  stroke-dashoffset: 1028;
+  stroke-width: 2.5;
   opacity: 0;
-  filter: drop-shadow(0 0 0.18rem #fff0a8);
+  filter: drop-shadow(0 0 0.2rem rgb(84 132 81 / 55%));
+}
+
+.energy-formula__connector circle {
+  fill: #edf5e9;
+  stroke: #6d9467;
+  stroke-width: 1.5;
   vector-effect: non-scaling-stroke;
 }
 
-.energy-flow__terminal {
-  fill: #dce8d4;
-  stroke: #6b8465;
-  stroke-width: 2;
-  vector-effect: non-scaling-stroke;
-}
-
-.energy-calculator--hero.is-visible .energy-flow__pulse {
+.energy-calculator--hero.is-visible .energy-formula__connector-pulse {
   opacity: 0.9;
-  animation: energy-flow-travel 6.4s linear infinite;
+  animation: energy-formula-pulse 6.4s linear 1.2s infinite;
 }
 
-.energy-calculator--hero.is-visible .energy-flow__filament {
-  animation: energy-filament-breathe 3.6s ease-in-out infinite;
+@keyframes energy-formula-arrive {
+  from {
+    opacity: 0.2;
+    transform: translateY(0.45rem);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
-.energy-calculator--hero.is-visible .energy-flow__bulb-aura {
-  animation: energy-bulb-breathe 3.6s ease-in-out infinite;
+@keyframes energy-formula-symbol {
+  from {
+    opacity: 0.2;
+    transform: translateY(0.18rem);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
-.energy-calculator--hero:focus-within .energy-flow__pulse,
-.energy-calculator--hero.is-engaged .energy-flow__pulse {
-  stroke-width: 5;
-  opacity: 1;
-  animation-duration: 3.8s;
+@keyframes energy-formula-scan {
+  0%,
+  18% {
+    opacity: 0;
+    transform: translateX(-120%);
+  }
+
+  28% {
+    opacity: 0.8;
+  }
+
+  46%,
+  100% {
+    opacity: 0;
+    transform: translateX(760%);
+  }
 }
 
-.energy-calculator--hero:focus-within .energy-flow__bulb,
-.energy-calculator--hero.is-engaged .energy-flow__bulb {
-  filter: drop-shadow(0 0 0.65rem rgb(224 197 116 / 40%));
-}
-
-@keyframes energy-flow-travel {
+@keyframes energy-formula-pulse {
   to {
     stroke-dashoffset: 0;
   }
 }
 
-@keyframes energy-filament-breathe {
-  0%,
-  100% {
-    filter: drop-shadow(0 0 0.12rem rgb(255 215 136 / 55%));
-    opacity: 0.82;
-  }
-
-  50% {
-    filter: drop-shadow(0 0 0.4rem rgb(255 221 148 / 95%));
-    opacity: 1;
-  }
-}
-
-@keyframes energy-bulb-breathe {
-  0%,
-  100% {
-    opacity: 0.38;
-    transform: scale(0.96);
-  }
-
-  50% {
-    opacity: 0.72;
-    transform: scale(1.04);
-  }
-}
-
 @media (prefers-reduced-motion: reduce) {
-  .energy-calculator--hero.is-visible .energy-flow__pulse,
-  .energy-calculator--hero.is-visible .energy-flow__filament,
-  .energy-calculator--hero.is-visible .energy-flow__bulb-aura {
+  .energy-calculator--hero.is-visible .energy-formula::after,
+  .energy-calculator--hero.is-visible .energy-formula__equation,
+  .energy-calculator--hero.is-visible .energy-formula__expression span,
+  .energy-calculator--hero.is-visible .energy-formula__connector-pulse {
     animation: none;
   }
 
-  .energy-flow__pulse {
+  .energy-formula::after {
     display: none;
   }
 
-  .energy-flow__filament {
-    filter: drop-shadow(0 0 0.2rem rgb(255 215 136 / 65%));
-    opacity: 1;
-  }
-
-  .energy-flow__bulb-aura {
-    opacity: 0.58;
-    transform: none;
+  .energy-formula__connector-pulse {
+    display: none;
   }
 }
 
@@ -2249,28 +2362,16 @@
 }
 
 @media (max-width: 48rem) {
-  .energy-flow {
-    display: flex;
-    min-height: 0;
-    flex-direction: column;
-    align-items: stretch;
-    margin-bottom: 0.25rem;
+  .energy-formula__equations {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
-  .energy-flow__bulb {
-    width: 4.5rem;
-    height: 5.8rem;
-    margin-left: clamp(1.25rem, 10vw, 4.5rem);
+  .energy-formula__equation:nth-child(odd) {
+    border-left: 0;
   }
 
-  .energy-flow__wire--wide {
-    display: none;
-  }
-
-  .energy-flow__wire--mobile {
-    display: block;
-    height: 3.9rem;
-    margin-top: -0.15rem;
+  .energy-formula__equation:nth-child(n + 3) {
+    border-top: 1px solid rgb(89 117 91 / 14%);
   }
 
   .energy-calculator__hero-heading {
@@ -2287,14 +2388,28 @@
 }
 
 @media (max-width: 32rem) {
-  .energy-flow__bulb {
-    width: 4rem;
-    height: 5.35rem;
-    margin-left: 1rem;
+  .energy-formula__header {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 0.45rem;
+    font-size: 0.6rem;
   }
 
-  .energy-flow__wire--mobile {
-    height: 3.5rem;
+  .energy-formula__equations {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .energy-formula__equation + .energy-formula__equation {
+    border-top: 1px solid rgb(89 117 91 / 14%);
+    border-left: 0;
+  }
+
+  .energy-formula__equation {
+    padding: 0.8rem 1rem;
+  }
+
+  .energy-formula__expression {
+    font-size: 1rem;
   }
 }
 
