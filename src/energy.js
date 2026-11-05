@@ -39,13 +39,21 @@ const productPageSize = 12;
 let selectedProduct = null;
 let selectedProductCalculationSummary = "";
 let currentProductPage = 1;
-const packageSceneObserver = "IntersectionObserver" in window
+const energySceneObserver = "IntersectionObserver" in window
   ? new IntersectionObserver((entries) => {
     entries.forEach((entry) => {
       entry.target.classList.toggle("is-visible", entry.isIntersecting);
     });
   }, { rootMargin: "80px 0px" })
   : null;
+const calculatorScene = document.querySelector(".energy-calculator--hero");
+if (calculatorScene) {
+  if (energySceneObserver) {
+    energySceneObserver.observe(calculatorScene);
+  } else {
+    calculatorScene.classList.add("is-visible");
+  }
+}
 
 function safeImageUrl(value) {
   if (typeof value !== "string" || !value.trim()) return null;
@@ -312,8 +320,8 @@ function createPackageScene(packageId) {
   const scene = createElement("figure", `energy-package-scene energy-package-scene--${packageId}`);
   scene.setAttribute("aria-hidden", "true");
   scene.innerHTML = sceneMarkup;
-  if (packageSceneObserver) {
-    packageSceneObserver.observe(scene);
+  if (energySceneObserver) {
+    energySceneObserver.observe(scene);
   } else {
     scene.classList.add("is-visible");
   }

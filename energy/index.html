@@ -105,50 +105,66 @@
           <div class="energy-calculator__heading energy-calculator__hero-heading">
             <div>
               <p class="energy-kicker"><span aria-hidden="true"></span> ELECTRONY / ENERGY</p>
-              <h1 id="energy-calculator-title">Calculate Your Power Needs</h1>
+              <h1 class="energy-calculator__title" id="energy-calculator-title">
+                <span class="energy-calculator__title-text">Calculate your power needs</span>
+                <svg class="energy-flow__bulb" viewBox="0 0 80 110" aria-hidden="true" focusable="false">
+                  <defs>
+                    <linearGradient id="energy-bulb-glass" x1="0" x2="1" y1="0" y2="1">
+                      <stop offset="0" stop-color="#fffef2" stop-opacity=".92"></stop>
+                      <stop offset=".48" stop-color="#f8ffe9" stop-opacity=".7"></stop>
+                      <stop offset="1" stop-color="#b6d79e" stop-opacity=".62"></stop>
+                    </linearGradient>
+                    <linearGradient id="energy-bulb-metal" x1="0" x2="1">
+                      <stop offset="0" stop-color="#64775e"></stop>
+                      <stop offset=".28" stop-color="#dce4d5"></stop>
+                      <stop offset=".52" stop-color="#84917d"></stop>
+                      <stop offset=".78" stop-color="#eef0e5"></stop>
+                      <stop offset="1" stop-color="#687763"></stop>
+                    </linearGradient>
+                    <radialGradient id="energy-bulb-light">
+                      <stop offset="0" stop-color="#fff8c5" stop-opacity=".9"></stop>
+                      <stop offset="1" stop-color="#d4ed9c" stop-opacity="0"></stop>
+                    </radialGradient>
+                  </defs>
+                  <circle class="energy-flow__bulb-aura" cx="40" cy="50" r="37" fill="url(#energy-bulb-light)"></circle>
+                  <path d="M40 7C24 7 13 19 13 36c0 12 6 19 12 26 3 4 4 8 4 13h22c0-5 1-9 4-13 6-7 12-14 12-26C67 19 56 7 40 7Z" fill="url(#energy-bulb-glass)" stroke="#819b78" stroke-opacity=".72" stroke-width="1.5"></path>
+                  <path d="M26 24c3-7 8-10 14-10" fill="none" stroke="#fff" stroke-linecap="round" stroke-opacity=".8" stroke-width="2"></path>
+                  <path d="M34 54v10m12-10v10" fill="none" stroke="#8e7350" stroke-linecap="round" stroke-width="1.7"></path>
+                  <path class="energy-flow__filament" d="M34 57h2l2-4 3 8 3-8 2 4" fill="none" stroke="#f9bd62" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path>
+                  <path d="M30 75h20v7H30z" fill="url(#energy-bulb-metal)"></path>
+                  <path d="M29 81h22v4H29zm1 5h20v4H30zm3 5h14v4H33z" fill="url(#energy-bulb-metal)" stroke="#657561" stroke-width=".6"></path>
+                  <path d="M36 95h8v3l-4 4-4-4z" fill="#60735c"></path>
+                </svg>
+              </h1>
               <p>Estimate your appliance load, daily energy use and preliminary solar or backup requirements, then explore products from the Electrony Energy catalogue.</p>
             </div>
             <a class="button energy-button energy-button--outline" href="#catalogue">Browse all products <span aria-hidden="true">↓</span></a>
           </div>
           <p class="energy-calculator__estimate-note">Start with an appliance preset, then edit its wattage to match the label or manual. Preset wattages are estimates, not universal specifications.</p>
 
-          <figure class="energy-formula" aria-labelledby="energy-formula-caption">
-            <figcaption class="energy-formula__header" id="energy-formula-caption">
-              <span>ENGINEERING BASIS</span>
-              <span><i aria-hidden="true"></i> LOAD → ENERGY ANALYSIS</span>
-            </figcaption>
-            <div class="energy-formula__equations">
-              <div class="energy-formula__equation">
-                <p class="energy-formula__label">Electrical power</p>
-                <p class="energy-formula__expression"><span>P</span> = <span>V</span> × <span>I</span></p>
-                <p class="energy-formula__units">W = V × A</p>
-                <p class="energy-formula__key">P power (W) · V voltage (V) · I current (A)</p>
-              </div>
-              <div class="energy-formula__equation">
-                <p class="energy-formula__label">Energy consumed</p>
-                <p class="energy-formula__expression"><span>E</span> = <span>P</span> × <span>t</span></p>
-                <p class="energy-formula__units">Wh = W × h</p>
-                <p class="energy-formula__key">E energy (Wh) · P power (W) · t time (h)</p>
-              </div>
-              <div class="energy-formula__equation">
-                <p class="energy-formula__label">Total connected load</p>
-                <p class="energy-formula__expression"><span>P<sub>total</sub></span> = <span>P₁ + P₂ + … + Pₙ</span></p>
-                <p class="energy-formula__units">W = sum of appliance watts</p>
-                <p class="energy-formula__key">Add the rated power of each load</p>
-              </div>
-              <div class="energy-formula__equation">
-                <p class="energy-formula__label">Daily energy requirement</p>
-                <p class="energy-formula__expression"><span>E<sub>daily</sub></span> = <span>Σ(Pᵢ × tᵢ)</span></p>
-                <p class="energy-formula__units">Wh/day = Σ(W × h/day)</p>
-                <p class="energy-formula__key">1,000 Wh = 1 kWh</p>
-              </div>
-            </div>
-            <svg class="energy-formula__connector" viewBox="0 0 1000 42" preserveAspectRatio="none" aria-hidden="true" focusable="false">
-              <path class="energy-formula__connector-track" d="M1 1H500V40"></path>
-              <path class="energy-formula__connector-pulse" pathLength="1000" d="M1 1H500V40"></path>
-              <circle cx="500" cy="39" r="3"></circle>
+          <div class="energy-flow" aria-hidden="true">
+            <svg class="energy-flow__wire energy-flow__wire--wide" viewBox="0 0 1000 120" preserveAspectRatio="none" focusable="false">
+              <defs>
+                <linearGradient id="energy-wire-metal" x1="0" x2="1">
+                  <stop offset="0" stop-color="#71866a"></stop>
+                  <stop offset=".5" stop-color="#bfd0b5"></stop>
+                  <stop offset="1" stop-color="#607c59"></stop>
+                </linearGradient>
+              </defs>
+              <path class="energy-flow__wire-shadow" d="M0 88C92 88 104 54 220 58S385 99 520 81s207-29 302-6 133 20 168 41"></path>
+              <path class="energy-flow__wire-core" d="M0 85C92 85 104 51 220 55s165 41 300 23 207-29 302-6 133 20 168 41"></path>
+              <path class="energy-flow__wire-highlight" d="M0 82C92 82 104 48 220 52s165 41 300 23 207-29 302-6 133 20 168 41"></path>
+              <path class="energy-flow__pulse" pathLength="1000" d="M0 85C92 85 104 51 220 55s165 41 300 23 207-29 302-6 133 20 168 41"></path>
+              <circle class="energy-flow__terminal" cx="990" cy="113" r="5"></circle>
             </svg>
-          </figure>
+            <svg class="energy-flow__wire energy-flow__wire--mobile" viewBox="0 0 360 100" preserveAspectRatio="none" focusable="false">
+              <path class="energy-flow__wire-shadow" d="M60 0c0 31 25 47 74 53s110 2 172 42"></path>
+              <path class="energy-flow__wire-core" d="M60 0c0 31 25 47 74 53s110 2 172 42"></path>
+              <path class="energy-flow__wire-highlight" d="M60 0c0 31 25 47 74 53s110 2 172 42"></path>
+              <path class="energy-flow__pulse" pathLength="1000" d="M60 0c0 31 25 47 74 53s110 2 172 42"></path>
+              <circle class="energy-flow__terminal" cx="306" cy="95" r="5"></circle>
+            </svg>
+          </div>
 
           <div class="energy-calculator__workspace">
             <section class="energy-calculator__panel" aria-labelledby="energy-appliances-title">
