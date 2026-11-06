@@ -552,6 +552,29 @@ function renderProductDetails(product, calculationSummary = "") {
   document.querySelector("#energy-dialog-title").textContent = product.model
     ? `${product.name} — ${product.model}`
     : product.name;
+  const imageFigure = document.querySelector("#energy-dialog-image");
+  const image = document.querySelector("#energy-dialog-image-photo");
+  const imageNote = document.querySelector("#energy-dialog-image-note");
+  const imageFallback = document.querySelector("#energy-dialog-image-fallback");
+  const imageUrl = safeImageUrl(product.image?.url);
+  image.onerror = null;
+  image.removeAttribute("src");
+  image.alt = "";
+  image.hidden = true;
+  imageFallback.hidden = true;
+  imageNote.textContent = product.image?.note || "";
+  imageNote.hidden = !product.image?.note;
+  imageFigure.hidden = !imageUrl || !product.image?.alt;
+  if (imageUrl && product.image?.alt) {
+    image.alt = product.image.alt;
+    image.onerror = () => {
+      image.hidden = true;
+      imageNote.hidden = true;
+      imageFallback.hidden = false;
+    };
+    image.src = imageUrl;
+    image.hidden = false;
+  }
   document.querySelector("#energy-dialog-category").textContent = energyCategories[product.category] || "Energy equipment";
   document.querySelector("#energy-dialog-description").textContent = product.description;
   const specificationList = document.querySelector("#energy-dialog-specs");

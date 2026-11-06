@@ -98,7 +98,11 @@ function makeProduct(brand, details) {
     ...(details.sourceNote ? { sourceNote: details.sourceNote } : {}),
     ...(details.reviewNote ? { reviewNote: details.reviewNote } : {}),
     ...(details.video ? { video: details.video } : {}),
-    image: Object.freeze({ url: image.url, alt: image.alt })
+    image: Object.freeze({
+      url: image.url,
+      alt: image.alt,
+      ...(image.note ? { note: image.note } : {})
+    })
   });
 }
 
@@ -409,6 +413,11 @@ const products = [
     category: "batteries-storage",
     description: "5.12 LOW VOLTAGE KWH 51.2V 100AH",
     specifications: ["5.12 kWh", "51.2V", "100Ah"],
+    image: {
+      url: "../assets/catalogue/energy/products/hisense/lifepo4-51-2v-100ah-battery-family.jpg",
+      alt: "Hisense 51.2V 100Ah LiFePO4 battery family image; the exact model is not visible.",
+      note: "Family-level image: visible rating is 51.2V 100Ah; the exact model is not identifiable from this photo."
+    },
     warranty: "5 Years",
     page: 2
   }),
@@ -471,6 +480,13 @@ const products = [
     category: "solar-inverters",
     description,
     specifications,
+    ...(index === 0 ? {
+      image: {
+        url: "../assets/catalogue/energy/products/growatt/spf-off-grid-inverter-family.jpg",
+        alt: "Growatt SPF off-grid inverter family image; the exact model label is not legible.",
+        note: "Family-level image only: the photo does not confirm the SPF model or its rating."
+      }
+    } : {}),
     warranty: index < 2 ? "2 Years" : "5 Years",
     sourceNote: sourceDataSheetNote,
     page: 2
@@ -557,6 +573,13 @@ const products = [
     category: "energy-storage-components",
     description,
     specifications,
+    ...(["CONTROL BOX HV BOS-B-PDU-2-A", "CONTROL BOX HV BOS-G-PDU-PRO"].includes(model) ? {
+      image: {
+        url: "../assets/catalogue/energy/products/deye/battery-control-box-family.webp",
+        alt: "Deye high-voltage battery control-box family image; the exact model is not visible.",
+        note: "Shared family-level image: the photo does not distinguish the BOS-B and BOS-G control-box models."
+      }
+    } : {}),
     warranty: "5 Years",
     sourceNote: sourceDataSheetNote,
     page: 3

@@ -2601,6 +2601,28 @@
   overflow-wrap: anywhere;
 }
 
+.energy-product-dialog__image {
+  margin: 1.25rem 0;
+  border: 1px solid var(--energy-line);
+  background: #fff;
+}
+
+.energy-product-dialog__image img {
+  width: 100%;
+  max-height: min(45vh, 24rem);
+  padding: clamp(0.75rem, 3vw, 1.5rem);
+  object-fit: contain;
+}
+
+.energy-product-dialog__image figcaption,
+.energy-product-dialog__image-fallback {
+  display: block;
+  padding: 0 1rem 1rem;
+  color: var(--energy-muted);
+  font-size: 0.78rem;
+  line-height: 1.5;
+}
+
 .energy-product-dialog__category,
 .energy-product-dialog__description,
 .energy-product-dialog__warranty,
