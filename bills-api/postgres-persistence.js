@@ -326,6 +326,82 @@ const READINESS_QUERY = `
         'setting_key', 'setting_value', 'description', 'updated_at'
       ]::text[])
   ),
+  required_column_types(table_name, column_name, type_name) AS (
+    VALUES
+      ('electrony_products', 'id', 'uuid'),
+      ('electrony_products', 'slug', 'text'),
+      ('electrony_products', 'name', 'text'),
+      ('electrony_products', 'category', 'text'),
+      ('electrony_products', 'short_description', 'text'),
+      ('electrony_products', 'website_url', 'text'),
+      ('electrony_products', 'status', 'text'),
+      ('electrony_products', 'display_order', 'integer'),
+      ('electrony_products', 'metadata', 'jsonb'),
+      ('electrony_products', 'created_at', 'timestamp with time zone'),
+      ('electrony_products', 'updated_at', 'timestamp with time zone'),
+      ('bill_fee_quotes', 'id', 'uuid'),
+      ('bill_fee_quotes', 'quote_reference', 'text'),
+      ('bill_fee_quotes', 'customer_id', 'uuid'),
+      ('bill_fee_quotes', 'service_type', 'text'),
+      ('bill_fee_quotes', 'provider_code', 'text'),
+      ('bill_fee_quotes', 'product_code', 'text'),
+      ('bill_fee_quotes', 'customer_reference', 'text'),
+      ('bill_fee_quotes', 'amount_minor', 'bigint'),
+      ('bill_fee_quotes', 'platform_fee_minor', 'bigint'),
+      ('bill_fee_quotes', 'provider_fee_minor', 'bigint'),
+      ('bill_fee_quotes', 'currency', 'text'),
+      ('bill_fee_quotes', 'status', 'text'),
+      ('bill_fee_quotes', 'expires_at', 'timestamp with time zone'),
+      ('bill_fee_quotes', 'metadata', 'jsonb'),
+      ('bill_orders', 'id', 'uuid'),
+      ('bill_orders', 'order_reference', 'text'),
+      ('bill_orders', 'customer_id', 'uuid'),
+      ('bill_orders', 'quote_id', 'uuid'),
+      ('bill_orders', 'service_type', 'text'),
+      ('bill_orders', 'provider_code', 'text'),
+      ('bill_orders', 'product_code', 'text'),
+      ('bill_orders', 'customer_reference', 'text'),
+      ('bill_orders', 'amount_minor', 'bigint'),
+      ('bill_orders', 'platform_fee_minor', 'bigint'),
+      ('bill_orders', 'provider_fee_minor', 'bigint'),
+      ('bill_orders', 'total_amount_minor', 'bigint'),
+      ('bill_orders', 'currency', 'text'),
+      ('bill_orders', 'payment_status', 'text'),
+      ('bill_orders', 'fulfilment_status', 'text'),
+      ('bill_orders', 'metadata', 'jsonb'),
+      ('bill_orders', 'payment_reference', 'text'),
+      ('bill_orders', 'payment_provider', 'text'),
+      ('bill_orders', 'paid_at', 'timestamp with time zone'),
+      ('bill_orders', 'failure_reason', 'text'),
+      ('bill_orders', 'provider_transaction_reference', 'text'),
+      ('bill_orders', 'fulfilled_at', 'timestamp with time zone'),
+      ('bill_orders', 'created_at', 'timestamp with time zone'),
+      ('bill_orders', 'updated_at', 'timestamp with time zone'),
+      ('bill_payment_attempts', 'id', 'uuid'),
+      ('bill_payment_attempts', 'order_id', 'uuid'),
+      ('bill_payment_attempts', 'provider', 'text'),
+      ('bill_payment_attempts', 'merchant_reference', 'text'),
+      ('bill_payment_attempts', 'amount_minor', 'bigint'),
+      ('bill_payment_attempts', 'currency', 'text'),
+      ('bill_payment_attempts', 'status', 'text'),
+      ('bill_payment_attempts', 'checkout_url', 'text'),
+      ('bill_payment_attempts', 'metadata', 'jsonb'),
+      ('bill_payment_attempts', 'provider_reference', 'text'),
+      ('bill_payment_attempts', 'verified_at', 'timestamp with time zone'),
+      ('bill_payment_attempts', 'updated_at', 'timestamp with time zone'),
+      ('bill_payment_webhook_events', 'provider', 'text'),
+      ('bill_payment_webhook_events', 'provider_event_id', 'text'),
+      ('bill_payment_webhook_events', 'event_type', 'text'),
+      ('bill_payment_webhook_events', 'merchant_reference', 'text'),
+      ('bill_payment_webhook_events', 'processing_status', 'text'),
+      ('bill_payment_webhook_events', 'payload', 'jsonb'),
+      ('bill_payment_webhook_events', 'error_message', 'text'),
+      ('bill_payment_webhook_events', 'processed_at', 'timestamp with time zone'),
+      ('bill_platform_settings', 'setting_key', 'text'),
+      ('bill_platform_settings', 'setting_value', 'text'),
+      ('bill_platform_settings', 'description', 'text'),
+      ('bill_platform_settings', 'updated_at', 'timestamp with time zone')
+  ),
   required_unique_keys(table_name, column_names) AS (
     VALUES
       ('electrony_products', ARRAY['slug']::text[]),
@@ -359,6 +435,11 @@ const READINESS_QUERY = `
     roles.rolreplication AS can_replicate,
     EXISTS (
       SELECT 1
+      FROM pg_database database_info
+      WHERE database_info.datdba = roles.oid
+    ) AS owns_database,
+    EXISTS (
+      SELECT 1
       FROM pg_auth_members membership
       WHERE membership.member = roles.oid
     ) AS has_role_memberships,
@@ -381,6 +462,33 @@ const READINESS_QUERY = `
         )
       ORDER BY required_column.column_name
     ) AS missing_required_columns,
+    ARRAY(
+      SELECT format(
+        '%I: expected %s, found %s',
+        required_type.column_name,
+        required_type.type_name,
+        format_type(column_info.atttypid, column_info.atttypmod)
+      )
+      FROM required_column_types required_type
+      JOIN pg_attribute column_info
+        ON column_info.attrelid = relation.oid
+        AND column_info.attname = required_type.column_name
+        AND column_info.attnum > 0
+        AND NOT column_info.attisdropped
+      WHERE required_type.table_name = relation.relname
+        AND format_type(column_info.atttypid, column_info.atttypmod) <> required_type.type_name
+      ORDER BY required_type.column_name
+    ) AS mismatched_required_column_types,
+    ARRAY(
+      SELECT column_info.attname::text
+      FROM pg_attribute column_info
+      JOIN required_columns required ON required.table_name = relation.relname
+      WHERE column_info.attrelid = relation.oid
+        AND column_info.attnum > 0
+        AND NOT column_info.attisdropped
+        AND NOT (column_info.attname = ANY(required.column_names))
+      ORDER BY column_info.attname
+    ) AS unexpected_columns,
     ARRAY(
       SELECT array_to_string(required_key.column_names, ',')
       FROM required_unique_keys required_key
@@ -1247,6 +1355,16 @@ function createPostgresPersistence(connectionString, PoolConstructor, environmen
         (Array.isArray(table.missing_required_columns) ? table.missing_required_columns : [])
           .map((column) => ({ table: table.table_name, column }))
       ));
+      const columnTypeMismatches = tableRows.flatMap((table) => (
+        (Array.isArray(table.mismatched_required_column_types)
+          ? table.mismatched_required_column_types
+          : [])
+          .map((mismatch) => ({ table: table.table_name, mismatch }))
+      ));
+      const unexpectedColumns = tableRows.flatMap((table) => (
+        (Array.isArray(table.unexpected_columns) ? table.unexpected_columns : [])
+          .map((column) => ({ table: table.table_name, column }))
+      ));
       const missingUniqueKeys = tableRows.flatMap((table) => (
         (Array.isArray(table.missing_required_unique_keys) ? table.missing_required_unique_keys : [])
             .map((key) => ({ table: table.table_name, key }))
@@ -1256,20 +1374,28 @@ function createPostgresPersistence(connectionString, PoolConstructor, environmen
             .map((relationship) => ({ table: table.table_name, relationship }))
       ));
       const missingConstraints = [...missingUniqueKeys, ...missingForeignKeys];
+      const physicalTypesVerified = allTablesPresent
+        && missingColumns.length === 0
+        && tableRows.every((table) => (
+        Array.isArray(table.mismatched_required_column_types)
+          && table.mismatched_required_column_types.length === 0
+        ));
       const schema = {
         status: missingTables.length
             ? "missing_tables"
-            : missingColumns.length || missingConstraints.length
+            : missingColumns.length || columnTypeMismatches.length || unexpectedColumns.length || missingConstraints.length
               ? "mismatch"
-            : allTablesPresent
+            : physicalTypesVerified
                 ? "required_columns_and_constraints_verified"
                 : "not_verified",
         missingTables,
         missingColumns,
+        columnTypeMismatches,
+        unexpectedColumns,
         missingUniqueKeys,
         missingForeignKeys,
         constraintsVerified: allTablesPresent && missingConstraints.length === 0,
-        physicalTypesVerified: false
+        physicalTypesVerified
       };
       const knownOtherRoleGrants = tableRows.flatMap((table) => {
         const anon = table.anon_unexpected_privileges || [];
@@ -1300,6 +1426,7 @@ function createPostgresPersistence(connectionString, PoolConstructor, environmen
         || knownRole.can_create_roles
         || knownRole.can_create_databases
         || knownRole.can_replicate
+        || knownRole.owns_database
       )) {
         confirmedFailureCode = "runtime_role_excessive_privileges";
       } else if (knownRole && (
@@ -1312,6 +1439,10 @@ function createPostgresPersistence(connectionString, PoolConstructor, environmen
         confirmedFailureCode = "required_tables_unavailable";
       } else if (allTablesPresent && missingColumns.length) {
         confirmedFailureCode = "required_columns_missing";
+      } else if (allTablesPresent && columnTypeMismatches.length) {
+        confirmedFailureCode = "required_column_types_mismatch";
+      } else if (allTablesPresent && unexpectedColumns.length) {
+        confirmedFailureCode = "unexpected_columns_found";
       } else if (allTablesPresent && missingConstraints.length) {
         confirmedFailureCode = "required_constraints_missing";
       } else if (tableRows.some((table) => !table.rls_enabled)) {
@@ -1450,6 +1581,16 @@ function createPostgresPersistence(connectionString, PoolConstructor, environmen
       (Array.isArray(table.missing_required_columns) ? table.missing_required_columns : [])
         .map((column) => ({ table: table.table_name, column }))
     ));
+    const columnTypeMismatches = tableRows.flatMap((table) => (
+      (Array.isArray(table.mismatched_required_column_types)
+        ? table.mismatched_required_column_types
+        : [])
+        .map((mismatch) => ({ table: table.table_name, mismatch }))
+    ));
+    const unexpectedColumns = tableRows.flatMap((table) => (
+      (Array.isArray(table.unexpected_columns) ? table.unexpected_columns : [])
+        .map((column) => ({ table: table.table_name, column }))
+    ));
     const missingUniqueKeys = tableRows.flatMap((table) => (
       (Array.isArray(table.missing_required_unique_keys) ? table.missing_required_unique_keys : [])
         .map((key) => ({ table: table.table_name, key }))
@@ -1459,20 +1600,28 @@ function createPostgresPersistence(connectionString, PoolConstructor, environmen
         .map((relationship) => ({ table: table.table_name, relationship }))
     ));
     const missingConstraints = [...missingUniqueKeys, ...missingForeignKeys];
+    const physicalTypesVerified = allTablesPresent
+      && missingColumns.length === 0
+      && tableRows.every((table) => (
+      Array.isArray(table.mismatched_required_column_types)
+        && table.mismatched_required_column_types.length === 0
+      ));
     const schema = {
       status: missingTables.length
         ? "missing_tables"
-        : missingColumns.length || missingConstraints.length
+        : missingColumns.length || columnTypeMismatches.length || unexpectedColumns.length || missingConstraints.length
           ? "mismatch"
-          : allTablesPresent
+          : physicalTypesVerified
             ? "required_columns_and_constraints_verified"
             : "not_verified",
       missingTables,
       missingColumns,
+      columnTypeMismatches,
+      unexpectedColumns,
       missingUniqueKeys,
       missingForeignKeys,
       constraintsVerified: allTablesPresent && missingConstraints.length === 0,
-      physicalTypesVerified: false
+      physicalTypesVerified
     };
     const roleExists = Boolean(role?.runtime_role_exists);
     const connectedAsRuntimeRole = Boolean(
@@ -1484,6 +1633,7 @@ function createPostgresPersistence(connectionString, PoolConstructor, environmen
       || role?.can_create_roles
       || role?.can_create_databases
       || role?.can_replicate
+      || role?.owns_database
     );
     const roleHasUnsafeSettings = Boolean(
       !role?.can_login || role?.inherits_roles || role?.has_role_memberships
@@ -1618,6 +1768,12 @@ function createPostgresPersistence(connectionString, PoolConstructor, environmen
     }
     if (missingColumns.length) {
       reject("required_columns_missing", "Required Electrony Bills PostgreSQL columns are unavailable.");
+    }
+    if (columnTypeMismatches.length) {
+      reject("required_column_types_mismatch", "Required Electrony Bills PostgreSQL column types do not match.");
+    }
+    if (unexpectedColumns.length) {
+      reject("unexpected_columns_found", "Electrony Bills PostgreSQL tables contain columns outside the required contract.");
     }
     if (missingConstraints.length) {
       reject("required_constraints_missing", "Required Electrony Bills PostgreSQL unique keys or foreign keys are unavailable.");

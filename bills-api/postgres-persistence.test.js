@@ -33,7 +33,12 @@ function emptyPrivilegeDiagnostics(overrides = {}) {
   };
 }
 
-function securityRows({ superuser = false, bypassesRls = false, policy = true } = {}) {
+function securityRows({
+  superuser = false,
+  bypassesRls = false,
+  ownsDatabase = false,
+  policy = true
+} = {}) {
   return REQUIRED_TABLES.map((tableName) => ({
     role_name: "electrony_bills_runtime",
     session_role_name: "electrony_bills_runtime",
@@ -46,11 +51,14 @@ function securityRows({ superuser = false, bypassesRls = false, policy = true } 
     can_create_roles: false,
     can_create_databases: false,
     can_replicate: false,
+    owns_database: ownsDatabase,
     has_role_memberships: false,
     has_public_schema_usage: true,
     has_schema_create: false,
     table_name: tableName,
     missing_required_columns: [],
+    mismatched_required_column_types: [],
+    unexpected_columns: [],
     missing_required_unique_keys: [],
     missing_required_foreign_keys: [],
     rls_enabled: true,
@@ -261,6 +269,9 @@ test("readiness verifies enabled RLS and role-scoped policy coverage", async () 
   assert.match(captured.queries[1].text, /has_sequence_privilege/);
   assert.match(captured.queries[1].text, /missing_required_unique_keys/);
   assert.match(captured.queries[1].text, /missing_required_foreign_keys/);
+  assert.match(captured.queries[1].text, /mismatched_required_column_types/);
+  assert.match(captured.queries[1].text, /unexpected_columns/);
+  assert.match(captured.queries[1].text, /format_type\(column_info\.atttypid/);
   assert.match(captured.queries[1].text, /pg_index/);
   assert.match(captured.queries[1].text, /pg_constraint/);
   assert.match(captured.queries[1].text, /has_required_policies/);
@@ -745,6 +756,16 @@ test("missing or ambiguous required table names block readiness as unverified", 
         ? { ...row, missing_required_columns: ["payment_reference"] }
         : row
     ))],
+    ["a mismatched required column type", securityRows().map((row) => (
+      row.table_name === "bill_orders"
+        ? { ...row, mismatched_required_column_types: ["amount_minor: expected bigint, found integer"] }
+        : row
+    ))],
+    ["an unexpected persistence column", securityRows().map((row) => (
+      row.table_name === "bill_orders"
+        ? { ...row, unexpected_columns: ["legacy_status"] }
+        : row
+    ))],
     ["a missing required webhook uniqueness key", securityRows().map((row) => (
       row.table_name === "bill_payment_webhook_events"
         ? { ...row, missing_required_unique_keys: ["provider,provider_event_id"] }
@@ -768,11 +789,28 @@ test("missing or ambiguous required table names block readiness as unverified", 
           status: "mismatch",
           missingTables: [],
           missingColumns: [{ table: "bill_orders", column: "payment_reference" }],
+          columnTypeMismatches: [],
+          unexpectedColumns: [],
           missingUniqueKeys: [],
           missingForeignKeys: [],
           constraintsVerified: true,
           physicalTypesVerified: false
         });
+      } else if (name === "a mismatched required column type") {
+        assert.equal(readiness.securityFailure, "required_column_types_mismatch");
+        assert.deepEqual(readiness.checks.schema.columnTypeMismatches, [{
+          table: "bill_orders",
+          mismatch: "amount_minor: expected bigint, found integer"
+        }]);
+        assert.equal(readiness.checks.schema.status, "mismatch");
+        assert.equal(readiness.checks.schema.physicalTypesVerified, false);
+      } else if (name === "an unexpected persistence column") {
+        assert.equal(readiness.securityFailure, "unexpected_columns_found");
+        assert.deepEqual(readiness.checks.schema.unexpectedColumns, [{
+          table: "bill_orders",
+          column: "legacy_status"
+        }]);
+        assert.equal(readiness.checks.schema.status, "mismatch");
       } else if (name === "a missing required webhook uniqueness key") {
         assert.equal(readiness.securityFailure, "required_constraints_missing");
         assert.deepEqual(readiness.checks.schema.missingUniqueKeys, [{
@@ -786,6 +824,8 @@ test("missing or ambiguous required table names block readiness as unverified", 
         readiness.checks.privilegeDiagnostics.diagnosticsUnverified,
         ![
           "a missing required persistence column",
+          "a mismatched required column type",
+          "an unexpected persistence column",
           "a missing required webhook uniqueness key"
         ].includes(name)
       );
@@ -793,6 +833,8 @@ test("missing or ambiguous required table names block readiness as unverified", 
         readiness.checks.privilegeDiagnostics.requiredGrantsVerified,
         [
           "a missing required persistence column",
+          "a mismatched required column type",
+          "an unexpected persistence column",
           "a missing required webhook uniqueness key"
         ].includes(name) ? true : null
       );
@@ -805,6 +847,7 @@ test("privileged, shared, and role-switched connections fail the role security c
   const roleCases = [
     ["superuser", { is_superuser: true }, "runtime_role_excessive_privileges"],
     ["BYPASSRLS", { bypasses_rls: true }, "runtime_role_excessive_privileges"],
+    ["database ownership", { owns_database: true }, "runtime_role_excessive_privileges"],
     ["role creation", { can_create_roles: true }, "runtime_role_excessive_privileges"],
     ["database creation", { can_create_databases: true }, "runtime_role_excessive_privileges"],
     ["replication", { can_replicate: true }, "runtime_role_excessive_privileges"],

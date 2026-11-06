@@ -788,6 +788,13 @@ function getMissingHealthConfiguration() {
     !name.startsWith("BILLS_PAYMENT_REDIRECT_URL")
     && !name.startsWith("BILLS_WEBHOOK_BASE_URL")
   ));
+  const runtimeDatabaseUrl = readEnv("BILLS_RUNTIME_DATABASE_URL").trim();
+  const inlinePostgresCa = readEnv("BILLS_POSTGRES_CA").trim();
+  const filePostgresCa = readEnv("BILLS_POSTGRES_CA_FILE").trim();
+  if (!runtimeDatabaseUrl) missing.push("BILLS_RUNTIME_DATABASE_URL");
+  if (Boolean(inlinePostgresCa) === Boolean(filePostgresCa)) {
+    missing.push("BILLS_POSTGRES_CA or BILLS_POSTGRES_CA_FILE");
+  }
   const paymentsBlockedValue = readEnv("PAYMENTS_BLOCKED").toLowerCase();
   if (paymentsBlockedValue !== "true" && paymentsBlockedValue !== "false") {
     missing.push("PAYMENTS_BLOCKED");
@@ -1431,23 +1438,30 @@ async function handleRequest(request, response) {
       status: databaseReadiness.connected ? "not_verified" : "not_checked",
       missingTables: null,
       missingColumns: null,
+      columnTypeMismatches: null,
+      unexpectedColumns: null,
       physicalTypesVerified: false
     };
-    const databaseReadinessStatus = !databaseReadiness.connected
-      ? "unavailable"
+    const databaseReadinessStatus = !databaseReadiness.configured
+      ? "not_configured"
+      : !databaseReadiness.connected
+        ? databaseReadiness.connectionFailure === "invalid_configuration"
+          ? "configuration_invalid"
+          : "connection_failure"
       : databaseSchema.status === "missing_tables"
-        ? "required_tables_missing"
+        ? "missing_tables"
         : databaseSchema.status === "mismatch"
           ? "schema_mismatch"
           : databaseSecurityChecks.tablePermissions?.status === "failed"
-            ? "permission_mismatch"
+            || databaseSecurityChecks.rlsPolicies?.status === "failed"
+            ? "permission_or_rls_failure"
             : databaseReadiness.securityStatus === "failed"
               ? "security_mismatch"
-            : databaseSchema.physicalTypesVerified !== true
-              ? "schema_types_unverified"
-            : databaseReadiness.securityStatus === "controls_verified"
-                ? "ready"
-                : "security_not_verified";
+              : databaseSchema.physicalTypesVerified !== true
+                ? "schema_mismatch"
+                : databaseReadiness.securityStatus === "controls_verified"
+                  ? "ready"
+                  : "security_not_verified";
     const paymentBlockers = [
       "monnify_payment_contract_not_verified",
       "payment_operations_disabled_pending_contract_review",
@@ -1522,12 +1536,20 @@ async function handleRequest(request, response) {
           connected: databaseReadiness.connected,
           missingTables: databaseSchema.missingTables,
           missingColumns: databaseSchema.missingColumns,
+          columnTypeMismatches: databaseSchema.columnTypeMismatches,
+          unexpectedColumns: databaseSchema.unexpectedColumns,
           physicalTypesVerified: databaseSchema.physicalTypesVerified,
           securityFailure: databaseReadiness.securityFailure
         },
         databaseSchema,
         databaseConnectivity: {
-          status: databaseReadiness.connected ? "verified" : "unavailable",
+          status: !databaseReadiness.configured
+            ? "not_configured"
+            : databaseReadiness.connected
+              ? "verified"
+              : databaseReadiness.connectionFailure === "invalid_configuration"
+                ? "configuration_invalid"
+                : "connection_failure",
           connected: databaseReadiness.connected
         },
         runtimeRole: databaseSecurityChecks.runtimeRole || {

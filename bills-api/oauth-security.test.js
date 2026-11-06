@@ -162,7 +162,9 @@ test("OAuth start sends a secure-cookie 302 and callback provider errors stay re
     await waitForServer(child);
     const healthResponse = await fetch(`http://127.0.0.1:${port}/health`);
     const health = await healthResponse.json();
-    assert.equal(health.checks.databaseReadiness.status, "unavailable");
+    assert.equal(health.checks.databaseReadiness.status, "not_configured");
+    assert.equal(health.checks.databaseConnectivity.status, "not_configured");
+    assert.ok(health.configuration.missingRequired.includes("BILLS_RUNTIME_DATABASE_URL"));
     assert.equal(health.checks.catalogue.status, "not_checked");
     assert.equal(health.readinessChecks.monnifyCatalogue.status, "not_checked");
     assert.equal(health.configuration.monnifyEnvironment, "sandbox");
