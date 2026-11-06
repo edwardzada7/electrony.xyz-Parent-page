@@ -202,6 +202,18 @@ test("guest service catalogue renders unavailable without provider-supplied prod
   assert.doesNotMatch(appSource, /Sogo|SOGO_/i);
 });
 
+test("paid transaction history distinguishes vending that has not started for unverified funds", () => {
+  const { context } = createAppContext();
+  const status = context.getTransactionHistoryStatus({
+    paymentStatus: "paid",
+    fulfilmentStatus: "not_started"
+  });
+
+  assert.match(status, /Vending awaiting operational funds/);
+  assert.match(status, /Funding is not verified/);
+  assert.match(status, /do not pay again/i);
+});
+
 test("OAuth sign-in preserves the Bills page and displays cancellation without blocking guests", async () => {
   const { context, accountsButton, authStatus } = createAppContext(
     "?service=data&auth=cancelled",

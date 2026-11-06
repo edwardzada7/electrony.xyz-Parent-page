@@ -50,6 +50,9 @@ function securityRows({ superuser = false, bypassesRls = false, policy = true } 
     has_public_schema_usage: true,
     has_schema_create: false,
     table_name: tableName,
+    missing_required_columns: [],
+    missing_required_unique_keys: [],
+    missing_required_foreign_keys: [],
     rls_enabled: true,
     owns_table: false,
     has_excessive_table_privileges: false,
@@ -256,6 +259,10 @@ test("readiness verifies enabled RLS and role-scoped policy coverage", async () 
   assert.match(captured.queries[1].text, /has_table_privilege/);
   assert.match(captured.queries[1].text, /has_schema_privilege/);
   assert.match(captured.queries[1].text, /has_sequence_privilege/);
+  assert.match(captured.queries[1].text, /missing_required_unique_keys/);
+  assert.match(captured.queries[1].text, /missing_required_foreign_keys/);
+  assert.match(captured.queries[1].text, /pg_index/);
+  assert.match(captured.queries[1].text, /pg_constraint/);
   assert.match(captured.queries[1].text, /has_required_policies/);
   assert.match(captured.queries[1].text, /policy_evidence/);
   assert.match(captured.queries[1].text, /server_version_num/);
@@ -733,6 +740,16 @@ test("missing or ambiguous required table names block readiness as unverified", 
         ? { ...row, table_name: "electrony_platform_settings" }
         : row
     ))],
+    ["a missing required persistence column", securityRows().map((row) => (
+      row.table_name === "bill_orders"
+        ? { ...row, missing_required_columns: ["payment_reference"] }
+        : row
+    ))],
+    ["a missing required webhook uniqueness key", securityRows().map((row) => (
+      row.table_name === "bill_payment_webhook_events"
+        ? { ...row, missing_required_unique_keys: ["provider,provider_event_id"] }
+        : row
+    ))],
     ["duplicate required table rows", [...securityRows(), securityRows()[0]]]
   ];
 
@@ -745,9 +762,40 @@ test("missing or ambiguous required table names block readiness as unverified", 
       ], captured);
 
       const readiness = await persistence.getReadiness();
-      assert.equal(readiness.securityFailure, "required_tables_unavailable");
-      assert.equal(readiness.checks.privilegeDiagnostics.diagnosticsUnverified, true);
-      assert.equal(readiness.checks.privilegeDiagnostics.requiredGrantsVerified, null);
+      if (name === "a missing required persistence column") {
+        assert.equal(readiness.securityFailure, "required_columns_missing");
+        assert.deepEqual(readiness.checks.schema, {
+          status: "mismatch",
+          missingTables: [],
+          missingColumns: [{ table: "bill_orders", column: "payment_reference" }],
+          missingUniqueKeys: [],
+          missingForeignKeys: [],
+          constraintsVerified: true,
+          physicalTypesVerified: false
+        });
+      } else if (name === "a missing required webhook uniqueness key") {
+        assert.equal(readiness.securityFailure, "required_constraints_missing");
+        assert.deepEqual(readiness.checks.schema.missingUniqueKeys, [{
+          table: "bill_payment_webhook_events",
+          key: "provider,provider_event_id"
+        }]);
+      } else {
+        assert.equal(readiness.securityFailure, "required_tables_unavailable");
+      }
+      assert.equal(
+        readiness.checks.privilegeDiagnostics.diagnosticsUnverified,
+        ![
+          "a missing required persistence column",
+          "a missing required webhook uniqueness key"
+        ].includes(name)
+      );
+      assert.equal(
+        readiness.checks.privilegeDiagnostics.requiredGrantsVerified,
+        [
+          "a missing required persistence column",
+          "a missing required webhook uniqueness key"
+        ].includes(name) ? true : null
+      );
       assert.equal(captured.queries.length, 3);
     });
   }
@@ -1004,6 +1052,7 @@ test("expired and reused quotes cannot be converted into orders", async () => {
     const persistence = configuredPersistence([
       { rows: [] },
       { rows: [] },
+      { rows: [] },
       { rows: [quote] },
       { rows: [] }
     ], captured);
@@ -1021,6 +1070,7 @@ test("order creation consumes the quote and inserts the exact quoted totals in o
   const persistence = configuredPersistence([
     { rows: [] },
     { rows: [] },
+    { rows: [] },
     { rows: [quoteRow()] },
     { rows: [] },
     { rows: [{ id: "quote-id" }] },
@@ -1036,8 +1086,9 @@ test("order creation consumes the quote and inserts the exact quoted totals in o
   assert.equal(order.total_amount_minor, 20000);
   const statements = captured.transactionQueries.map(({ text }) => text);
   assert.equal(statements[0], "BEGIN");
-  assert.match(statements[4], /UPDATE public\.bill_fee_quotes/);
-  assert.match(statements[5], /INSERT INTO public\.bill_orders/);
+  assert.match(statements[5], /UPDATE public\.bill_fee_quotes/);
+  assert.match(statements[6], /INSERT INTO public\.bill_orders/);
+  assert.match(statements[1], /pg_advisory_xact_lock/);
   assert.equal(statements.at(-1), "COMMIT");
   const insert = captured.transactionQueries.find(({ text }) => text.includes("INSERT INTO public.bill_orders"));
   assert.equal(insert.values[0], "ORDER-1");
@@ -1052,6 +1103,7 @@ test("order retries return the existing order rather than creating another", asy
   const guestOrderSecret = Buffer.alloc(32).toString("base64url");
   const guestAccessHash = crypto.createHash("sha256").update(guestOrderSecret).digest("hex");
   const persistence = configuredPersistence([
+    { rows: [] },
     { rows: [] },
     { rows: [{
       order_reference: "ORDER-1",
@@ -1075,6 +1127,7 @@ test("order retries return the existing order rather than creating another", asy
 test("order retries do not authorize guest orders by reference alone", async () => {
   const captured = {};
   const persistence = configuredPersistence([
+    { rows: [] },
     { rows: [] },
     { rows: [{
       order_reference: "ORDER-1",
@@ -1101,6 +1154,7 @@ test("a failed order insert rolls back quote consumption and sanitizes constrain
   const persistence = configuredPersistence([
     { rows: [] },
     { rows: [] },
+    { rows: [] },
     { rows: [quoteRow()] },
     { rows: [] },
     { rows: [{ id: "quote-id" }] },
@@ -1119,6 +1173,7 @@ test("a failed order insert rolls back quote consumption and sanitizes constrain
 test("payment attempts reject a reused merchant reference for another order", async () => {
   const captured = {};
   const persistence = configuredPersistence([
+    { rows: [] },
     { rows: [] },
     { rows: [{
       order_reference: "OTHER-ORDER",
@@ -1143,6 +1198,7 @@ test("payment attempts reject a reused merchant reference for another order", as
 test("payment-attempt creation moves the order to initiated in the same transaction", async () => {
   const captured = {};
   const persistence = configuredPersistence([
+    { rows: [] },
     { rows: [] },
     { rows: [] },
     { rows: [{
@@ -1329,6 +1385,7 @@ test("webhook events are inserted idempotently and can only be claimed once", as
   const persistence = configuredPersistence([
     { rows: [] },
     { rows: [] },
+    { rows: [] },
     { rows: [event] },
     { rows: [] },
     { rows: [] }
@@ -1342,7 +1399,8 @@ test("webhook events are inserted idempotently and can only be claimed once", as
   });
   assert.equal(recorded.duplicate, true);
   assert.equal(recorded.event.provider_event_id, "EVENT-1");
-  assert.match(captured.transactionQueries[1].text, /ON CONFLICT \(provider, provider_event_id\) DO NOTHING/);
+  assert.match(captured.transactionQueries[1].text, /pg_advisory_xact_lock/);
+  assert.match(captured.transactionQueries[2].text, /ON CONFLICT \(provider, provider_event_id\) DO NOTHING/);
   assert.equal(await persistence.claimWebhookEvent("monnify", "EVENT-1"), null);
   assert.equal(captured.transactionQueries.at(-1).text, "COMMIT");
   assert.match(captured.transactionQueries.at(-2).text, /processing_status IN \('received', 'failed'\)/);

@@ -729,6 +729,11 @@ function hasMonnifyConfig() {
   return getMissingMonnifyConfig().length === 0;
 }
 
+function getMonnifyPaymentMode() {
+  const environment = monnifyBillsAdapter.getEnvironment();
+  return environment ? `monnify-${environment}` : "monnify-unconfigured";
+}
+
 function getUnavailableVendingCatalogue(message, status) {
   const categories = ["electricity", "airtime", "data", "bills"].reduce((result, service) => {
     result[service] = {
@@ -761,6 +766,21 @@ async function getVendingCatalogueStatus() {
       "provider_unavailable"
     );
   }
+}
+
+function getHealthCatalogueStatus() {
+  const missingVasConfiguration = monnifyBillsAdapter.getMissingConfiguration()
+    .filter((name) => name !== "MONNIFY_CONTRACT_CODE");
+  if (missingVasConfiguration.length) {
+    return getUnavailableVendingCatalogue(
+      `Monnify Bills catalogue is unavailable. Configure ${missingVasConfiguration.join(", ")}.`,
+      "provider_unconfigured"
+    );
+  }
+  return getUnavailableVendingCatalogue(
+    "Monnify catalogue was not requested by the basic health check.",
+    "not_checked"
+  );
 }
 
 function getMissingHealthConfiguration() {
@@ -1233,6 +1253,7 @@ function getTransactionLifecycleStatus(order) {
     if (["pending", "processing"].includes(order.fulfilment_status)) return "processing";
     if (order.fulfilment_status === "failed") return "vending_failed";
     if (order.fulfilment_status === "review_required") return "pending_reconciliation";
+    if (order.fulfilment_status === "not_started") return "awaiting_operational_funds";
     return "paid";
   }
   if (order.payment_status === "initiated") return "awaiting_payment";
@@ -1402,10 +1423,31 @@ async function handleRequest(request, response) {
     const databaseReadiness = await postgresPersistence.getReadiness();
     const missingHealthConfiguration = getMissingHealthConfiguration();
     const databaseSecurityReady = databaseReadiness.securityStatus === "controls_verified";
-    const catalogueStatus = await getVendingCatalogueStatus();
+    const catalogueStatus = getHealthCatalogueStatus();
     const electronyAccountsOAuth = getElectronyAccountsOAuthConfiguration();
     const catalogueReady = catalogueStatus.available === true;
     const databaseSecurityChecks = databaseReadiness.checks || {};
+    const databaseSchema = databaseSecurityChecks.schema || {
+      status: databaseReadiness.connected ? "not_verified" : "not_checked",
+      missingTables: null,
+      missingColumns: null,
+      physicalTypesVerified: false
+    };
+    const databaseReadinessStatus = !databaseReadiness.connected
+      ? "unavailable"
+      : databaseSchema.status === "missing_tables"
+        ? "required_tables_missing"
+        : databaseSchema.status === "mismatch"
+          ? "schema_mismatch"
+          : databaseSecurityChecks.tablePermissions?.status === "failed"
+            ? "permission_mismatch"
+            : databaseReadiness.securityStatus === "failed"
+              ? "security_mismatch"
+            : databaseSchema.physicalTypesVerified !== true
+              ? "schema_types_unverified"
+            : databaseReadiness.securityStatus === "controls_verified"
+                ? "ready"
+                : "security_not_verified";
     const paymentBlockers = [
       "monnify_payment_contract_not_verified",
       "payment_operations_disabled_pending_contract_review",
@@ -1420,6 +1462,16 @@ async function handleRequest(request, response) {
       paymentBlockers.push("anon_authenticated_grants_require_review");
     }
     const readinessChecks = {
+      database: {
+        ready: databaseReadinessStatus === "ready",
+        status: databaseReadinessStatus,
+        blocker: databaseReadinessStatus === "ready" ? null : `database_${databaseReadinessStatus}`
+      },
+      monnifyCatalogue: {
+        ready: catalogueReady,
+        status: catalogueStatus.status,
+        blocker: catalogueReady ? null : `monnify_catalogue_${catalogueStatus.status}`
+      },
       billVendingProvider: {
         ready: false,
         status: "provider_unconfigured",
@@ -1464,6 +1516,16 @@ async function handleRequest(request, response) {
       mode: healthReady ? "ready" : "fail-closed",
       database: databaseReadiness,
       checks: {
+        databaseReadiness: {
+          ready: databaseReadinessStatus === "ready",
+          status: databaseReadinessStatus,
+          connected: databaseReadiness.connected,
+          missingTables: databaseSchema.missingTables,
+          missingColumns: databaseSchema.missingColumns,
+          physicalTypesVerified: databaseSchema.physicalTypesVerified,
+          securityFailure: databaseReadiness.securityFailure
+        },
+        databaseSchema,
         databaseConnectivity: {
           status: databaseReadiness.connected ? "verified" : "unavailable",
           connected: databaseReadiness.connected
@@ -1566,6 +1628,7 @@ async function handleRequest(request, response) {
         : "json-file",
       configuration: {
         monnify: hasMonnifyConfig(),
+        monnifyEnvironment: monnifyBillsAdapter.getEnvironment(),
         missingMonnify: getMissingMonnifyConfig(),
         missingRequired: missingHealthConfiguration,
         electronyAccountsOAuth,
@@ -2181,7 +2244,7 @@ async function handleRequest(request, response) {
             providerFeeMinor: existingOrder.provider_fee_minor === null ? null : Number(existingOrder.provider_fee_minor),
             totalAmountMinor: Number(existingOrder.total_amount_minor),
             status: existingOrder.payment_status === "pending" ? "created" : existingOrder.payment_status,
-            mode: process.env.NODE_ENV === "production" ? "monnify-production" : "monnify-sandbox",
+            mode: getMonnifyPaymentMode(),
             checkoutUrl: existingAttempt?.checkout_url || "",
             idempotent: true
           });
@@ -2296,7 +2359,7 @@ async function handleRequest(request, response) {
         providerFeeMinor: transaction.providerFeeMinor,
         totalAmountMinor: transaction.totalAmountMinor,
         status: "awaiting_payment",
-        mode: process.env.NODE_ENV === "production" ? "monnify-production" : "monnify-sandbox",
+        mode: getMonnifyPaymentMode(),
         checkoutUrl: result.checkoutUrl,
         monnifyReference: result.monnifyReference,
         note: "Only the payment redirect URL is exposed to the browser. Monnify credentials remain server-side only."

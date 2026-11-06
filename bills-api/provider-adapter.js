@@ -188,7 +188,8 @@ function buildProviderAdapter(environment = process.env, options = {}) {
       return await readJsonResponse(response);
     } catch (error) {
       if (response.status === 401) tokenCache = null;
-      if (method === "POST" && pathname.endsWith("/vend") && response.status >= 500) {
+      if (method === "POST" && pathname.endsWith("/vend")
+        && (response.status >= 500 || (response.ok && error.code === "provider_invalid_response"))) {
         error.outcomeUncertain = true;
       }
       throw error;
@@ -244,7 +245,7 @@ function buildProviderAdapter(environment = process.env, options = {}) {
       for (const category of supportedCategories) {
         const service = getServiceForCategory(category.code);
         const billers = await getPages("/api/v1/vas/bills-payment/billers", {
-          category_code: category.code
+          categoryCode: category.code
         });
         const current = categories[service];
         current.available = true;
@@ -292,7 +293,7 @@ function buildProviderAdapter(environment = process.env, options = {}) {
     if (productRequests.has(billerCode)) return productRequests.get(billerCode);
     const request = (async () => {
       const products = await getPages("/api/v1/vas/bills-payment/biller-products", {
-        biller_code: billerCode
+        billerCode
       });
       const normalized = products
         .filter((product) => typeof product?.code === "string" && typeof product?.name === "string")
@@ -377,8 +378,8 @@ function buildProviderAdapter(environment = process.env, options = {}) {
     const body = {
       productCode,
       customerId,
-      amount,
-      reference,
+      vendAmount: amount,
+      vendReference: reference,
       ...(validation.requireValidationRef
         ? { validationReference: validation.validationReference }
         : {}),
@@ -391,7 +392,9 @@ function buildProviderAdapter(environment = process.env, options = {}) {
     });
     const result = payload.responseBody;
     if (!result || typeof result.vendStatus !== "string" || !result.vendReference) {
-      throw createProviderError("Monnify returned an incomplete vending response.", "provider_invalid_response");
+      const error = createProviderError("Monnify returned an incomplete vending response.", "provider_invalid_response");
+      error.outcomeUncertain = true;
+      throw error;
     }
     return { ...result, raw: payload };
   }
@@ -413,6 +416,12 @@ function buildProviderAdapter(environment = process.env, options = {}) {
   return {
     isConfigured: () => getMissingConfiguration().length === 0,
     getMissingConfiguration,
+    getEnvironment() {
+      const config = getConfiguration();
+      return config.expectedBaseUrl && config.baseUrl === config.expectedBaseUrl
+        ? config.environment
+        : null;
+    },
     getAccessToken: authenticate,
     getCatalogue,
     getProducts,

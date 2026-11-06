@@ -294,6 +294,54 @@ function validateVerification(verification, { reference, amountMinor, currency, 
 }
 
 const READINESS_QUERY = `
+  WITH required_columns(table_name, column_names) AS (
+    VALUES
+      ('electrony_products', ARRAY[
+        'id', 'slug', 'name', 'category', 'short_description', 'website_url',
+        'status', 'display_order', 'metadata', 'created_at', 'updated_at'
+      ]::text[]),
+      ('bill_fee_quotes', ARRAY[
+        'id', 'quote_reference', 'customer_id', 'service_type', 'provider_code',
+        'product_code', 'customer_reference', 'amount_minor', 'platform_fee_minor',
+        'provider_fee_minor', 'currency', 'status', 'expires_at', 'metadata'
+      ]::text[]),
+      ('bill_orders', ARRAY[
+        'id', 'order_reference', 'customer_id', 'quote_id', 'service_type',
+        'provider_code', 'product_code', 'customer_reference', 'amount_minor',
+        'platform_fee_minor', 'provider_fee_minor', 'total_amount_minor', 'currency',
+        'payment_status', 'fulfilment_status', 'metadata', 'payment_reference',
+        'payment_provider', 'paid_at', 'failure_reason',
+        'provider_transaction_reference', 'fulfilled_at', 'created_at', 'updated_at'
+      ]::text[]),
+      ('bill_payment_attempts', ARRAY[
+        'id', 'order_id', 'provider', 'merchant_reference', 'amount_minor',
+        'currency', 'status', 'checkout_url', 'metadata', 'provider_reference',
+        'verified_at', 'updated_at'
+      ]::text[]),
+      ('bill_payment_webhook_events', ARRAY[
+        'provider', 'provider_event_id', 'event_type', 'merchant_reference',
+        'processing_status', 'payload', 'error_message', 'processed_at'
+      ]::text[]),
+      ('bill_platform_settings', ARRAY[
+        'setting_key', 'setting_value', 'description', 'updated_at'
+      ]::text[])
+  ),
+  required_unique_keys(table_name, column_names) AS (
+    VALUES
+      ('electrony_products', ARRAY['slug']::text[]),
+      ('bill_fee_quotes', ARRAY['quote_reference']::text[]),
+      ('bill_orders', ARRAY['order_reference']::text[]),
+      ('bill_orders', ARRAY['payment_reference']::text[]),
+      ('bill_orders', ARRAY['provider_transaction_reference']::text[]),
+      ('bill_payment_attempts', ARRAY['merchant_reference']::text[]),
+      ('bill_payment_webhook_events', ARRAY['provider', 'provider_event_id']::text[]),
+      ('bill_platform_settings', ARRAY['setting_key']::text[])
+  ),
+  required_foreign_keys(source_table, source_column, target_table, target_column) AS (
+    VALUES
+      ('bill_orders', 'quote_id', 'bill_fee_quotes', 'id'),
+      ('bill_payment_attempts', 'order_id', 'bill_orders', 'id')
+  )
   SELECT
     current_user AS role_name,
     session_user AS session_role_name,
@@ -318,6 +366,81 @@ const READINESS_QUERY = `
     relation.relname AS table_name,
     relation.relrowsecurity AS rls_enabled,
     pg_get_userbyid(relation.relowner) = current_user AS owns_table,
+    ARRAY(
+      SELECT required_column.column_name
+      FROM required_columns
+      CROSS JOIN LATERAL unnest(required_columns.column_names) AS required_column(column_name)
+      WHERE required_columns.table_name = relation.relname
+        AND NOT EXISTS (
+          SELECT 1
+          FROM pg_attribute column_info
+          WHERE column_info.attrelid = relation.oid
+            AND column_info.attname = required_column.column_name
+            AND column_info.attnum > 0
+            AND NOT column_info.attisdropped
+        )
+      ORDER BY required_column.column_name
+    ) AS missing_required_columns,
+    ARRAY(
+      SELECT array_to_string(required_key.column_names, ',')
+      FROM required_unique_keys required_key
+      WHERE required_key.table_name = relation.relname
+        AND NOT EXISTS (
+          SELECT 1
+          FROM pg_index index_info
+          WHERE index_info.indrelid = relation.oid
+            AND index_info.indisunique
+            AND index_info.indisvalid
+            AND index_info.indpred IS NULL
+            AND index_info.indnatts = cardinality(required_key.column_names)
+            AND ARRAY(
+              SELECT attribute.attname::text
+              FROM unnest(index_info.indkey::smallint[]) WITH ORDINALITY AS index_key(attnum, position)
+              JOIN pg_attribute attribute
+                ON attribute.attrelid = index_info.indrelid
+                AND attribute.attnum = index_key.attnum
+              WHERE index_key.position <= index_info.indnatts
+              ORDER BY index_key.position
+            ) = required_key.column_names
+        )
+      ORDER BY array_to_string(required_key.column_names, ',')
+    ) AS missing_required_unique_keys,
+    ARRAY(
+      SELECT format(
+        '%I.%I->%I.%I',
+        required_key.source_table,
+        required_key.source_column,
+        required_key.target_table,
+        required_key.target_column
+      )
+      FROM required_foreign_keys required_key
+      JOIN pg_class source_relation
+        ON source_relation.relnamespace = 'public'::regnamespace
+        AND source_relation.relname = required_key.source_table
+      JOIN pg_attribute source_column
+        ON source_column.attrelid = source_relation.oid
+        AND source_column.attname = required_key.source_column
+        AND source_column.attnum > 0
+        AND NOT source_column.attisdropped
+      JOIN pg_class target_relation
+        ON target_relation.relnamespace = 'public'::regnamespace
+        AND target_relation.relname = required_key.target_table
+      JOIN pg_attribute target_column
+        ON target_column.attrelid = target_relation.oid
+        AND target_column.attname = required_key.target_column
+        AND target_column.attnum > 0
+        AND NOT target_column.attisdropped
+      WHERE required_key.source_table = relation.relname
+        AND NOT EXISTS (
+          SELECT 1
+          FROM pg_constraint constraint_info
+          WHERE constraint_info.contype = 'f'
+            AND constraint_info.conrelid = source_relation.oid
+            AND constraint_info.confrelid = target_relation.oid
+            AND constraint_info.conkey = ARRAY[source_column.attnum]::smallint[]
+            AND constraint_info.confkey = ARRAY[target_column.attnum]::smallint[]
+        )
+    ) AS missing_required_foreign_keys,
     CASE relation.relname
       WHEN 'electrony_products' THEN
         has_table_privilege(current_user, relation.oid, 'SELECT')
@@ -1119,6 +1242,35 @@ function createPostgresPersistence(connectionString, PoolConstructor, environmen
         && new Set(tableNames).size === tableNames.length
         && tableNames.every((tableName) => REQUIRED_TABLES.includes(tableName))
         && REQUIRED_TABLES.every((tableName) => tables.has(tableName));
+      const missingTables = REQUIRED_TABLES.filter((tableName) => !tables.has(tableName));
+      const missingColumns = tableRows.flatMap((table) => (
+        (Array.isArray(table.missing_required_columns) ? table.missing_required_columns : [])
+          .map((column) => ({ table: table.table_name, column }))
+      ));
+      const missingUniqueKeys = tableRows.flatMap((table) => (
+        (Array.isArray(table.missing_required_unique_keys) ? table.missing_required_unique_keys : [])
+            .map((key) => ({ table: table.table_name, key }))
+      ));
+      const missingForeignKeys = tableRows.flatMap((table) => (
+        (Array.isArray(table.missing_required_foreign_keys) ? table.missing_required_foreign_keys : [])
+            .map((relationship) => ({ table: table.table_name, relationship }))
+      ));
+      const missingConstraints = [...missingUniqueKeys, ...missingForeignKeys];
+      const schema = {
+        status: missingTables.length
+            ? "missing_tables"
+            : missingColumns.length || missingConstraints.length
+              ? "mismatch"
+            : allTablesPresent
+                ? "required_columns_and_constraints_verified"
+                : "not_verified",
+        missingTables,
+        missingColumns,
+        missingUniqueKeys,
+        missingForeignKeys,
+        constraintsVerified: allTablesPresent && missingConstraints.length === 0,
+        physicalTypesVerified: false
+      };
       const knownOtherRoleGrants = tableRows.flatMap((table) => {
         const anon = table.anon_unexpected_privileges || [];
         const authenticated = table.authenticated_unexpected_privileges || [];
@@ -1158,6 +1310,10 @@ function createPostgresPersistence(connectionString, PoolConstructor, environmen
         confirmedFailureCode = "dedicated_role_required";
       } else if (!allTablesPresent && knownRows.length) {
         confirmedFailureCode = "required_tables_unavailable";
+      } else if (allTablesPresent && missingColumns.length) {
+        confirmedFailureCode = "required_columns_missing";
+      } else if (allTablesPresent && missingConstraints.length) {
+        confirmedFailureCode = "required_constraints_missing";
       } else if (tableRows.some((table) => !table.rls_enabled)) {
         confirmedFailureCode = "rls_disabled";
       } else if (tableRows.some((table) => table.owns_table)) {
@@ -1171,6 +1327,7 @@ function createPostgresPersistence(connectionString, PoolConstructor, environmen
       }
       error.code = confirmedFailureCode || failureCode;
       error.readinessChecks = {
+        schema,
         runtimeRole: {
           name: "electrony_bills_runtime",
           exists: roleExists,
@@ -1288,6 +1445,35 @@ function createPostgresPersistence(connectionString, PoolConstructor, environmen
     const tableRows = [...tables.values()];
     const allTablesPresent = requiredTableRowsUnambiguous
       && REQUIRED_TABLES.every((tableName) => tables.has(tableName));
+    const missingTables = REQUIRED_TABLES.filter((tableName) => !tables.has(tableName));
+    const missingColumns = tableRows.flatMap((table) => (
+      (Array.isArray(table.missing_required_columns) ? table.missing_required_columns : [])
+        .map((column) => ({ table: table.table_name, column }))
+    ));
+    const missingUniqueKeys = tableRows.flatMap((table) => (
+      (Array.isArray(table.missing_required_unique_keys) ? table.missing_required_unique_keys : [])
+        .map((key) => ({ table: table.table_name, key }))
+    ));
+    const missingForeignKeys = tableRows.flatMap((table) => (
+      (Array.isArray(table.missing_required_foreign_keys) ? table.missing_required_foreign_keys : [])
+        .map((relationship) => ({ table: table.table_name, relationship }))
+    ));
+    const missingConstraints = [...missingUniqueKeys, ...missingForeignKeys];
+    const schema = {
+      status: missingTables.length
+        ? "missing_tables"
+        : missingColumns.length || missingConstraints.length
+          ? "mismatch"
+          : allTablesPresent
+            ? "required_columns_and_constraints_verified"
+            : "not_verified",
+      missingTables,
+      missingColumns,
+      missingUniqueKeys,
+      missingForeignKeys,
+      constraintsVerified: allTablesPresent && missingConstraints.length === 0,
+      physicalTypesVerified: false
+    };
     const roleExists = Boolean(role?.runtime_role_exists);
     const connectedAsRuntimeRole = Boolean(
       role?.is_runtime_role && role.role_name === role.session_role_name
@@ -1359,6 +1545,7 @@ function createPostgresPersistence(connectionString, PoolConstructor, environmen
       && !excessiveFunctionPrivilegesFound
       && unexpectedSchemaCreateGrants.length === 0;
     const readinessChecks = {
+      schema,
       runtimeRole: {
         name: "electrony_bills_runtime",
         exists: roleExists,
@@ -1428,6 +1615,12 @@ function createPostgresPersistence(connectionString, PoolConstructor, environmen
     }
     if (!allTablesPresent) {
       reject("required_tables_unavailable", "Required Electrony Bills PostgreSQL tables are unavailable.");
+    }
+    if (missingColumns.length) {
+      reject("required_columns_missing", "Required Electrony Bills PostgreSQL columns are unavailable.");
+    }
+    if (missingConstraints.length) {
+      reject("required_constraints_missing", "Required Electrony Bills PostgreSQL unique keys or foreign keys are unavailable.");
     }
     if (!allTablesHaveRls) {
       reject("rls_disabled", "Row Level Security must be enabled on every required table.");
@@ -1642,6 +1835,10 @@ function createPostgresPersistence(connectionString, PoolConstructor, environmen
       throw persistenceError("Customer orders must not include guest-order authorization.", "invalid_input");
     }
     return withTransaction(async (transactionQuery) => {
+      await transactionQuery(
+        "SELECT pg_advisory_xact_lock(hashtextextended($1::text, 0))",
+        [`bill-order:${orderReference}`]
+      );
       const existingResult = await transactionQuery(`
         SELECT * FROM public.bill_orders
         WHERE order_reference = $1
@@ -1993,6 +2190,10 @@ function createPostgresPersistence(connectionString, PoolConstructor, environmen
     }
     const metadata = validateMetadata(input.metadata);
     return withTransaction(async (transactionQuery) => {
+      await transactionQuery(
+        "SELECT pg_advisory_xact_lock(hashtextextended($1::text, 0))",
+        [`bill-payment-attempt:${merchantReference}`]
+      );
       const prior = await transactionQuery(`
         SELECT a.*, o.order_reference FROM public.bill_payment_attempts a
         JOIN public.bill_orders o ON o.id = a.order_id
@@ -2172,6 +2373,10 @@ function createPostgresPersistence(connectionString, PoolConstructor, environmen
     const merchantReference = validateText(input.merchantReference, "merchantReference", { optional: true });
     const payload = validateMetadata(input.payload, "payload");
     return withTransaction(async (transactionQuery) => {
+      await transactionQuery(
+        "SELECT pg_advisory_xact_lock(hashtextextended($1::text, 0))",
+        [JSON.stringify(["bill-webhook", provider, providerEventId])]
+      );
       const inserted = await transactionQuery(`
         INSERT INTO public.bill_payment_webhook_events (
           provider, provider_event_id, event_type, merchant_reference,

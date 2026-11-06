@@ -54,6 +54,14 @@ if (calculatorScene) {
     calculatorScene.classList.add("is-visible");
   }
 }
+const circuitSwitch = document.querySelector("#energy-circuit-switch");
+if (calculatorScene && circuitSwitch) {
+  circuitSwitch.addEventListener("click", () => {
+    const isOn = circuitSwitch.getAttribute("aria-pressed") !== "true";
+    circuitSwitch.setAttribute("aria-pressed", String(isOn));
+    calculatorScene.classList.toggle("is-on", isOn);
+  });
+}
 
 function safeImageUrl(value) {
   if (typeof value !== "string" || !value.trim()) return null;

@@ -148,13 +148,27 @@ test("OAuth start sends a secure-cookie 302 and callback provider errors stay re
       ELECTRONY_IDENTITY_OAUTH_CLIENT_ID: CLIENT_ID,
       BILLS_OAUTH_CALLBACK_URL: OAUTH_CONFIG.callbackUrl,
       BILLS_APP_URL: "https://bills.electrony.xyz/",
-      BILLS_JWT_SECRET: jwtSecret
+      BILLS_JWT_SECRET: jwtSecret,
+      MONNIFY_API_KEY: "sandbox-api-key",
+      MONNIFY_SECRET_KEY: "sandbox-secret-key",
+      MONNIFY_CONTRACT_CODE: "sandbox-contract-code",
+      MONNIFY_ENVIRONMENT: "sandbox",
+      MONNIFY_BASE_URL: "https://sandbox.monnify.com"
     },
     stdio: ["ignore", "pipe", "pipe"]
   });
 
   try {
     await waitForServer(child);
+    const healthResponse = await fetch(`http://127.0.0.1:${port}/health`);
+    const health = await healthResponse.json();
+    assert.equal(health.checks.databaseReadiness.status, "unavailable");
+    assert.equal(health.checks.catalogue.status, "not_checked");
+    assert.equal(health.readinessChecks.monnifyCatalogue.status, "not_checked");
+    assert.equal(health.configuration.monnifyEnvironment, "sandbox");
+    assert.equal(health.readinessChecks.database.ready, false);
+    assert.equal(health.readinessChecks.monnifyCatalogue.ready, false);
+
     const appUrl = "https://bills.electrony.xyz/";
     const startOAuth = async (returnTo = appUrl) => fetch(
       `http://127.0.0.1:${port}/api/auth/oauth/start?return_to=${encodeURIComponent(returnTo)}`,

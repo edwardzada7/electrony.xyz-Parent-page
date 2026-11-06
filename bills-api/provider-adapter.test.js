@@ -41,17 +41,37 @@ function createFetch(respond) {
 }
 
 test("Monnify adapter requires explicit, environment-matched sandbox configuration", async () => {
+  const configuredAdapter = buildProviderAdapter(configuredEnvironment);
+  assert.equal(configuredAdapter.getEnvironment(), "sandbox");
+
   const adapter = buildProviderAdapter({
     ...configuredEnvironment,
     MONNIFY_BASE_URL: "https://api.monnify.com"
   }, { fetch: async () => assert.fail("Unconfigured adapter must not call Monnify.") });
 
   assert.equal(adapter.isConfigured(), false);
+  assert.equal(adapter.getEnvironment(), null);
   assert.deepEqual(adapter.getMissingConfiguration(), ["MONNIFY_BASE_URL"]);
   await assert.rejects(adapter.getCatalogue(), {
     code: "provider_unconfigured",
     statusCode: 503
   });
+});
+
+test("Monnify mode follows the selected API environment, not NODE_ENV", () => {
+  const productionAdapter = buildProviderAdapter({
+    ...configuredEnvironment,
+    NODE_ENV: "development",
+    MONNIFY_ENVIRONMENT: "production",
+    MONNIFY_BASE_URL: "https://api.monnify.com"
+  });
+  const sandboxAdapter = buildProviderAdapter({
+    ...configuredEnvironment,
+    NODE_ENV: "production"
+  });
+
+  assert.equal(productionAdapter.getEnvironment(), "production");
+  assert.equal(sandboxAdapter.getEnvironment(), "sandbox");
 });
 
 test("catalogue reads authenticated Monnify categories and billers and caches the result", async () => {
@@ -73,7 +93,7 @@ test("catalogue reads authenticated Monnify categories and billers and caches th
       });
     }
     if (url.pathname.endsWith("/billers")) {
-      if (url.searchParams.get("category_code") !== "ELECTRICITY") {
+      if (url.searchParams.get("categoryCode") !== "ELECTRICITY") {
         return successful({ content: [], nextPage: null });
       }
       return successful({
@@ -113,7 +133,7 @@ test("products and customer validation use catalogue codes and preserve requireV
       return successful({ content: [{ code: "LIVE-DISCO", name: "Catalogue Disco" }], nextPage: null });
     }
     if (url.pathname.endsWith("/biller-products")) {
-      assert.equal(url.searchParams.get("biller_code"), "LIVE-DISCO");
+      assert.equal(url.searchParams.get("billerCode"), "LIVE-DISCO");
       return successful({
         content: [{
           code: "LIVE-PREPAID",
@@ -169,7 +189,7 @@ test("vending uses the documented request fields and only includes required vali
     if (url.pathname.endsWith("/vend")) {
       sentBodies.push(JSON.parse(options.body));
       return successful({
-        vendReference: sentBodies.at(-1).reference,
+        vendReference: sentBodies.at(-1).vendReference,
         transactionReference: "provider-transaction",
         vendStatus: "IN_PROGRESS",
         description: "Pending"
@@ -204,9 +224,11 @@ test("vending uses the documented request fields and only includes required vali
   });
 
   assert.equal(withReference.vendStatus, "IN_PROGRESS");
-  assert.equal(sentBodies[0].amount, 1500);
+  assert.equal(sentBodies[0].vendAmount, 1500);
   assert.equal(sentBodies[0].validationReference, "validated-reference");
-  assert.equal(sentBodies[0].reference, "ELECBILLS-20261105-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA");
+  assert.equal(sentBodies[0].vendReference, "ELECBILLS-20261105-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA");
+  assert.equal(Object.hasOwn(sentBodies[0], "amount"), false);
+  assert.equal(Object.hasOwn(sentBodies[0], "reference"), false);
   assert.equal(Object.hasOwn(sentBodies[1], "validationReference"), false);
   await assert.rejects(adapter.vend({
     productCode: "LIVE-PREPAID",
@@ -214,6 +236,42 @@ test("vending uses the documented request fields and only includes required vali
     amount: 1500,
     reference: "another-reference"
   }), { code: "validation_required" });
+});
+
+test("malformed successful vending responses are uncertain and are never retried", async () => {
+  let vendCalls = 0;
+  const { fetch } = createFetch(({ url }) => {
+    if (url.pathname === "/api/v1/auth/login") return successful({ accessToken: "token", expiresIn: 3600 });
+    if (url.pathname.endsWith("/vend")) {
+      vendCalls += 1;
+      return {
+        ok: true,
+        status: 200,
+        async json() {
+          throw new Error("invalid JSON");
+        }
+      };
+    }
+    assert.fail(`Unexpected Monnify request: ${url.pathname}`);
+  });
+  const adapter = buildProviderAdapter(configuredEnvironment, { fetch });
+
+  await assert.rejects(adapter.vend({
+    productCode: "OPEN-AIRTIME",
+    customerId: "08012345678",
+    amount: 500,
+    reference: "merchant-reference",
+    validation: {
+      productCode: "OPEN-AIRTIME",
+      customerId: "08012345678",
+      requireValidationRef: false
+    }
+  }), {
+    code: "provider_invalid_response",
+    outcomeUncertain: true
+  });
+
+  assert.equal(vendCalls, 1);
 });
 
 test("uncertain vending failures are not retried and are resolved only by GET requery", async () => {

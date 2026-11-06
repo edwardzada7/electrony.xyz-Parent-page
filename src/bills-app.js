@@ -1068,7 +1068,16 @@ function displayPaymentOutcome(response, reference) {
       return;
     }
 
-    if (["review_required", "pending_reconciliation", "not_started"].includes(fulfillmentStatus)) {
+    if (fulfillmentStatus === "not_started" || status === "awaiting_operational_funds") {
+      displayTransactionResult(
+        "Vending awaiting operational funds.",
+        `Reference: ${reference}. Payment is confirmed, but operational funding has not been verified and vending has not started. Do not pay again.`,
+        "pending"
+      );
+      return;
+    }
+
+    if (["review_required", "pending_reconciliation"].includes(fulfillmentStatus)) {
       displayTransactionResult(
         "Requires support or reconciliation.",
         `Reference: ${reference}. Payment is confirmed, but the service outcome needs review. Do not pay again.`,
@@ -1129,6 +1138,9 @@ function getTransactionHistoryStatus(transaction) {
   if (paymentStatus === "paid" && fulfilmentStatus === "fulfilled") return "Successful";
   if (paymentStatus === "paid" && fulfilmentStatus === "failed") {
     return "Payment confirmed; service delivery failed. Contact support; do not pay again.";
+  }
+  if (paymentStatus === "paid" && fulfilmentStatus === "not_started") {
+    return "Vending awaiting operational funds. Funding is not verified; do not pay again.";
   }
   if (paymentStatus === "paid" && ["pending", "processing", "review_required"].includes(fulfilmentStatus)) {
     return "Payment confirmed; service is pending or being reconciled.";
