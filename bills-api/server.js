@@ -1454,7 +1454,9 @@ async function handleRequest(request, response) {
           ? "schema_mismatch"
           : databaseSecurityChecks.tablePermissions?.status === "failed"
             || databaseSecurityChecks.rlsPolicies?.status === "failed"
-            ? "permission_or_rls_failure"
+              || databaseSecurityChecks.runtimeRole?.status === "failed"
+              || databaseSecurityChecks.otherRoleGrants?.status === "remediation_required"
+              ? "permission_or_rls_failure"
             : databaseReadiness.securityStatus === "failed"
               ? "security_mismatch"
               : databaseSchema.physicalTypesVerified !== true
@@ -1550,7 +1552,10 @@ async function handleRequest(request, response) {
               : databaseReadiness.connectionFailure === "invalid_configuration"
                 ? "configuration_invalid"
                 : "connection_failure",
-          connected: databaseReadiness.connected
+          connected: databaseReadiness.connected,
+          failureCategory: databaseReadiness.connected
+            ? null
+            : databaseReadiness.connectionFailure
         },
         runtimeRole: databaseSecurityChecks.runtimeRole || {
           status: databaseReadiness.connected ? "not_verified" : "not_checked",

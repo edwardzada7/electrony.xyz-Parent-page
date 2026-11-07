@@ -1861,7 +1861,7 @@ function createPostgresPersistence(connectionString, PoolConstructor, environmen
         connected: false,
         securityStatus: "not_checked",
         securityFailure: null,
-        connectionFailure: "connection_failed"
+        connectionFailure: classifyConnectionFailure(error)
       };
     }
 

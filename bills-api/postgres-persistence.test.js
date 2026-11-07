@@ -310,7 +310,7 @@ test("readiness verifies enabled RLS and role-scoped policy coverage", async () 
   assert.equal(captured.closed, true);
 });
 
-test("connection failures are safely classified in server logs while health remains generic", async () => {
+test("connection failures expose safe categories in readiness and logs", async () => {
   const failures = [
     ["ENOTFOUND", "dns_error"],
     ["ECONNREFUSED", "connection_refused"],
@@ -336,8 +336,10 @@ test("connection failures are safely classified in server logs while health rema
         connected: false,
         securityStatus: "not_checked",
         securityFailure: null,
-        connectionFailure: "connection_failed"
+        connectionFailure: category
       });
+      assert.equal(JSON.stringify(readiness).includes("password"), false);
+      assert.equal(JSON.stringify(readiness).includes("db.private.example.test"), false);
       assert.deepEqual(logged.at(-1), [
         "Bills PostgreSQL connection failure.",
         { category, errorCode: code }
@@ -362,7 +364,7 @@ test("wrapped connection errors expose only a recognized nested code", async () 
     const readiness = await makePersistence([pgPoolError]).getReadiness();
 
     assert.equal(readiness.connected, false);
-    assert.equal(readiness.connectionFailure, "connection_failed");
+    assert.equal(readiness.connectionFailure, "tls_error");
     assert.deepEqual(logged, [[
       "Bills PostgreSQL connection failure.",
       { category: "tls_error", errorCode: "UNABLE_TO_GET_ISSUER_CERT_LOCALLY" }
@@ -382,8 +384,9 @@ test("unknown connection errors do not log unsafe codes or raw messages", async 
   try {
     const error = new Error("password=private db.private.example.test secret");
     error.code = "private_database_password";
-    await makePersistence([error]).getReadiness();
+    const readiness = await makePersistence([error]).getReadiness();
 
+    assert.equal(readiness.connectionFailure, "unknown");
     assert.deepEqual(logged, [[
       "Bills PostgreSQL connection failure.",
       { category: "unknown" }
