@@ -2989,13 +2989,27 @@
   overflow-wrap: anywhere;
 }
 
+.energy-package-card__capacity,
 .energy-package-card__application,
 .energy-package-card__review,
-.energy-package-card__source {
+.energy-package-card__source,
+.energy-package-card__suitability {
   margin: 0;
   color: var(--energy-muted);
   font-size: 0.86rem;
   line-height: 1.65;
+}
+
+.energy-package-card__capacity {
+  color: var(--energy-forest);
+  font-weight: 600;
+}
+
+.energy-package-card__suitability {
+  padding: 0.75rem;
+  border-left: 3px solid var(--energy-green);
+  background: #f3f8f1;
+  font-size: 0.8rem;
 }
 
 .energy-package-card__badge {
@@ -3045,6 +3059,90 @@
 
 .energy-package-card__details[open] ul {
   margin-top: 0.6rem;
+}
+
+.energy-package-pricing__lines {
+  display: grid;
+  gap: 0.65rem;
+  padding: 0;
+  margin: 0.75rem 0 0;
+  list-style: none;
+}
+
+.energy-package-pricing__line {
+  display: grid;
+  gap: 0.25rem;
+  min-width: 0;
+  padding: 0.75rem;
+  border: 1px solid var(--energy-line);
+  border-radius: 0.35rem;
+  background: #fbfdf9;
+}
+
+.energy-package-pricing__category {
+  color: var(--energy-forest);
+  font-size: 0.8rem;
+}
+
+.energy-package-pricing__product,
+.energy-package-pricing__description {
+  overflow-wrap: anywhere;
+  color: var(--energy-muted);
+  font-size: 0.78rem;
+  line-height: 1.5;
+}
+
+.energy-package-pricing__amounts {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.5rem;
+  margin: 0.3rem 0 0;
+}
+
+.energy-package-pricing__amounts > div {
+  min-width: 0;
+}
+
+.energy-package-pricing__amounts > div:last-child {
+  grid-column: 1 / -1;
+  padding-top: 0.4rem;
+  border-top: 1px solid var(--energy-line);
+}
+
+.energy-package-pricing__amounts dt {
+  color: var(--energy-muted);
+  font-size: 0.68rem;
+}
+
+.energy-package-pricing__amounts dd {
+  margin: 0.1rem 0 0;
+  color: var(--energy-ink);
+  font-size: 0.78rem;
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+
+.energy-package-pricing__summary {
+  display: grid;
+  gap: 0.3rem;
+  padding: 0.85rem;
+  margin-top: 0.8rem;
+  border-left: 3px solid var(--energy-green);
+  background: #f3f8f1;
+  color: var(--energy-forest);
+}
+
+.energy-package-pricing__summary > span {
+  font-size: 1.2rem;
+  font-weight: 700;
+  overflow-wrap: anywhere;
+}
+
+.energy-package-pricing__summary p {
+  margin: 0;
+  color: var(--energy-muted);
+  font-size: 0.76rem;
+  line-height: 1.5;
 }
 
 .energy-package-card__review {

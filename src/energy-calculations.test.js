@@ -10,6 +10,7 @@ const energySource = fs.readFileSync(path.join(__dirname, "energy.js"), "utf8");
 const energyCalculatorSource = fs.readFileSync(path.join(__dirname, "energy-calculator.js"), "utf8");
 const energyCalculationsSource = fs.readFileSync(path.join(__dirname, "energy-calculations.js"), "utf8");
 const energyPackageSource = fs.readFileSync(path.join(__dirname, "energy-packages.js"), "utf8");
+const energyPricingSource = fs.readFileSync(path.join(__dirname, "energy-pricing.js"), "utf8");
 const energyCatalogueSource = fs.readFileSync(path.join(__dirname, "energy-catalogue.js"), "utf8");
 const calculatorContext = { window: {} };
 vm.runInNewContext(calculatorSource, calculatorContext);
@@ -32,6 +33,7 @@ test("Energy page scripts do not redeclare page-level lexical bindings", () => {
   const pageScripts = [
     energyCatalogueSource,
     energyPackageSource,
+    energyPricingSource,
     energySource,
     energyCalculationsSource,
     energyCalculatorSource

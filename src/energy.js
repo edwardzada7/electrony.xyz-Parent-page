@@ -256,8 +256,10 @@ function renderEnergyCatalogue() {
 
 function createPackageCard(solarPackage, comparison = null) {
   const card = createElement("article", "energy-package-card");
+  const pricing = window.ElectronyEnergyPricing.calculateSolarPackagePricing(solarPackage, energyProducts);
   const application = createElement("p", "energy-package-card__application", solarPackage.application);
   const title = createElement("h3", "energy-package-card__title", solarPackage.name);
+  const capacity = createElement("p", "energy-package-card__capacity", `System capacity: ${solarPackage.capacity}`);
   const badge = comparison
     ? createElement("p", "energy-package-card__badge", comparison.recommended ? "Preliminary rating comparison" : "Explore with Electrony")
     : null;
@@ -267,7 +269,7 @@ function createPackageCard(solarPackage, comparison = null) {
     createElement("li", "", `Solar array: ${solarPackage.panelCount} × ${solarPackage.panelWatts}W panels (${formatPackageWatts(solarPackage.panelCount * solarPackage.panelWatts)} rated total).`),
     createElement("li", "", solarPackage.batterySummary)
   );
-  card.append(title, application);
+  card.append(title, capacity, application);
   if (badge) card.appendChild(badge);
   card.appendChild(createPackageScene(solarPackage.id));
   card.appendChild(summary);
@@ -295,17 +297,49 @@ function createPackageCard(solarPackage, comparison = null) {
   const details = document.createElement("details");
   details.className = "energy-package-card__details";
   const disclosure = document.createElement("summary");
-  disclosure.textContent = "View package specifications";
-  const componentList = document.createElement("ul");
-  solarPackage.components.forEach((component) => {
-    componentList.appendChild(createElement("li", "", `${component.category} — ${component.model}: ${component.details}; quantity ${component.quantity}.`));
+  disclosure.textContent = "View itemized components and pricing";
+  const componentList = createElement("ul", "energy-package-pricing__lines");
+  pricing.lines.forEach((line) => {
+    const componentLine = createElement("li", "energy-package-pricing__line");
+    const componentHeading = createElement("strong", "energy-package-pricing__category", line.component.category);
+    const productName = createElement("span", "energy-package-pricing__product", `${line.manufacturer} — ${line.model}`);
+    const componentDetails = createElement("span", "energy-package-pricing__description", line.component.details);
+    const amounts = createElement("dl", "energy-package-pricing__amounts");
+    [
+      ["Quantity", `${line.component.quantity} ${line.component.unit}${line.component.quantity === 1 ? "" : "s"}`],
+      ["Unit price", line.unitPriceNgn === null ? "Price on enquiry" : formatNaira(line.unitPriceNgn)],
+      ["Line total", line.lineTotalNgn === null ? "Price on enquiry" : formatNaira(line.lineTotalNgn)]
+    ].forEach(([label, amount]) => {
+      const entry = createElement("div");
+      entry.append(createElement("dt", "", label), createElement("dd", "", amount));
+      amounts.appendChild(entry);
+    });
+    componentLine.append(componentHeading, productName, componentDetails, amounts);
+    componentList.appendChild(componentLine);
   });
-  details.append(disclosure, componentList);
+  const pricingSummary = createElement("div", "energy-package-pricing__summary");
+  pricingSummary.append(
+    createElement("strong", "", pricing.complete ? "Package component total" : "Partial component subtotal · confirmed prices only"),
+    createElement("span", "", pricing.complete && pricing.totalNgn !== null
+      ? formatNaira(pricing.totalNgn)
+      : pricing.subtotalNgn === null ? "Full total unavailable" : formatNaira(pricing.subtotalNgn)),
+    createElement("p", "", pricing.complete
+      ? "All listed component prices are confirmed in the product price list."
+      : `Full package component total unavailable: ${pricing.unpricedLines.length} required ${pricing.unpricedLines.length === 1 ? "line has" : "lines have"} no confirmed price.`),
+    createElement("p", "", "Component pricing only; installation, transportation, labour, taxes, engineering and other fees not explicitly priced are excluded.")
+  );
+  details.append(disclosure, componentList, pricingSummary);
   card.appendChild(details);
   if (solarPackage.reviewNote) {
     card.appendChild(createElement("p", "energy-package-card__review", `Source detail to confirm: ${solarPackage.reviewNote}`));
   }
+  if (solarPackage.pricingNote) {
+    card.appendChild(createElement("p", "energy-package-card__review", solarPackage.pricingNote));
+  }
+  card.appendChild(createElement("p", "energy-package-card__suitability",
+    "Package suitability is not guaranteed. Final system design requires load assessment and site evaluation, including battery/inverter compatibility, PV string sizing and project-specific circuit protection."));
   const source = createElement("p", "energy-package-card__source", `Source: ${solarPackage.source.document}, page ${solarPackage.source.page}.`);
+  const priceSource = createElement("p", "energy-package-card__source", "Individual product prices: POWER-SOLAR PL-1.pdf (5 November 2026).");
   const footer = createElement("div", "energy-package-card__footer");
   const quote = document.createElement("a");
   quote.className = "button energy-button energy-button--primary";
@@ -316,7 +350,8 @@ function createPackageCard(solarPackage, comparison = null) {
     requestSolarPackage(solarPackage, comparison?.estimate || null);
   });
   footer.appendChild(quote);
-  card.append(source, footer);
+  card.append(source, priceSource, footer);
+  card.insertBefore(pricingSummary.cloneNode(true), details);
   return card;
 }
 
@@ -496,6 +531,14 @@ function formatPackageEnergy(wattHours) {
   return `${new Intl.NumberFormat(undefined, { maximumFractionDigits: 2 }).format(wattHours / 1000)} kWh`;
 }
 
+function formatNaira(amount) {
+  return new Intl.NumberFormat("en-NG", {
+    style: "currency",
+    currency: "NGN",
+    maximumFractionDigits: 0
+  }).format(amount);
+}
+
 function renderSolarPackageCatalogue() {
   packageCatalogue.replaceChildren();
   solarPackages.forEach((solarPackage) => packageCatalogue.appendChild(createPackageCard(solarPackage)));
@@ -523,17 +566,27 @@ function renderSolarPackageRecommendations(estimate) {
 }
 
 function requestSolarPackage(solarPackage, estimate = null) {
+  const pricing = window.ElectronyEnergyPricing.calculateSolarPackagePricing(solarPackage, energyProducts);
   categorySelect.value = "complete-systems";
   productInput.value = solarPackage.name;
   requirementsInput.value = [
-    `Solar package enquiry: ${solarPackage.name}`,
+    `Solar package enquiry: ${solarPackage.name} — ${solarPackage.capacity}`,
     `Intended application in source: ${solarPackage.application}`,
-    ...solarPackage.components.map((component) =>
-      `${component.category}: ${component.model}; ${component.details}; quantity ${component.quantity}.`),
+    ...pricing.lines.map((line) =>
+      `${line.component.category}: ${line.manufacturer} ${line.model}; ${line.component.details}; quantity ${line.component.quantity} ${line.component.unit}; unit price ${line.unitPriceNgn === null ? "Price on enquiry" : formatNaira(line.unitPriceNgn)}; line total ${line.lineTotalNgn === null ? "Price on enquiry" : formatNaira(line.lineTotalNgn)}.`),
+    pricing.complete
+      ? `Calculated package component total: ${formatNaira(pricing.totalNgn)}.`
+      : `Full package component total unavailable because ${pricing.unpricedLines.length} required component ${pricing.unpricedLines.length === 1 ? "has" : "have"} no confirmed price.${pricing.subtotalNgn === null ? "" : ` Partial subtotal for confirmed-price components only: ${formatNaira(pricing.subtotalNgn)}.`}`,
+    pricing.unpricedLines.length
+      ? `Components requiring a quote: ${pricing.unpricedLines.map((line) => `${line.manufacturer} ${line.model} (${line.component.quantity} ${line.component.unit})`).join("; ")}.`
+      : "",
+    "Displayed component prices exclude installation, transportation, labour, taxes, engineering and other fees not explicitly priced in the catalogue.",
     solarPackage.reviewNote ? `Please confirm: ${solarPackage.reviewNote}` : "",
+    solarPackage.pricingNote ? `Pricing note: ${solarPackage.pricingNote}` : "",
     `Source: ${solarPackage.source.document}, page ${solarPackage.source.page}.`,
+    "Package suitability is not guaranteed. Please perform load assessment and site evaluation and confirm battery/inverter compatibility, PV string sizing and project-specific circuit protection.",
     estimate ? window.ElectronyEnergyCalculationSummary : "",
-    "Please confirm current price, availability, electrical compatibility and suitability for my application."
+    "Please confirm current prices, availability, electrical compatibility and suitability for my application."
   ].filter(Boolean).join("\n");
   [categorySelect, productInput, requirementsInput].forEach((field) => {
     field.dispatchEvent(new Event(field instanceof HTMLSelectElement ? "change" : "input", { bubbles: true }));

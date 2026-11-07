@@ -1,5 +1,31 @@
-const sourceDocument = "POWER-SOLAR PL.pdf";
+const sourceDocument = "POWER-SOLAR PL-1.pdf";
 const sourceDataSheetNote = "Please ask your sales rep for date sheet";
+const priceSourceDocument = "POWER-SOLAR PL-1.pdf";
+const confirmedPrices = Object.freeze({
+  "JINKO|620N-66HL4-BD": { amountNgn: 122500, page: 1 },
+  "JINKO|725N-66HL5-BD": { amountNgn: 155000, page: 1 },
+  "HUAWEI|ATS 63A": { amountNgn: 1040000, page: 2 },
+  "GROWATT|ABM 5.5-A1-H": { amountNgn: 899000, page: 3 },
+  "GROWATT|HOPE5L-B1": { amountNgn: 855000, page: 3 },
+  "GROWATT|SPH 3600TL-BL-UP": { amountNgn: 450000, page: 3 },
+  "DEYE|50K-SG01HP3-E": { amountNgn: 4750000, page: 2 },
+  "DEYE|BATSE-F16-C": { amountNgn: 2250000, page: 2 },
+  "DEYE|BOS-B-PACK16": { amountNgn: 2325000, page: 2 },
+  "DEYE|CONTROL BOX HV BOS-B-PDU-2-A": { amountNgn: 1950000, page: 2 },
+  "DEYE|DEYERACK-3U-H": { amountNgn: 565000, page: 2 },
+  "ANTAI|ANTAIRAILCG010-01": { amountNgn: 20500, page: 4 },
+  "ANTAI|ANTAIMIDGN003-05": { amountNgn: 1000, page: 4 },
+  "ANTAI|ANTAILUGTYN16-01": { amountNgn: 1000, page: 4 },
+  "ANTAI|ANTAILFEETTYN353-01": { amountNgn: 1300, page: 4 },
+  "ANTAI|ANTAIJOINERCG037": { amountNgn: 1200, page: 4 },
+  "ANTAI|ANTAIENDCG018-01": { amountNgn: 1000, page: 4 },
+  "SUNTREE|SUNACGUARD63A-230V": { amountNgn: 7500, page: 4 },
+  "SUNTREE|SUNDB6WAY": { amountNgn: 4500, page: 4 },
+  "SUNTREE|SUNDB12WAY": { amountNgn: 7000, page: 4 },
+  "SUNTREE|SUNACMCCB100A-4P": { amountNgn: 60000, page: 4 },
+  "SUNTREE|SUNDCISO32A-1000V-4P": { amountNgn: 18000, page: 4 },
+  "SUNTREE|SUNACMCCB250A-4P": { amountNgn: 100000, page: 4 }
+});
 const brandLogos = Object.freeze({
   JINKO: "../assets/catalogue/energy/brands/jinko.png",
   HUAWEI: "../assets/catalogue/energy/brands/huawei.png",
@@ -83,6 +109,7 @@ function makeProduct(brand, details) {
     alt: categoryImage[1]
   };
   const slug = `${brand}-${details.model || details.name}`.toLocaleLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+  const confirmedPrice = confirmedPrices[`${brand}|${details.model || ""}`];
   return Object.freeze({
     id: slug,
     brand,
@@ -93,6 +120,10 @@ function makeProduct(brand, details) {
     enquiryCategory: enquiryCategories[details.category],
     description: details.description || "",
     specifications: Object.freeze(details.specifications || []),
+    ...(confirmedPrice ? {
+      priceNgn: confirmedPrice.amountNgn,
+      priceSource: Object.freeze({ document: priceSourceDocument, page: confirmedPrice.page })
+    } : {}),
     ...(details.warranty ? { warranty: details.warranty } : {}),
     source: Object.freeze({ document: sourceDocument, page: details.page }),
     ...(details.sourceNote ? { sourceNote: details.sourceNote } : {}),
