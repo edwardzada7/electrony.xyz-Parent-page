@@ -132,6 +132,49 @@ const confirmedPrices = Object.freeze({
   "SUNTREE|SUNPVCABLE1C6MMRED": { amountNgn: 1500, display: "1,500.00", page: 5 },
   "SUNTREE|SUNPVCABLE1C6MMBLACK": { amountNgn: 1500, display: "1,500.00", page: 5 }
 });
+const priceAdjustmentId = "energy-price-adjustments-2026-11-phase-1";
+const explicitPriceAdjustments = Object.freeze({
+  "DEYE|6/6KOG03LP1": 50000,
+  "DEYE|8K-SG06LP1-EU": 135000,
+  "DEYE|12K-SG05LP3-E": 140000,
+  "DEYE|16K-SG01LP1-E": 225000,
+  "DEYE|20K-SG05LP3-E": 304000,
+  "DEYE|12K-SG06LP1-E": 179000,
+  "DEYE|50K-SG01HP3-E": 1000000,
+  "DEYE|80K-SG02HP3-E": 650000,
+  "DEYE|125K-SG02HP3": 875000,
+  "DEYE|100K-G": 300000,
+  "DEYE|136K-G": 450000,
+  "DEYE|BATSE-F16-C": 250000,
+  "DEYE|SE-F5-L": 100000,
+  "DEYE|BOS-GM-5.1 HV": 150000,
+  "DEYE|BOS-G-PRO51": 150000,
+  "DEYE|GB-W-12": 200000,
+  "DEYE|PDU-GB-W-2": 150000,
+  "DEYE|ACC-GB-W-PARTS": 100000,
+  "DEYE|BOS-B-PACK16": 220000,
+  "DEYE|PCS 125K-L01HP3": 500000,
+  "DEYE|MPPT 200KW": 250000,
+  "DEYE|CONTROL BOX HV BOS-B-PDU-2-A": 250000,
+  "DEYE|STS 500L": 750000,
+  "DEYE|CONTROL BOX HV BOS-G-PDU-PRO": 100000,
+  "DEYE|DEYERACK-3U-H": 100000,
+  "PYLON-TECH|PYLONBATFB-L-16 ( 16 Kwh )": 200000,
+  "PYLON-TECH|UF5000 (5.12 Kwh)": 100000,
+  "HUAWEI|POWER CABINET": 1500000,
+  "HUAWEI|BATTERY CABINET": 950000,
+  "HUAWEI|ESM-48200A1": 500000,
+  "HUAWEI|ESM-48100A7": 500000,
+  "HUAWEI|I23003": 70000,
+  "HUAWEI|PVDU-8kW": 90000,
+  "HUAWEI|HUWINV100KTL-M2": 500000,
+  "HUAWEI|HUWINV150K-MG0": 1000000,
+  "HUAWEI|LUNA 2000-97KWH": 19000000,
+  "HUAWEI|LUNA 2000-129KWH": 19000000,
+  "HUAWEI|LUNA 2000-215KWH": 19000000,
+  "HISENSE|INV6KS-AA1": 45000,
+  "HISENSE|BATHEL5-E-BB1": 95500
+});
 const brandLogos = Object.freeze({
   JINKO: "../assets/catalogue/energy/brands/jinko.png",
   HUAWEI: "../assets/catalogue/energy/brands/huawei.png",
@@ -205,6 +248,23 @@ const categoryImages = Object.freeze({
   "solar-cables": ["energy-cables.svg", "Illustrative electrical cable category artwork; not a product photograph."]
 });
 
+function getPriceAdjustmentAmount(brand, details) {
+  if (details.category === "solar-panels") return 19000;
+  if (brand === "HISENSE") {
+    if (details.category === "solar-inverters") return 45000;
+    if (details.category === "batteries-storage") return 95500;
+    if (details.category === "transformers") {
+      return /(?:^|[^0-9])(?:800|1000)\s*KVA/i.test(details.model || "") ? 2000000 : 1000000;
+    }
+  }
+  return explicitPriceAdjustments[`${brand}|${details.model || ""}`] || 0;
+}
+
+function formatAdjustedPrice(priceNgn, originalDisplay) {
+  const decimalSuffix = typeof originalDisplay === "string" && originalDisplay.includes(".") ? ".00" : "";
+  return `${priceNgn.toLocaleString("en-US")}${decimalSuffix}`;
+}
+
 function makeProduct(brand, details) {
   const categoryImage = categoryImages[details.category] || [
     "energy-cables.svg",
@@ -216,6 +276,26 @@ function makeProduct(brand, details) {
   };
   const slug = `${brand}-${details.model || details.name}`.toLocaleLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
   const confirmedPrice = confirmedPrices[`${brand}|${details.model || ""}`];
+  const basePriceNgn = confirmedPrice?.amountNgn;
+  const isValidBasePrice = Number.isSafeInteger(basePriceNgn)
+    && basePriceNgn >= 0
+    && typeof confirmedPrice?.display === "string";
+  const adjustmentAmountNgn = getPriceAdjustmentAmount(brand, details);
+  const calculatedPriceNgn = isValidBasePrice ? basePriceNgn + adjustmentAmountNgn : null;
+  const priceNgn = Number.isSafeInteger(calculatedPriceNgn) ? calculatedPriceNgn : null;
+  const priceAdjustment = adjustmentAmountNgn > 0 && isValidBasePrice && priceNgn !== null
+    ? Object.freeze({
+      id: `${priceAdjustmentId}:${slug}`,
+      batchId: priceAdjustmentId,
+      amountNgn: adjustmentAmountNgn,
+      previousPriceNgn: basePriceNgn
+    })
+    : null;
+  const priceDisplay = priceNgn === null
+    ? null
+    : adjustmentAmountNgn > 0
+      ? formatAdjustedPrice(priceNgn, confirmedPrice.display)
+      : confirmedPrice.display;
   return Object.freeze({
     id: slug,
     brand,
@@ -226,8 +306,9 @@ function makeProduct(brand, details) {
     enquiryCategory: enquiryCategories[details.category],
     description: details.description || "",
     specifications: Object.freeze(details.specifications || []),
-    priceNgn: confirmedPrice?.amountNgn ?? null,
-    priceDisplay: confirmedPrice?.display ?? null,
+    priceNgn,
+    priceDisplay,
+    ...(priceAdjustment ? { priceAdjustment } : {}),
     priceSource: Object.freeze({
       document: priceSourceDocument,
       page: confirmedPrice?.page ?? details.page
@@ -310,8 +391,8 @@ const products = [
     category: "energy-storage-components",
     description: "1*Power Cabinet (indoor, including 4*4kW Battery Charger, 1*36kVA Bypass module, 1*D.G. interface module, Integrated cable, installation auxiliary material package, and software etc)",
     image: {
-      url: "../assets/catalogue/energy/products/huawei/POWER CABINET.jpeg",
-      alt: "Huawei Power-S cabinet with integrated power and battery modules."
+      url: "/energy/power%20cabinet%20and%20battery%20cabinet%20huawei.jpeg",
+      alt: "Huawei power cabinet and battery cabinet shown together."
     },
     warranty: "5 Years",
     page: 2
@@ -322,8 +403,8 @@ const products = [
     category: "energy-storage-components",
     description: "1*Battery Cabinet (indoor, including Integrated cable, installation auxiliary material package, and software etc)",
     image: {
-      url: "../assets/catalogue/energy/products/huawei/BATTERY CABINET.jpeg",
-      alt: "Huawei battery cabinet with rack-mounted lithium battery modules."
+      url: "/energy/power%20cabinet%20and%20battery%20cabinet%20huawei.jpeg",
+      alt: "Huawei power cabinet and battery cabinet shown together."
     },
     warranty: "5 Years",
     page: 2
@@ -335,8 +416,8 @@ const products = [
     description: "Energy Storage Module,ESM-48200A1, 48V, 200Ah, 442mm (W) * 560mm (D) * 218mm (H)",
     specifications: ["10 kWh", "48V", "200Ah", "442mm (W) * 560mm (D) * 218mm (H)"],
     image: {
-      url: "../assets/catalogue/energy/products/huawei/LITHIUM BATTERY.jpeg",
-      alt: "Huawei lithium battery modules; image is generic to the battery family."
+      url: "/energy/Huawei%20battery.webp",
+      alt: "Huawei lithium battery cabinet."
     },
     warranty: "5 Years",
     page: 2
@@ -348,8 +429,8 @@ const products = [
     description: "Energy Storage Module,ESM-48100A7, 48V, 100Ah, 442mm (W) * 396mm (D) * 130mm (H)",
     specifications: ["5 kWh", "48V", "100Ah", "442mm (W) * 396mm (D) * 130mm (H)"],
     image: {
-      url: "../assets/catalogue/energy/products/huawei/LITHIUM BATTERY.jpeg",
-      alt: "Huawei lithium battery modules; image is generic to the battery family."
+      url: "/energy/Huawei%20battery.webp",
+      alt: "Huawei lithium battery cabinet."
     },
     warranty: "5 Years",
     page: 2
@@ -360,6 +441,10 @@ const products = [
     category: "solar-inverters",
     description: "Inverter Module, I23003, 1U, 3kVA/2.5kW, High Efficiency",
     specifications: ["1U", "3kVA/2.5kW"],
+    image: {
+      url: "/energy/HIGH%20EFFICIENCY%20INVERTER%20MODULE.jpeg",
+      alt: "Huawei high-efficiency inverter module."
+    },
     warranty: "5 Years",
     page: 2
   }),
@@ -396,7 +481,7 @@ const products = [
     description: "Smart PV Controller, 150 KW",
     specifications: ["150 KW"],
     image: {
-      url: "../assets/catalogue/energy/products/huawei/HUWINV100KTL-M2.png",
+      url: "/energy/HUWINV100KTL-M2.jpg",
       alt: "Huawei HUWINV100KTL-M2 smart PV controller."
     },
     warranty: "5 Years",
@@ -410,8 +495,8 @@ const products = [
     description: "Smart PV Controller, 100 KW",
     specifications: ["100 KW"],
     image: {
-      url: "../assets/catalogue/energy/products/huawei/HUWINV150K-MG0.jpg",
-      alt: "Huawei HUWINV150K-MG0 smart PV controller."
+      url: "/energy/HUWINV100KTL-M2.jpg",
+      alt: "Huawei HUWINV150K-MG0 smart PV controller; the requested HUWINV100KTL-M2 photograph is used."
     },
     warranty: "5 Years",
     reviewNote: "The source associates model HUWINV150K-MG0 with a 100 KW description; retain both as printed and verify before advising.",
@@ -427,18 +512,10 @@ const products = [
     category: "energy-storage-systems",
     description,
     specifications: [capacity],
-    ...(model === "LUNA 2000-97KWH" ? {
-      image: {
-        url: "../assets/catalogue/energy/products/huawei/LUNA 2000-97KWH.webp",
-        alt: "Huawei LUNA 2000 97 kWh battery energy storage system."
-      }
-    } : {}),
-    ...(model === "LUNA 2000-215KWH" ? {
-      image: {
-        url: "../assets/catalogue/energy/products/huawei/LUNA 2000-215KWH.webp",
-        alt: "Huawei LUNA 2000 215 kWh battery energy storage system."
-      }
-    } : {}),
+    image: {
+      url: "/energy/LUNA%202000-97KWH.png",
+      alt: `Huawei ${model} battery energy storage system; the requested LUNA 2000-97KWH photograph is used.`
+    },
     warranty: "5 Years",
     page: 3
   })),
@@ -697,6 +774,10 @@ const products = [
     category: "solar-inverters",
     description,
     specifications,
+    image: {
+      url: "/energy/deye%20inverter.webp",
+      alt: "Deye inverter product photograph; the exact model is not visible."
+    },
     warranty: "5 Years",
     sourceNote: sourceDataSheetNote,
     page: ["6/6KOG03LP1", "8K-SG06LP1-EU", "12K-SG05LP3-E", "16K-SG01LP1-E", "20K-SG05LP3-E", "12K-SG06LP1-E"].includes(model) ? 1 : 2
@@ -714,6 +795,10 @@ const products = [
     category: "batteries-storage",
     description,
     specifications,
+    image: {
+      url: "/energy/deye%20battery.webp",
+      alt: "Deye battery product photograph; the exact model is not visible."
+    },
     warranty,
     sourceNote: sourceDataSheetNote,
     page: 2
@@ -751,6 +836,10 @@ const products = [
     category: "batteries-storage",
     description: "16KWH, 51.2V, LV, ELEGANT DESIGN, FLEXIBLE INSTALLATION, SMART MONITORING, APP & LED DISPLAY, WHEELS INCLUDED",
     specifications: ["16KWH", "51.2V", "LV", "ELEGANT DESIGN", "FLEXIBLE INSTALLATION", "SMART MONITORING", "APP & LED DISPLAY", "WHEELS INCLUDED"],
+    image: {
+      url: "/energy/Polytech%20battery.webp",
+      alt: "Pylontech 16 kWh lithium battery."
+    },
     warranty: "5 Years",
     sourceNote: sourceDataSheetNote,
     page: 2
@@ -761,6 +850,10 @@ const products = [
     category: "batteries-storage",
     description: "Rechargeable Lithium Ion Battery 5120 Wh 51.2Vdc 100Ah, 95% DOD, 442*452.6*161 mm, 42 kg, Single string quantity 20 units, Cycle life > 6,000",
     specifications: ["5.12 kWh", "51.2Vdc", "100Ah", "95% DOD", "442*452.6*161 mm", "42 kg", "Single string quantity 20 units", "Cycle life > 6,000"],
+    image: {
+      url: "/energy/Polytech%205.1kwh%20battery.webp",
+      alt: "Pylontech UF5000 5.12 kWh lithium battery."
+    },
     warranty: "5 Years",
     sourceNote: sourceDataSheetNote,
     page: 2

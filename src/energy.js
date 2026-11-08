@@ -68,7 +68,7 @@ function safeImageUrl(value) {
   try {
     const imageUrl = new URL(value, document.baseURI);
     if (imageUrl.origin !== window.location.origin
-      || !imageUrl.pathname.startsWith("/assets/")
+      || (!imageUrl.pathname.startsWith("/assets/") && !imageUrl.pathname.startsWith("/energy/"))
       || imageUrl.search
       || imageUrl.hash) {
       return null;

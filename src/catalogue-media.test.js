@@ -24,7 +24,7 @@ test("Energy product image mappings preserve all 130 catalogue records", () => {
   assert.equal(new Set(products.map((product) => product.id)).size, 130);
 
   const productImages = products.filter((product) => product.image.url.includes("/products/"));
-  assert.equal(productImages.length, 26);
+  assert.equal(productImages.length, 18);
   for (const product of productImages) {
     assert.ok(product.image.alt);
     assert.ok(fs.existsSync(resolvePageAsset("energy", product.image.url)), product.image.url);
@@ -45,15 +45,24 @@ test("Energy product image mappings preserve all 130 catalogue records", () => {
   assert.equal(uploadedImages.length, 21);
   const mappedImagePaths = new Set(productImages.map((product) => {
     const url = new URL(product.image.url, "https://catalogue.example/energy/");
-    return decodeURIComponent(url.pathname.split("/products/")[1]);
-  }));
-  assert.equal(mappedImagePaths.size, 18);
+    return url.pathname.includes("/products/")
+      ? decodeURIComponent(url.pathname.split("/products/")[1])
+      : null;
+  }).filter(Boolean));
+  assert.equal(mappedImagePaths.size, 11);
   assert.deepEqual(
     uploadedImages.filter((filename) => !mappedImagePaths.has(filename)).sort(),
     [
       "growatt/spf-off-grid-inverter-family.jpg",
       "huawei/ATS 63A.jpg",
-      "huawei/Huawei-Auto-Transfer-Switch-100A-Max-220380Vac-3-Phase.jpg"
+      "huawei/BATTERY CABINET.jpeg",
+      "huawei/HUWINV100KTL-M2.png",
+      "huawei/HUWINV150K-MG0.jpg",
+      "huawei/Huawei-Auto-Transfer-Switch-100A-Max-220380Vac-3-Phase.jpg",
+      "huawei/LITHIUM BATTERY.jpeg",
+      "huawei/LUNA 2000-215KWH.webp",
+      "huawei/LUNA 2000-97KWH.webp",
+      "huawei/POWER CABINET.jpeg"
     ].sort()
   );
 

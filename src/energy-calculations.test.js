@@ -213,12 +213,14 @@ test("catalogue search, brand and category filters combine and find products bey
 });
 
 test("catalogue pagination makes all original products available exactly once", () => {
-  assert.equal(catalogueProducts.length, 123);
-  assert.equal(new Set(catalogueProducts.map(({ id }) => id)).size, 123);
+  assert.equal(catalogueProducts.length, 130);
+  assert.equal(new Set(catalogueProducts.map(({ id }) => id)).size, catalogueProducts.length);
   catalogueProducts.forEach((product) => {
     assert.ok(product.image?.url, `${product.id} should retain its product or category image`);
     assert.ok(product.image?.alt, `${product.id} should have meaningful image alternative text`);
-    assert.ok(fs.existsSync(path.resolve(projectRoot, "energy", product.image.url)), `${product.id} image should be present in public assets`);
+    const imageUrl = new URL(product.image.url, "https://energy.example/energy/");
+    const imagePath = path.join(projectRoot, decodeURIComponent(imageUrl.pathname.slice(1)));
+    assert.ok(fs.existsSync(imagePath), `${product.id} image should be present in public assets`);
   });
 
   const allProducts = Array.from(filterEnergyProducts(catalogueProducts, {
@@ -234,6 +236,6 @@ test("catalogue pagination makes all original products available exactly once", 
   assert.equal(pagedProducts.length, catalogueProducts.length);
   assert.equal(new Set(pagedProducts.map(({ id }) => id)).size, catalogueProducts.length);
   assert.equal(allPages[0].products.length, 12);
-  assert.equal(allPages.at(-1).products.length, 3);
+  assert.equal(allPages.at(-1).products.length, catalogueProducts.length % 12);
   assert.equal(getEnergyProductPage(allProducts, 100, 12).page, allPages.length);
 });

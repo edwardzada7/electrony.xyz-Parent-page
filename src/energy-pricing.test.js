@@ -54,9 +54,9 @@ test("reconciles all source catalogue products and preserves explicit price prov
 test("calculates every confirmed line and package subtotal in exact naira", () => {
   const expected = [
     ["basic-small-home-office", 591200, null, 3],
-    ["medium-home-office", 2389400, null, 3],
-    ["premium-executive-corporate", 3290000, null, 5],
-    ["heavy-commercial-industrial", 26352800, 26352800, 0]
+    ["medium-home-office", 2579400, null, 3],
+    ["premium-executive-corporate", 3540000, null, 5],
+    ["heavy-commercial-industrial", 29692800, 29692800, 0]
   ];
 
   expected.forEach(([id, subtotalNgn, totalNgn, unpricedCount]) => {
@@ -80,19 +80,19 @@ test("maps the listed models to the exact catalogue products and quantities", ()
   const mediumPanels = pricingFor("medium-home-office").lines.find((line) => line.component.category === "Solar panels");
   assert.equal(mediumPanels.model, "620N-66HL4-BD");
   assert.equal(mediumPanels.component.quantity, 10);
-  assert.equal(mediumPanels.unitPriceNgn, 122500);
-  assert.equal(mediumPanels.lineTotalNgn, 1225000);
+  assert.equal(mediumPanels.unitPriceNgn, 141500);
+  assert.equal(mediumPanels.lineTotalNgn, 1415000);
 
   const heavy = pricingFor("heavy-commercial-industrial");
   const heavyPanels = heavy.lines.find((line) => line.component.category === "Solar panels");
   const heavyRails = heavy.lines.find((line) => line.model === "ANTAIRAILCG010-01");
   const heavyBatteries = heavy.lines.find((line) => line.model === "BOS-B-PACK16");
   assert.equal(heavyPanels.component.quantity, 70);
-  assert.equal(heavyPanels.lineTotalNgn, 10850000);
+  assert.equal(heavyPanels.lineTotalNgn, 12180000);
   assert.equal(heavyRails.component.quantity, 36);
   assert.equal(heavyRails.lineTotalNgn, 738000);
   assert.equal(heavyBatteries.component.quantity, 3);
-  assert.equal(heavyBatteries.lineTotalNgn, 6975000);
+  assert.equal(heavyBatteries.lineTotalNgn, 7635000);
 });
 
 test("recalculates package prices when a catalogue unit price changes", () => {
@@ -101,7 +101,7 @@ test("recalculates package prices when a catalogue unit price changes", () => {
       ? { ...product, priceNgn: product.priceNgn + 1000 }
       : product);
   const result = pricingFor("heavy-commercial-industrial", catalogueWithPriceChange);
-  assert.equal(result.totalNgn, 26422800);
+  assert.equal(result.totalNgn, 29762800);
 });
 
 test("keeps missing prices unpriced and excludes them from partial subtotals", () => {

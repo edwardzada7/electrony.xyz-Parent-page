@@ -1,6 +1,6 @@
 # Energy product image mapping
 
-The original uploads remain unchanged in this directory. The organized images live in `../assets/catalogue/energy/products/` and are referenced by the structured catalogue. Confidence applies to the brand/family match, not to an exact model unless the notes say otherwise. A medium-confidence image is family-level only; it must not be read as proof of the displayed SKU or its specifications. “Unmatched” means it is deliberately not assigned to a catalogue product.
+The original uploads remain unchanged in this directory. Product photos are referenced in place when they are already in this Energy assets folder; existing organized images live in `../assets/catalogue/energy/products/`. Confidence applies to the brand/family match, not to an exact model unless the notes say otherwise. A medium-confidence image is family-level only; it must not be read as proof of the displayed SKU or its specifications. “Unmatched” means it is deliberately not assigned to a catalogue product.
 
 | Original filename | New filename | Brand | Product/model | Capacity | Product category | Source | Confidence | Notes |
 |---|---|---|---|---|---|---|---|---|
@@ -38,3 +38,21 @@ The original uploads remain unchanged in this directory. The organized images li
 | `main-12_111132e1b0.jpg` | — | Deye | Hybrid inverter family; model not visible | Not confirmed | Inverter | — | unmatched | Deye logo and display visible; exact product variant is not distinguishable. |
 | `sun-5-12k-sg02lp2-us-am22-768x931.webp` | — | Unknown | Empty battery rack; model not visible | Not applicable | Energy-storage component | — | unmatched | The picture shows a rack, not the named inverter. Filename conflicts with the visible contents. |
 | `主图-26-1.webp` | — | Deye | Hybrid inverter family; model not visible | Not confirmed | Inverter | — | unmatched | Deye logo visible; the exact model and rating are not shown. |
+
+## Phase 1 uploaded image assignments
+
+These are local files in this directory; the catalogue references them directly without creating duplicate copies.
+
+- `deye inverter.webp`: all 11 listed Deye inverter models. The photograph is family-level and does not identify a specific SKU.
+- `deye battery.webp`: the six listed Deye battery models only: `BATSE-F16-C`, `SE-F5-L`, `BOS-GM-5.1 HV`, `BOS-G-PRO51`, `GB-W-12`, and `BOS-B-PACK16`.
+- `Polytech battery.webp`: `PYLONBATFB-L-16 ( 16 Kwh )`.
+- `Polytech 5.1kwh battery.webp`: `UF5000 (5.12 Kwh)`.
+- `power cabinet and battery cabinet huawei.jpeg`: both Huawei cabinet records; the single uploaded photograph shows the two cabinets together.
+- `Huawei battery.webp`: Huawei 10 kWh and 5 kWh lithium battery records.
+- `HUWINV100KTL-M2.jpg`: `HUWINV100KTL-M2` and, as requested, `HUWINV150K-MG0`.
+- `HIGH EFFICIENCY INVERTER MODULE.jpeg`: Huawei model `I23003`.
+- `LUNA 2000-97KWH.png`: all three Huawei LUNA 2000 models.
+
+`32-114725_1.jpg` is a Huawei inverter-like product photograph, not a transformer, and is not assigned because it is not the specified model image. `deye accessories.jpg` does not identify an exact catalogue model, so it remains unassigned. No uploaded Hisense transformer photograph or Hisense transformer product record was found. The existing transformer records identify their manufacturer as unspecified; they remain unchanged.
+
+Phase 1 price adjustments retain the confirmed source prices as their baseline. Final catalogue prices are computed once from that baseline and each affected record exposes its adjustment ID, amount, and previous price as metadata.
