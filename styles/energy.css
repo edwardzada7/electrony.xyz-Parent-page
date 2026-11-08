@@ -2508,6 +2508,15 @@
   overflow-wrap: anywhere;
 }
 
+.energy-product-card__price {
+  margin: 0;
+  color: var(--energy-forest);
+  font-size: 1.05rem;
+  font-weight: 700;
+  line-height: 1.4;
+  overflow-wrap: anywhere;
+}
+
 .energy-product-card__specifications {
   display: flex;
   flex-wrap: wrap;
@@ -2629,6 +2638,14 @@
 .energy-product-dialog__source {
   color: var(--energy-muted);
   line-height: 1.65;
+}
+
+.energy-product-dialog__price {
+  margin: -0.75rem 0 1rem;
+  color: var(--energy-forest);
+  font-size: 1.05rem;
+  font-weight: 700;
+  line-height: 1.5;
 }
 
 .energy-product-dialog__category {
@@ -3202,6 +3219,16 @@
   margin-top: 1.25rem;
   color: var(--energy-muted);
   font-size: 0.8rem;
+  line-height: 1.65;
+}
+
+.energy-catalogue-price-note {
+  margin: -1.5rem 0 1.5rem;
+  padding: 0.9rem 1rem;
+  border-left: 3px solid var(--energy-forest);
+  background: #f3faf1;
+  color: var(--energy-muted);
+  font-size: 0.82rem;
   line-height: 1.65;
 }
 

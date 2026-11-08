@@ -2,36 +2,142 @@ const sourceDocument = "POWER-SOLAR PL-1.pdf";
 const sourceDataSheetNote = "Please ask your sales rep for date sheet";
 const priceSourceDocument = "POWER-SOLAR PL-1.pdf";
 const confirmedPrices = Object.freeze({
-  "JINKO|620N-66HL4-BD": { amountNgn: 122500, page: 1 },
-  "JINKO|725N-66HL5-BD": { amountNgn: 155000, page: 1 },
-  "HUAWEI|ATS 63A": { amountNgn: 1040000, page: 2 },
-  "GROWATT|ABM 5.5-A1-H": { amountNgn: 899000, page: 3 },
-  "GROWATT|HOPE5L-B1": { amountNgn: 855000, page: 3 },
-  "GROWATT|SPH 3600TL-BL-UP": { amountNgn: 450000, page: 3 },
-  "DEYE|50K-SG01HP3-E": { amountNgn: 4750000, page: 2 },
-  "DEYE|BATSE-F16-C": { amountNgn: 2250000, page: 2 },
-  "DEYE|BOS-B-PACK16": { amountNgn: 2325000, page: 2 },
-  "DEYE|CONTROL BOX HV BOS-B-PDU-2-A": { amountNgn: 1950000, page: 2 },
-  "DEYE|DEYERACK-3U-H": { amountNgn: 565000, page: 2 },
-  "ANTAI|ANTAIRAILCG010-01": { amountNgn: 20500, page: 4 },
-  "ANTAI|ANTAIMIDGN003-05": { amountNgn: 1000, page: 4 },
-  "ANTAI|ANTAILUGTYN16-01": { amountNgn: 1000, page: 4 },
-  "ANTAI|ANTAILFEETTYN353-01": { amountNgn: 1300, page: 4 },
-  "ANTAI|ANTAIJOINERCG037": { amountNgn: 1200, page: 4 },
-  "ANTAI|ANTAIENDCG018-01": { amountNgn: 1000, page: 4 },
-  "SUNTREE|SUNACGUARD63A-230V": { amountNgn: 7500, page: 4 },
-  "SUNTREE|SUNDB6WAY": { amountNgn: 4500, page: 4 },
-  "SUNTREE|SUNDB12WAY": { amountNgn: 7000, page: 4 },
-  "SUNTREE|SUNACMCCB100A-4P": { amountNgn: 60000, page: 4 },
-  "SUNTREE|SUNDCISO32A-1000V-4P": { amountNgn: 18000, page: 4 },
-  "SUNTREE|SUNACMCCB250A-4P": { amountNgn: 100000, page: 4 }
+  "JINKO|525M-72HL4-TV": { amountNgn: 83000, display: "83,000", page: 1 },
+  "JINKO|595N-72HL4-BD": { amountNgn: 112000, display: "112,000", page: 1 },
+  "JINKO|620N-66HL4-BD": { amountNgn: 122500, display: "122,500", page: 1 },
+  "JINKO|625N-66HL4-BD": { amountNgn: 124000, display: "124,000", page: 1 },
+  "JINKO|630N-66HL4-BD": { amountNgn: 125500, display: "125,500", page: 1 },
+  "JINKO|640N-66HL4-BD": { amountNgn: 127000, display: "127,000", page: 1 },
+  "JINKO|650N-66QL6-BD": { amountNgn: 140000, display: "140,000", page: 1 },
+  "JINKO|725N-66HL5-BD": { amountNgn: 155000, display: "155,000", page: 1 },
+  "HISENSE|INV6KS-AA1": { amountNgn: 359000, display: "359,000", page: 1 },
+  "HISENSE|BATHEL5-E-BB1": { amountNgn: 810000, display: "810,000", page: 1 },
+  "Manufacturer not specified|KETRANS50KVA-11/04": { amountNgn: 2700000, display: "2,700,000", page: 1 },
+  "Manufacturer not specified|KETRANS100KVA-11/04": { amountNgn: 3750000, display: "3,750,000", page: 1 },
+  "Manufacturer not specified|KETRANS200KVA-11/04": { amountNgn: 5600000, display: "5,600,000", page: 1 },
+  "Manufacturer not specified|KETRANS315KVA-11/04": { amountNgn: 7350000, display: "7,350,000", page: 1 },
+  "Manufacturer not specified|KETRANS500KVA-11/04": { amountNgn: 9550000, display: "9,550,000", page: 1 },
+  "Manufacturer not specified|KETRANS800KVA-11/04": { amountNgn: 15250000, display: "15,250,000", page: 1 },
+  "Manufacturer not specified|KETRANS1000KVA-11/04": { amountNgn: 16450000, display: "16,450,000", page: 1 },
+  "DEYE|6/6KOG03LP1": { amountNgn: 463000, display: "463,000", page: 1 },
+  "DEYE|8K-SG06LP1-EU": { amountNgn: 1255000, display: "1,255,000.00", page: 1 },
+  "DEYE|12K-SG05LP3-E": { amountNgn: 1859000, display: "1,859,000.00", page: 1 },
+  "DEYE|16K-SG01LP1-E": { amountNgn: 2275000, display: "2,275,000.00", page: 1 },
+  "DEYE|20K-SG05LP3-E": { amountNgn: 2775000, display: "2,775,000.00", page: 1 },
+  "DEYE|12K-SG06LP1-E": { amountNgn: 1799000, display: "1,799,000.00", page: 1 },
+  "DEYE|50K-SG01HP3-E": { amountNgn: 4750000, display: "4,750,000.00", page: 2 },
+  "DEYE|80K-SG02HP3-E": { amountNgn: 6500000, display: "6,500,000.00", page: 2 },
+  "DEYE|125K-SG02HP3": { amountNgn: 8750000, display: "8,750,000.00", page: 2 },
+  "DEYE|100K-G": { amountNgn: 3225000, display: "3,225,000.00", page: 2 },
+  "DEYE|136K-G": { amountNgn: 4599000, display: "4,599,000.00", page: 2 },
+  "DEYE|BATSE-F16-C": { amountNgn: 2250000, display: "2,250,000.00", page: 2 },
+  "DEYE|SE-F5-L": { amountNgn: 849000, display: "849,000.00", page: 2 },
+  "DEYE|BOS-GM-5.1 HV": { amountNgn: 1015000, display: "1,015,000.00", page: 2 },
+  "DEYE|BOS-G-PRO51": { amountNgn: 1026500, display: "1,026,500.00", page: 2 },
+  "DEYE|GB-W-12": { amountNgn: 2020000, display: "2,020,000.00", page: 2 },
+  "DEYE|BOS-B-PACK16": { amountNgn: 2325000, display: "2,325,000.00", page: 2 },
+  "DEYE|PDU-GB-W-2": { amountNgn: 1402000, display: "1,402,000.00", page: 2 },
+  "DEYE|ACC-GB-W-PARTS": { amountNgn: 392000, display: "392,000", page: 2 },
+  "DEYE|PCS 125K-L01HP3": { amountNgn: 5195000, display: "5,195,000.00", page: 2 },
+  "DEYE|MPPT 200KW": { amountNgn: 2250000, display: "2,250,000.00", page: 2 },
+  "DEYE|CONTROL BOX HV BOS-B-PDU-2-A": { amountNgn: 1950000, display: "1,950,000.00", page: 2 },
+  "DEYE|STS 500L": { amountNgn: 7227500, display: "7,227,500.00", page: 2 },
+  "DEYE|CONTROL BOX HV BOS-G-PDU-PRO": { amountNgn: 1015000, display: "1,015,000.00", page: 2 },
+  "DEYE|DEYERACK-3U-H": { amountNgn: 565000, display: "565,000.00", page: 2 },
+  "PYLON-TECH|PYLONBATFB-L-16 ( 16 Kwh )": { amountNgn: 2325000, display: "2,325,000", page: 2 },
+  "PYLON-TECH|UF5000 (5.12 Kwh)": { amountNgn: 999000, display: "999,000.00", page: 2 },
+  "PYLON-TECH|KIT-USC": { amountNgn: 40000, display: "40,000.00", page: 2 },
+  "HUAWEI|POWER CABINET": { amountNgn: 7500000, display: "7,500,000", page: 2 },
+  "HUAWEI|BATTERY CABINET": { amountNgn: 4375000, display: "4,375,000", page: 2 },
+  "HUAWEI|ESM-48200A1": { amountNgn: 3850000, display: "3,850,000", page: 2 },
+  "HUAWEI|ESM-48100A7": { amountNgn: 1999000, display: "1,999,000", page: 2 },
+  "HUAWEI|I23003": { amountNgn: 327000, display: "327,000", page: 2 },
+  "HUAWEI|PVDU-8kW": { amountNgn: 448500, display: "448,500", page: 3 },
+  "HUAWEI|S4875": { amountNgn: 285500, display: "285,500", page: 3 },
+  "HUAWEI|HUWINV100KTL-M2": { amountNgn: 5350000, display: "5,350,000", page: 3 },
+  "HUAWEI|HUWINV150K-MG0": { amountNgn: 7350000, display: "7,350,000", page: 3 },
+  "HUAWEI|LUNA 2000-97KWH": { amountNgn: 56500000, display: "56,500,000", page: 3 },
+  "HUAWEI|LUNA 2000-129KWH": { amountNgn: 63000000, display: "63,000,000", page: 3 },
+  "HUAWEI|LUNA 2000-215KWH": { amountNgn: 76800000, display: "76,800,000", page: 3 },
+  "HUAWEI|INSTALLATION TRAY": { amountNgn: 2150000, display: "2,150,000", page: 3 },
+  "HUAWEI|ATS 63A": { amountNgn: 1040000, display: "1,040,000", page: 3 },
+  "HUAWEI|ATS 100A": { amountNgn: 1525000, display: "1,525,000", page: 3 },
+  "HUAWEI|LQUID LEVEL SENSOR": { amountNgn: 795000, display: "795,000", page: 3 },
+  "HUAWEI|TOUCH SCREEN": { amountNgn: 440000, display: "440,000", page: 3 },
+  "HUAWEI|MERC-1300WP": { amountNgn: 95000, display: "95,000", page: 3 },
+  "HUAWEI|DTSU666-HW": { amountNgn: 160000, display: "160,000", page: 3 },
+  "HUAWEI|HUWSMARTMODUL1000A01": { amountNgn: 800000, display: "800,000", page: 3 },
+  "HUAWEI|SMART LOGGER 3000A01EU": { amountNgn: 619000, display: "619,000", page: 3 },
+  "GROWATT|SIM 6000ES PLUS-H + BATTERY + BASE 6KW + 5.5 KWH": { amountNgn: 1492000, display: "1,492,000", page: 3 },
+  "GROWATT|ABM 5.5-A1-H": { amountNgn: 899000, display: "899,000", page: 3 },
+  "GROWATT|SIM 6000ES PLUS-H + BATTERY + BASE 6KW + 5.12 kwh": { amountNgn: 1453000, display: "1,453,000", page: 3 },
+  "GROWATT|ABM 5-LS-B1-H": { amountNgn: 860000, display: "860,000", page: 3 },
+  "GROWATT|HOPE5L-B1": { amountNgn: 855000, display: "855,000", page: 3 },
+  "GROWATT|HOPE16LM-A1": { amountNgn: 2325000, display: "2,325,000", page: 3 },
+  "GROWATT|SPF 6000ES": { amountNgn: 455000, display: "455,000", page: 3 },
+  "GROWATT|SPH 3600TL-BL-UP": { amountNgn: 450000, display: "450,000", page: 3 },
+  "GROWATT|SPH 5000TL-BL-UP": { amountNgn: 500000, display: "500,000", page: 3 },
+  "GROWATT|WIT-100K-HU": { amountNgn: 11050000, display: "11,050,000.00", page: 3 },
+  "GROWATT|ACE-209H-2H": { amountNgn: 37000000, display: "37,000,000.00", page: 3 },
+  "GROWATT|SEM-XA-RM": { amountNgn: 1020000, display: "1,020,000.00", page: 3 },
+  "GROWATT|CT 600/5A": { amountNgn: 320000, display: "320,000", page: 3 },
+  "TSTY Transformer|400kva 400-400v": { amountNgn: 8500000, display: "8,500,000.00", page: 3 },
+  "TSTY Transformer|600kva 400-400v": { amountNgn: 12050000, display: "12,050,000.00", page: 3 },
+  "ANTAI|ANTAIRAILCG010-01": { amountNgn: 20500, display: "20,500", page: 4 },
+  "ANTAI|ANTAIMIDGN003-05": { amountNgn: 1000, display: "1,000", page: 4 },
+  "ANTAI|ANTAILUGTYN16-01": { amountNgn: 1000, display: "1,000", page: 4 },
+  "ANTAI|ANTAILFEETTYN353-01": { amountNgn: 1300, display: "1,300", page: 4 },
+  "ANTAI|ANTAIJOINERCG037": { amountNgn: 1200, display: "1,200", page: 4 },
+  "ANTAI|ANTAIENDCG018-01": { amountNgn: 1000, display: "1,000", page: 4 },
+  "SUNTREE|SUNACGUARD63A-230V": { amountNgn: 7500, display: "7,500.00", page: 4 },
+  "SUNTREE|SUNACSURGE20KA-275V": { amountNgn: 6000, display: "6,000.00", page: 4 },
+  "SUNTREE|SUNACSURGE20KA-385V": { amountNgn: 12000, display: "12,000.00", page: 4 },
+  "SUNTREE|SUNBRKAC100AMPS-2P": { amountNgn: 7000, display: "7,000.00", page: 4 },
+  "SUNTREE|SUNBRKAC100AMPS-4P": { amountNgn: 14000, display: "14,000.00", page: 4 },
+  "SUNTREE|SUNBRKAC20AMPS-2P": { amountNgn: 2450, display: "2,450.00", page: 4 },
+  "SUNTREE|SUNBRKAC25AMPS-2P": { amountNgn: 2450, display: "2,450.00", page: 4 },
+  "SUNTREE|SUNBRKAC25AMPS-4P": { amountNgn: 4800, display: "4,800.00", page: 4 },
+  "SUNTREE|SUNBRKAC32AMPS-2P": { amountNgn: 2700, display: "2,700.00", page: 4 },
+  "SUNTREE|SUNBRKAC32AMPS-4P": { amountNgn: 4900, display: "4,900.00", page: 4 },
+  "SUNTREE|SUNBRKAC40AMPS-2P": { amountNgn: 2900, display: "2,900.00", page: 4 },
+  "SUNTREE|SUNBRKAC63AMPS-2P": { amountNgn: 3500, display: "3,500.00", page: 4 },
+  "SUNTREE|SUNBRKAC63AMPS-4P": { amountNgn: 6300, display: "6,300.00", page: 4 },
+  "SUNTREE|SUNBRKDC125A-2P": { amountNgn: 22500, display: "22,500.00", page: 4 },
+  "SUNTREE|SUNBRKDC63A-2P": { amountNgn: 13000, display: "13,000.00", page: 4 },
+  "SUNTREE|SUNDB4WAY": { amountNgn: 3300, display: "3,300.00", page: 4 },
+  "SUNTREE|SUNDB6WAY": { amountNgn: 4500, display: "4,500.00", page: 4 },
+  "SUNTREE|SUNDB12WAY": { amountNgn: 7000, display: "7,000.00", page: 4 },
+  "SUNTREE|SUNDB18WAY": { amountNgn: 11000, display: "11,000.00", page: 4 },
+  "SUNTREE|SUNDB18WAYIP65": { amountNgn: 21000, display: "21,000.00", page: 4 },
+  "SUNTREE|SUNDB24WAY": { amountNgn: null, display: null, page: 4 },
+  "SUNTREE|SUNDB24WAYIP65": { amountNgn: 32000, display: "32,000.00", page: 4 },
+  "SUNTREE|SUNDCISO25A-1500V": { amountNgn: 20000, display: "20,000.00", page: 4 },
+  "SUNTREE|SUNDCISO32A-1000V-4P": { amountNgn: 18000, display: "18,000.00", page: 4 },
+  "SUNTREE|SUNACMCCB100A-4P": { amountNgn: 60000, display: "60,000.00", page: 4 },
+  "SUNTREE|SUNACMCCB-SM8E-125M": { amountNgn: 165000, display: "165,000.00", page: 4 },
+  "SUNTREE|SUNACMCCB160A-4P": { amountNgn: 89000, display: "89,000.00", page: 4 },
+  "SUNTREE|SUNMCCB250A-2P": { amountNgn: 80000, display: "80,000.00", page: 4 },
+  "SUNTREE|SUNACMCCB-SM8E-250M": { amountNgn: 195000, display: "195,000.00", page: 4 },
+  "SUNTREE|SUNDCMCCB400A-2P": { amountNgn: 195000, display: "195,000.00", page: 4 },
+  "SUNTREE|SUNDCMCCB400A-1500V": { amountNgn: 440000, display: "440,000.00", page: 4 },
+  "SUNTREE|SUNACMCCB250A-4P": { amountNgn: 100000, display: "100,000.00", page: 4 },
+  "SUNTREE|SUNDCSURGE20KA-1000V": { amountNgn: 20000, display: "20,000.00", page: 4 },
+  "SUNTREE|SUNENCLOSURE20X25X15": { amountNgn: 28300, display: "28,300.00", page: 4 },
+  "SUNTREE|SUNENCLOSURE25X35X15": { amountNgn: 30500, display: "30,500.00", page: 4 },
+  "SUNTREE|SUNENCLOSURE40X60X20": { amountNgn: 57000, display: "57,000.00", page: 4 },
+  "SUNTREE|SUNENCLOSURE50X70X20": { amountNgn: 73000, display: "73,000.00", page: 4 },
+  "SUNTREE|SUNENCLOSURE60X80X25": { amountNgn: 104000, display: "104,000.00", page: 4 },
+  "SUNTREE|SUNFUSEDC20A-1000V": { amountNgn: 3000, display: "3,000.00", page: 5 },
+  "SUNTREE|SUNMC4-45A": { amountNgn: 1200, display: "1,200.00", page: 5 },
+  "SUNTREE|SUNPVCABLE1C6MMRED": { amountNgn: 1500, display: "1,500.00", page: 5 },
+  "SUNTREE|SUNPVCABLE1C6MMBLACK": { amountNgn: 1500, display: "1,500.00", page: 5 }
 });
 const brandLogos = Object.freeze({
   JINKO: "../assets/catalogue/energy/brands/jinko.png",
   HUAWEI: "../assets/catalogue/energy/brands/huawei.png",
   GROWATT: "../assets/catalogue/energy/brands/growatt.png",
   DEYE: "../assets/catalogue/energy/brands/deye.png",
-  PYLONTECH: "../assets/catalogue/energy/brands/pylontech.png",
+  "PYLON-TECH": "../assets/catalogue/energy/brands/pylontech.png",
   ANTAI: "../assets/catalogue/energy/brands/antai.png",
   SUNTREE: "../assets/catalogue/energy/brands/suntree.png"
 });
@@ -120,10 +226,12 @@ function makeProduct(brand, details) {
     enquiryCategory: enquiryCategories[details.category],
     description: details.description || "",
     specifications: Object.freeze(details.specifications || []),
-    ...(confirmedPrice ? {
-      priceNgn: confirmedPrice.amountNgn,
-      priceSource: Object.freeze({ document: priceSourceDocument, page: confirmedPrice.page })
-    } : {}),
+    priceNgn: confirmedPrice?.amountNgn ?? null,
+    priceDisplay: confirmedPrice?.display ?? null,
+    priceSource: Object.freeze({
+      document: priceSourceDocument,
+      page: confirmedPrice?.page ?? details.page
+    }),
     ...(details.warranty ? { warranty: details.warranty } : {}),
     source: Object.freeze({ document: sourceDocument, page: details.page }),
     ...(details.sourceNote ? { sourceNote: details.sourceNote } : {}),
@@ -169,11 +277,13 @@ function getEnergyProductPage(products, page, pageSize) {
 
 const products = [
   ...[
-    ["585N-72HL4-BD", "585W", "Solar Panel Half Cut BIFACIAL(36)"],
-    ["590N-72HL4-BD", "590W", "Solar Panel Half Cut BIFACIAL (36)"],
+    ["525M-72HL4-TV", "525W", "525W Solar Panel Half Cut BIFACIAL(27)"],
+    ["595N-72HL4-BD", "595W", "595W Solar Panel Half Cut BIFACIAL (36)"],
     ["620N-66HL4-BD", "620W", "Solar Panel Half Cut BIFACIAL(36)"],
+    ["625N-66HL4-BD", "625W", "Solar Panel Half Cut BIFACIAL(36)"],
+    ["630N-66HL4-BD", "630W", "Solar Panel Half Cut BIFACIAL(36)"],
+    ["640N-66HL4-BD", "640W", "Solar Panel Half Cut BIFACIAL(36)"],
     ["650N-66QL6-BD", "650W", "3.0 SOLAR PANEL BIFACIAL (36)"],
-    ["720N-66HL5-BD", "720W", "Solar Panel Half Cut BIFACIAL(33)"],
     ["725N-66HL5-BD", "725W", "Solar Panel Half Cut BIFACIAL(33)"]
   ].map(([model, rating, description], index) => makeProduct("JINKO", {
     name: "Solar panel",
@@ -182,7 +292,7 @@ const products = [
     description,
     specifications: [rating, ...(description.includes("Half Cut") ? ["Half cut"] : []), description.match(/BIFACIAL ?\(\d+\)/i)?.[0] || "Bifacial"],
     warranty: "25 Years Linear Warranty + 10 Years Product Warranty",
-    image: index < 3
+    image: index < 4
       ? {
         url: "../assets/catalogue/energy/products/jinko/image (2).webp",
         alt: "Jinko solar panel product photograph; wattage-specific model is not identified."
@@ -204,7 +314,7 @@ const products = [
       alt: "Huawei Power-S cabinet with integrated power and battery modules."
     },
     warranty: "5 Years",
-    page: 1
+    page: 2
   }),
   makeProduct("HUAWEI", {
     name: "Battery Cabinet",
@@ -216,42 +326,42 @@ const products = [
       alt: "Huawei battery cabinet with rack-mounted lithium battery modules."
     },
     warranty: "5 Years",
-    page: 1
+    page: 2
   }),
   makeProduct("HUAWEI", {
     name: "Lithium Battery (10 kWh)",
     model: "ESM-48200A1",
     category: "batteries-storage",
-    description: "Energy Storage Module, 48V, 200Ah, 442mm (W) * 560mm (D) * 218mm (H)",
+    description: "Energy Storage Module,ESM-48200A1, 48V, 200Ah, 442mm (W) * 560mm (D) * 218mm (H)",
     specifications: ["10 kWh", "48V", "200Ah", "442mm (W) * 560mm (D) * 218mm (H)"],
     image: {
       url: "../assets/catalogue/energy/products/huawei/LITHIUM BATTERY.jpeg",
       alt: "Huawei lithium battery modules; image is generic to the battery family."
     },
     warranty: "5 Years",
-    page: 1
+    page: 2
   }),
   makeProduct("HUAWEI", {
     name: "Lithium Battery (5 kWh)",
     model: "ESM-48100A7",
     category: "batteries-storage",
-    description: "Energy Storage Module, 48V, 100Ah, 442mm (W) * 396mm (D) * 130mm (H)",
+    description: "Energy Storage Module,ESM-48100A7, 48V, 100Ah, 442mm (W) * 396mm (D) * 130mm (H)",
     specifications: ["5 kWh", "48V", "100Ah", "442mm (W) * 396mm (D) * 130mm (H)"],
     image: {
       url: "../assets/catalogue/energy/products/huawei/LITHIUM BATTERY.jpeg",
       alt: "Huawei lithium battery modules; image is generic to the battery family."
     },
     warranty: "5 Years",
-    page: 1
+    page: 2
   }),
   makeProduct("HUAWEI", {
     name: "High Efficiency Inverter Module",
     model: "I23003",
     category: "solar-inverters",
-    description: "Inverter Module, 1U, 3kVA/2.5kW, High Efficiency",
+    description: "Inverter Module, I23003, 1U, 3kVA/2.5kW, High Efficiency",
     specifications: ["1U", "3kVA/2.5kW"],
     warranty: "5 Years",
-    page: 1
+    page: 2
   }),
   makeProduct("HUAWEI", {
     name: "PV Distribution Unit",
@@ -264,20 +374,20 @@ const products = [
       alt: "Huawei PVDU-8kW PV distribution unit."
     },
     warranty: "5 Years",
-    page: 1
+    page: 3
   }),
   makeProduct("HUAWEI", {
     name: "High Efficiency Solar Module",
     model: "S4875",
-    category: "solar-panels",
-    description: "Solar Module, 1U, 4kW, High Efficiency",
+    category: "solar-inverters",
+    description: "Solar Module, S4875, 1U, 4kW, High Efficiency",
     specifications: ["1U", "4kW"],
     image: {
       url: "../assets/catalogue/energy/products/huawei/HIGH EFFICIECNY SOLAR Module.jpg",
       alt: "Huawei high-efficiency solar module."
     },
     warranty: "5 Years",
-    page: 1
+    page: 3
   }),
   makeProduct("HUAWEI", {
     name: "Smart PV Controller",
@@ -291,7 +401,7 @@ const products = [
     },
     warranty: "5 Years",
     reviewNote: "The source associates model HUWINV100KTL-M2 with a 150 KW description; retain both as printed and verify before advising.",
-    page: 1
+    page: 3
   }),
   makeProduct("HUAWEI", {
     name: "Smart PV Controller",
@@ -305,12 +415,11 @@ const products = [
     },
     warranty: "5 Years",
     reviewNote: "The source associates model HUWINV150K-MG0 with a 100 KW description; retain both as printed and verify before advising.",
-    page: 1
+    page: 3
   }),
   ...[
     ["LUNA 2000-97KWH", "97KWH", "BESS 97KWH (Door Mounted distributed air conditioners, battery packs, battery rack, smart rack controller, PCS, Abort button)"],
     ["LUNA 2000-129KWH", "129KWH", "BESS 129KWH (Door Mounted distributed air conditioners, battery packs, battery rack, smart rack controller, PCS, Abort button)"],
-    ["LUNA 2000-161KWH", "161KWH", "BESS 161KWH (Door Mounted distributed air conditioners, battery packs, battery rack, smart rack controller, PCS, Abort button)"],
     ["LUNA 2000-215KWH", "215KWH", "BESS 215KWH (Door Mounted distributed air conditioners, battery packs, battery rack, smart rack controller, PCS, Abort button)"]
   ].map(([model, capacity, description]) => makeProduct("HUAWEI", {
     name: "LUNA 2000 energy storage system",
@@ -331,7 +440,7 @@ const products = [
       }
     } : {}),
     warranty: "5 Years",
-    page: 1
+    page: 3
   })),
   makeProduct("HUAWEI", {
     name: "LUNA BESS Battery Installation Tray",
@@ -342,7 +451,7 @@ const products = [
       url: "../assets/catalogue/energy/products/huawei/INSTALLATION TRAY.webp",
       alt: "Installation tray for a Huawei LUNA battery energy storage system."
     },
-    page: 1
+    page: 3
   }),
   makeProduct("HUAWEI", {
     name: "Auto Transform Switch",
@@ -351,7 +460,7 @@ const products = [
     description: "Auto Transform Switch 63A Max, 220/380Vac, 3 Phase, SPD Class B",
     specifications: ["63A Max", "220/380Vac", "3 Phase", "SPD Class B"],
     warranty: "5 Years",
-    page: 1
+    page: 3
   }),
   makeProduct("HUAWEI", {
     name: "Auto Transform Switch",
@@ -360,7 +469,7 @@ const products = [
     description: "Auto Transform Switch 100A Max, 220/380Vac, 3 Phase",
     specifications: ["100A Max", "220/380Vac", "3 Phase"],
     warranty: "5 Years",
-    page: 1
+    page: 3
   }),
   makeProduct("HUAWEI", {
     name: "Liquid Level Sensor",
@@ -373,7 +482,7 @@ const products = [
       alt: "Huawei liquid-level sensor probe with cable."
     },
     warranty: "5 Years",
-    page: 1
+    page: 3
   }),
   makeProduct("HUAWEI", {
     name: "Touch Screen",
@@ -381,7 +490,7 @@ const products = [
     category: "energy-storage-components",
     description: "Power-S Touch Screen Installed on the Indoor Cabinet",
     warranty: "5 Years",
-    page: 1
+    page: 3
   }),
   makeProduct("HUAWEI", {
     name: "Smart Optimizer",
@@ -394,7 +503,7 @@ const products = [
       alt: "Huawei MERC-1300WP smart power optimizer."
     },
     warranty: "5 Years",
-    page: 1
+    page: 3
   }),
   makeProduct("HUAWEI", {
     name: "Smart Power Meter",
@@ -405,7 +514,7 @@ const products = [
       url: "../assets/catalogue/energy/products/huawei/DTSU666-HW.jpg",
       alt: "Huawei DTSU666-HW smart power meter."
     },
-    page: 1
+    page: 3
   }),
   makeProduct("HUAWEI", {
     name: "Smart Module / Data Logger",
@@ -417,7 +526,7 @@ const products = [
       url: "../assets/catalogue/energy/products/huawei/HUWSMARTMODUL1000A01.webp",
       alt: "Huawei SmartModule for PV system monitoring."
     },
-    page: 1
+    page: 3
   }),
   makeProduct("HUAWEI", {
     name: "Smart Logger",
@@ -426,7 +535,7 @@ const products = [
     description: "Dedicated to monitoring and managing a PV power generating system. It can connect up to 80 devices and centrally monitors information regarding connected solar modules and inverters.",
     specifications: ["Connects up to 80 devices"],
     warranty: "5 Years",
-    page: 1
+    page: 3
   }),
 
   makeProduct("HISENSE", {
@@ -442,7 +551,7 @@ const products = [
     name: "Low Voltage Battery",
     model: "BATHEL5-E-BB1",
     category: "batteries-storage",
-    description: "5.12 LOW VOLTAGE KWH 51.2V 100AH",
+    description: "5.12 LOW VOLTAGE KWH 51.2V 100AH, COMES WITH A FREE PARALLEL CABLE KIT HISBATCABLEKIT-5-LV",
     specifications: ["5.12 kWh", "51.2V", "100Ah"],
     image: {
       url: "../assets/catalogue/energy/products/hisense/lifepo4-51-2v-100ah-battery-family.jpg",
@@ -450,8 +559,27 @@ const products = [
       note: "Family-level image: visible rating is 51.2V 100Ah; the exact model is not identifiable from this photo."
     },
     warranty: "5 Years",
-    page: 2
+    page: 1
   }),
+
+  ...[
+    ["KETRANS50KVA-11/04", "50KVA", "STEPDOWN/UP 50KVA11/0.4KV,50Hz ,3Phase,400kg"],
+    ["KETRANS100KVA-11/04", "100KVA", "STEPDOWN/UP 100KVA11/0.4KV,50Hz ,3Phase,574kg"],
+    ["KETRANS200KVA-11/04", "200KVA", "STEPDOWN/UP 200KVA11/0.4KV,50Hz ,3Phase,856kg"],
+    ["KETRANS315KVA-11/04", "315KVA", "STEPDOWN/UP 315KVA11/0.4KV,50Hz ,3Phase,"],
+    ["KETRANS500KVA-11/04", "500KVA", "STEPDOWN/UP 500KVA11/0.4KV,50Hz ,3Phase,"],
+    ["KETRANS800KVA-11/04", "800KVA", "STEPDOWN/UP 800KVA11/0.4KV,50Hz ,3Phase,"],
+    ["KETRANS1000KVA-11/04", "1000KVA", "STEPDOWN/UP 1000KVA11/0.4KV,50Hz ,3Phase,"]
+  ].map(([model, rating, description]) => makeProduct("Manufacturer not specified", {
+    name: "Transformer",
+    model,
+    category: "transformers",
+    description,
+    specifications: [rating, "11/0.4KV", "50Hz", "3Phase"],
+    warranty: "2 Years",
+    reviewNote: "The source does not identify a manufacturer for this transformer. Its KETRANS model number is retained as printed.",
+    page: 1
+  })),
 
   ...[
     ["SIM 6000ES PLUS-H + BATTERY + BASE 6KW + 5.5 KWH", "Future-H all-in-one solution", "Integrated inverter and lithium battery system, Compact size & easy installation, Flexible expansion capacity up to 18kW/33kWh, Maximum PV input voltage up to 500VDC, Grid and Generator dual AC input with integrated transfer switch", ["6kW", "5.5 kWh", "Expansion up to 18kW/33kWh", "Maximum PV input up to 500VDC", "Grid and Generator dual AC input"]],
@@ -465,7 +593,7 @@ const products = [
     warranty: "INVERTER 2 YEARS & BATTEY 5 YEARS",
     sourceNote: sourceDataSheetNote,
     reviewNote: "The source warranty cell spans the integrated system and battery rows.",
-    page: 2
+    page: 3
   })),
   makeProduct("GROWATT", {
     name: "Lithium-ion Battery",
@@ -473,10 +601,8 @@ const products = [
     category: "batteries-storage",
     description: "Rechargeable Lithium Ion Battery 5.5 Kwh, 51.2 Vdc 100Ah, 98% DOD, 43 Kg, Cycle life > 6,000, IP 20",
     specifications: ["5.5 Kwh", "51.2 Vdc", "100Ah", "98% DOD", "43 Kg", "Cycle life > 6,000", "IP 20"],
-    warranty: "INVERTER 2 YEARS & BATTEY 5 YEARS",
     sourceNote: sourceDataSheetNote,
-    reviewNote: "The source warranty cell spans the integrated system and battery rows.",
-    page: 2
+    page: 3
   }),
   makeProduct("GROWATT", {
     name: "Lithium-ion Battery",
@@ -484,10 +610,8 @@ const products = [
     category: "batteries-storage",
     description: "Rechargeable Lithium Ion Battery 5.12 Kwh, 51.2 Vdc 100Ah, 93% DOD, 440*540*130.5 mm, 45 Kg, Single string quantity 12 units, Cycle life > 6,000, IP 20",
     specifications: ["5.12 Kwh", "51.2 Vdc", "100Ah", "93% DOD", "440*540*130.5 mm", "45 Kg", "Single string quantity 12 units", "Cycle life > 6,000", "IP 20"],
-    warranty: "INVERTER 2 YEARS & BATTEY 5 YEARS",
     sourceNote: sourceDataSheetNote,
-    reviewNote: "The source warranty cell spans the integrated system and battery rows.",
-    page: 2
+    page: 3
   }),
   makeProduct("GROWATT", {
     name: "Lithium-ion Battery",
@@ -497,30 +621,32 @@ const products = [
     specifications: ["5.12 KWH", "51.2 V", "DoD up to 98%", "440*480*130.5mm", "43 ± 2Kg", "Max.48 packs parallel", "IP20"],
     warranty: "5 Years",
     sourceNote: sourceDataSheetNote,
-    page: 2
+    page: 3
+  }),
+  makeProduct("GROWATT", {
+    name: "Lithium-ion Battery",
+    model: "HOPE16LM-A1",
+    category: "batteries-storage",
+    description: "Rechargeable Lithium Ion Battery 16 kwh, 51.2V, Operating voltage: 40~58.4V, Cycle life: 6000 (0.5C, 95% DOD), IP 20, 48 pcs in parallel",
+    specifications: ["16 kwh", "51.2V", "40~58.4V", "6000 cycles (0.5C, 95% DOD)", "IP 20", "48 pcs in parallel"],
+    warranty: "5 Years",
+    sourceNote: sourceDataSheetNote,
+    page: 3
   }),
   ...[
-    ["SPF 3000TL-HVM-24", "3KW, 24V, High Frequency, Integrated MPPT charge controller, Configurable grid or solar input priority, WIFI Dongle Included for Monitoring, Maximum PV Array Power 1500W", ["3KW", "24V", "Maximum PV Array Power 1500W"]],
-    ["SPF 6000ES", "6KW, 48V, 2 MPPT, Work with or without Battery, Configurable grid or solar input priority, WIFI Dongle Included for Monitoring, Parallel Up to 6 Units, Two AC input terminals with integrated transfer switch, Maximum PV Array Power 8000W, Maximum PV input voltage up to 500VDC", ["6KW", "48V", "2 MPPT", "Parallel up to 6 units", "Maximum PV Array Power 8000W", "Maximum PV input voltage up to 500VDC"]],
-    ["SPH 3600TL-BL-UP", "Hybrid 3.6KW 2MPPT, Smart Load Management Via Dry Contact, UPS Function < 10MS Transition, 1.5 DC/AC RATIO, Single Phase, Max. recommended PV power 7500W, Grid Side Parallel, Free Shine Wifi-X", ["3.6KW", "2MPPT", "UPS transition < 10MS", "Single Phase", "Max. recommended PV power 7500W"]],
-    ["SPH 5000TL-BL-UP", "Hybrid 5KW 2MPPT, Smart Load Management Via Dry Contact, UPS Function < 10MS Transition, 1.5 DC/AC RATIO, Single Phase, Max. recommended PV power 7500W, Grid Side Parallel, Free Shine Wifi-X", ["5KW", "2MPPT", "UPS transition < 10MS", "Single Phase", "Max. recommended PV power 7500W"]],
-    ["WIT-100K-HU", "Smart Hybrid 100KW ESS Inverter, 156KW PV Input, 10 MPPT Trackers, Smart Air Cooling, IP66", ["100KW", "156KW PV Input", "10 MPPT Trackers", "IP66"]]
-  ].map(([model, description, specifications], index) => makeProduct("GROWATT", {
+    ["SPF 6000ES", "HYBRID, 6KW, 48V, 2 MPPT, Work with or without Battery, Configurable grid or solar input priority, WIFI Dongle Included for Monitoring, Parallel Up to 6 Units, Two AC input terminals with integrated transfer switch, Maximum PV Array Powe 8000W, Maximum PV input voltage up to 500VDC,", ["6KW", "48V", "2 MPPT", "Parallel Up to 6 Units", "Maximum PV Array Powe 8000W", "Maximum PV input voltage up to 500VDC"], "2 Years"],
+    ["SPH 3600TL-BL-UP", "Hybrid 3.6KW 2MPPT, Smart Load Management Via Dry Contact, UPS Function < 10MS Transition, 1.5 DC/AC RATIO, Single Phase, Max. recommended PV power 7500W, Grid Side Parallel, Free Shine Wifi-X", ["3.6KW", "2MPPT", "UPS Function < 10MS Transition", "1.5 DC/AC RATIO", "Single Phase", "Max. recommended PV power 7500W"], "5 Years"],
+    ["SPH 5000TL-BL-UP", "Hybrid 5KW 2MPPT, Smart Load Management Via Dry Contact, UPS Function < 10MS Transition, 1.5 DC/AC RATIO, Single Phase, Max. recommended PV power 7500W, Grid Side Parallel, Free Shine Wifi-X", ["5KW", "2MPPT", "UPS Function < 10MS Transition", "1.5 DC/AC RATIO", "Single Phase", "Max. recommended PV power 7500W"], "5 Years"],
+    ["WIT-100K-HU", "Smart Hybrid 100KW ESS Inverter, 156KW PV Input, 10 MPPT Trackers, Smart Air Cooling, IP66", ["100KW", "156KW PV Input", "10 MPPT Trackers", "Smart Air Cooling", "IP66"], "5 Years"]
+  ].map(([model, description, specifications, warranty]) => makeProduct("GROWATT", {
     name: "Inverter",
     model,
     category: "solar-inverters",
     description,
     specifications,
-    ...(index === 0 ? {
-      image: {
-        url: "../assets/catalogue/energy/products/growatt/spf-off-grid-inverter-family.jpg",
-        alt: "Growatt SPF off-grid inverter family image; the exact model label is not legible.",
-        note: "Family-level image only: the photo does not confirm the SPF model or its rating."
-      }
-    } : {}),
-    warranty: index < 2 ? "2 Years" : "5 Years",
+    warranty,
     sourceNote: sourceDataSheetNote,
-    page: 2
+    page: 3
   })),
   makeProduct("GROWATT", {
     name: "Battery Energy Storage System",
@@ -530,7 +656,7 @@ const products = [
     specifications: ["209.6 Kwh", "Parallel up to 13 Units", "280Ah"],
     warranty: "5 Years",
     sourceNote: sourceDataSheetNote,
-    page: 2
+    page: 3
   }),
   makeProduct("GROWATT", {
     name: "Smart Energy Meter",
@@ -540,7 +666,7 @@ const products = [
     specifications: ["Monitoring and export limitation", "Up to 48 inverters", "Ethernet", "RS485 communication"],
     warranty: "1 Year",
     sourceNote: sourceDataSheetNote,
-    page: 2
+    page: 3
   }),
   makeProduct("GROWATT", {
     name: "Current Transformer",
@@ -550,36 +676,37 @@ const products = [
     specifications: ["600A/5A"],
     warranty: "1 Year",
     sourceNote: sourceDataSheetNote,
-    page: 2
+    page: 3
   }),
 
   ...[
-    ["6K-OG02LP1-EU", "6KW Single Phase, Single Phase Low voltage, 48V Low Voltage Battery Supported, Supports 16 pcs parallel (off-grid).", ["6KW", "Single Phase", "48V Low Voltage Battery", "Supports 16 pcs parallel (off-grid)"]],
-    ["6/6KOG03LP1", "LV OFF-GRID 1-PHASE 6.6KW, Compatible with 18A PV Modules, 200% Peak Output, Up to 97.6% Conversion Efficiency, 4ms On/Off-Grid Switching, Max. 16 Units in Parallel, IP65 Protection Rating", ["6.6KW", "1-Phase", "Compatible with 18A PV Modules", "200% Peak Output", "Up to 97.6% Conversion Efficiency", "4ms switching", "Max. 16 Units in Parallel", "IP65"]],
-    ["8K-SG04LP3-EU", "8 KW Hybrid Inverter, Three Phase, Low Voltage, 10400W Mppt, Works with both Lead-acid or Li-Ion Batteries, Max. 10 pcs parallel for on-grid and off-grid operation, Support multiple batteries parallel, Max. charging/discharging current of 240A", ["8 KW", "Three Phase", "Low Voltage", "10400W Mppt", "Max. 10 pcs parallel", "Max. charging/discharging current of 240A"]],
-    ["8K-SG05LP1-EU", "8KW Single phase, 48V Low Voltage Battery Supported, Max. 16 pcs parallel for on-grid and off-grid operation; Support multiple batteries parallel, Max. charging/discharging current of 190A", ["8KW", "Single phase", "48V Low Voltage Battery", "Max. 16 pcs parallel", "Max. charging/discharging current of 190A"]],
-    ["12K-SG05LP3-E", "12 KW Hybrid Inverter, Three Phase, Low Voltage, 15600W Mppt, Works with both Lead-acid or Li-Ion Batteries, Max. 10 pcs parallel for on-grid and off-grid operation, Support multiple batteries parallel, Max. charging/discharging current of 240A", ["12 KW", "Three Phase", "Low Voltage", "15600W Mppt", "Max. 10 pcs parallel", "Max. charging/discharging current of 240A"]],
+    ["6/6KOG03LP1", "LV OFF-GRID 1-PHASE 6.6KW,Compatible with 18A PV Modules,200% Peak Output,Up to 97.6% Conversion Efficiency,4ms On/Off-Grid Switching,Max. 16 Units in Parallel,IP65 Protection Rating", ["6.6KW", "1-PHASE", "18A PV Modules", "200% Peak Output", "Up to 97.6% Conversion Efficiency", "4ms On/Off-Grid Switching", "Max. 16 Units in Parallel", "IP65"]],
+    ["8K-SG06LP1-EU", "8KW Single phase, 48V Low Voltage Battery Supported, Max. 16 pcs parallel for on-grid and off-grid operation; Support multiple batteries parallel, Max. charging/discharging current of 190A", ["8KW", "Single phase", "48V Low Voltage Battery Supported", "Max. 16 pcs parallel", "Max. charging/discharging current of 190A"]],
+    ["12K-SG05LP3-E", "12 KW Hybrid Inverter, Three Phase, Low Voltage, 15600W Mppt, Works with both Lead-acid or Li-lon Batteries, Max. 10 pcs parallel for on-grid and off-grid operation, Support multiple batteries parallel, Max. charging/discharging current of 240A", ["12 KW", "Three Phase", "Low Voltage", "15600W Mppt", "Max. 10 pcs parallel", "Max. charging/discharging current of 240A"]],
+    ["16K-SG01LP1-E", "16 KW Hybrid Inverter, single Phase, Low Voltage ,3 MPPT ,LV Battery Supported , IP65 ,AC couple to retrofit existing solar system , Max. charging/discharging current of 380A ,LV Battery Supported ,WIFI, RS485 CAN,max 16 pcs parallel for on-grid/off-grid operation, Support multiple batteries parallel", ["16 KW", "single Phase", "Low Voltage", "3 MPPT", "IP65", "Max. charging/discharging current of 380A", "WIFI", "RS485 CAN", "max 16 pcs parallel"]],
     ["20K-SG05LP3-E", "20 KW Hybrid, Inverter, Three Phase, Low Voltage, 26000w Dual MPPT", ["20 KW", "Three Phase", "Low Voltage", "26000w Dual MPPT"]],
+    ["12K-SG06LP1-E", "12kW Hybrid Inverter ,Single Phase , 48V Low Voltage Battery Supported, Max. 16 pcs parallel for on-grid and off-grid operation; Support multiple batteries parallel , Max. charging/discharging current of 250A", ["12kW", "Single Phase", "48V Low Voltage Battery Supported", "Max. 16 pcs parallel", "Max. charging/discharging current of 250A"]],
     ["50K-SG01HP3-E", "50 Kw Hybrid Inverter, Three Phase, High Voltage, 65000W Mppt, Max. 10 pcs parallel for on-grid and off-grid operation; Support multiple batteries parallel, Max. charging/discharging current of 100A", ["50 Kw", "Three Phase", "High Voltage", "65000W Mppt", "Max. 10 pcs parallel", "Max. charging/discharging current of 100A"]],
-    ["80K-SG02HP3-E", "HV HYBRID 3-PHASE 80KW, 100% unbalanced output each phase, AC couple to retrofit existing solar system, Max. 10 pcs parallel for on-grid and off-grid operation; Support multiple batteries parallel, 128 Kw PV Inout", ["80KW", "3-Phase", "100% unbalanced output each phase", "AC couple", "Max. 10 pcs parallel", "128 Kw PV Inout"]],
+    ["80K-SG02HP3-E", "80KW HV HYBRID 3-PHASE , 100% unbalanced output each phase, AC couple to retrofit existing solar system, Max. 10 pcs parallel for on-grid and off-grid operation; Support multiple batteries parallel, 128 Kw PV Inout", ["80KW", "3-PHASE", "100% unbalanced output each phase", "AC couple to retrofit existing solar system", "Max. 10 pcs parallel", "128 Kw PV Inout"]],
+    ["125K-SG02HP3", "125kw HV HYBRID 3-PHASE ,100% unbalanced output ,Max. 10 pcs parallel for on-grid and off-grid ,Max. charging/discharging current of 200A,IP 65", ["125kw", "HV HYBRID 3-PHASE", "100% unbalanced output", "Max. 10 pcs parallel", "Max. charging/discharging current of 200A", "IP 65"]],
     ["100K-G", "HV STRING 3-PHASE 100KW, 150KW DC Input, Max. 6 MPP trackers, Max. efficiency up to 98.8%", ["3-Phase", "100KW", "150KW DC Input", "Max. 6 MPP trackers", "Max. efficiency up to 98.8%"]],
     ["136K-G", "HV STRING 3-PHASE 136KW, 204KW DC Input, 8 MPPT", ["3-Phase", "136KW", "204KW DC Input", "8 MPPT"]]
-  ].map(([model, description, specifications], index) => makeProduct("DEYE", {
+  ].map(([model, description, specifications]) => makeProduct("DEYE", {
     name: "Inverter",
     model,
     category: "solar-inverters",
     description,
     specifications,
-    warranty: index === 8 ? "6 Years" : "5 Years",
+    warranty: "5 Years",
     sourceNote: sourceDataSheetNote,
-    page: index < 6 ? 2 : 3
+    page: ["6/6KOG03LP1", "8K-SG06LP1-EU", "12K-SG05LP3-E", "16K-SG01LP1-E", "20K-SG05LP3-E", "12K-SG06LP1-E"].includes(model) ? 1 : 2
   })),
   ...[
-    ["BATSE-F16-C", "Rechargeable Lithium Ion Low Voltage Battery, 16 KWH, 48 V, parallel up to 32 units in parallel", ["16 KWH", "48 V", "Parallel up to 32 units"], "10 Years"],
-    ["BOS-PACK-7.6KWH", "Rechargeable Lithium Ion High Voltage Battery, 7.6 Kwh", ["7.6 Kwh", "High Voltage"], "10 Years"],
+    ["BATSE-F16-C", "Rechargeable Lithium Ion Low Voltage Battery, 16 KWH , 48 V , parallel up to 32 units in parallel", ["16 KWH", "48 V", "Parallel up to 32 units"], "10 Years"],
     ["SE-F5-L", "Rechargeable Lithium Ion Low Voltage Battery, 5.12 Kwh", ["5.12 Kwh", "Low Voltage"], "5 Years"],
     ["BOS-GM-5.1 HV", "Rechargeable Lithium Ion High Voltage Battery, 5.12 Kwh 0.5C", ["5.12 Kwh", "High Voltage", "0.5C"], "10 Years"],
     ["BOS-G-PRO51", "Rechargeable Lithium Ion High Voltage Battery, 5.12 Kwh", ["5.12 Kwh", "High Voltage"], "10 Years"],
+    ["GB-W-12", "Rechargeable Lithium Ion High Voltage Battery 12 KWH ,IP20 GB-W , 51.2Vdc , dod 90% ,Expandable up TP approximately 3 MWh ,Over 6,000 cycles", ["12 KWH", "IP20 GB-W", "51.2Vdc", "dod 90%", "Expandable up TP approximately 3 MWh", "Over 6,000 cycles"], "10 Years"],
     ["BOS-B-PACK16", "HV BATTERY PACK 16 kwh B-PRO", ["16 kwh", "High Voltage", "B-PRO"], "10 Years"]
   ].map(([model, description, specifications, warranty]) => makeProduct("DEYE", {
     name: "Battery",
@@ -589,9 +716,11 @@ const products = [
     specifications,
     warranty,
     sourceNote: sourceDataSheetNote,
-    page: 3
+    page: 2
   })),
   ...[
+    ["PDU-GB-W-2", "Battery Control Box", "GB-W HV CONTROL BOX+BASE", ["GB-W"]],
+    ["ACC-GB-W-PARTS", "Battery Base", "GB-W BASE+RAIL+COVER", ["GB-W"]],
     ["PCS 125K-L01HP3", "Power Conversion System", "125 KW PCS, Max. Charging/Discharging Current (A) 220AH", ["125 KW", "Max. Charging/Discharging Current (A) 220AH"]],
     ["MPPT 200KW", "MPPT Charging Module", "200 kW MPPT charging module", ["200 kW"]],
     ["CONTROL BOX HV BOS-B-PDU-2-A", "Battery Control Box", "BOS-B-PRO16KWH CONTROL BOX+ACC", ["For BOS-B-PRO16KWH"]],
@@ -613,74 +742,36 @@ const products = [
     } : {}),
     warranty: "5 Years",
     sourceNote: sourceDataSheetNote,
-    page: 3
+    page: 2
   })),
 
-  makeProduct("PYLONTECH", {
+  makeProduct("PYLON-TECH", {
     name: "Lithium Battery",
-    model: "PYLONBATFB-L-16",
+    model: "PYLONBATFB-L-16 ( 16 Kwh )",
     category: "batteries-storage",
-    description: "16KWH, 51.2V, LV, ELEGANT DESIGN, FLEXIBLE INSTALLATION, SMART MONITORING, APP & LED DISPLAY, BUILT IN FIRE SUPPRESION MODULE, WHEELS INCLUDED",
-    specifications: ["16 kWh", "51.2V", "LV", "Built in fire suppression module", "Wheels included"],
+    description: "16KWH, 51.2V, LV, ELEGANT DESIGN, FLEXIBLE INSTALLATION, SMART MONITORING, APP & LED DISPLAY, WHEELS INCLUDED",
+    specifications: ["16KWH", "51.2V", "LV", "ELEGANT DESIGN", "FLEXIBLE INSTALLATION", "SMART MONITORING", "APP & LED DISPLAY", "WHEELS INCLUDED"],
     warranty: "5 Years",
     sourceNote: sourceDataSheetNote,
-    page: 3
+    page: 2
   }),
-  makeProduct("PYLONTECH", {
+  makeProduct("PYLON-TECH", {
     name: "Lithium Battery",
-    model: "UF5000",
+    model: "UF5000 (5.12 Kwh)",
     category: "batteries-storage",
-    description: "Rechargeable Lithium Ion Battery 5120 Wh 51.2Vdc 100Ah, 95% DOD, 442*452.6*161 mm, 42 kg, Single string quantity 20 units, Cycle life > 6,000, External Cable Kit Included",
+    description: "Rechargeable Lithium Ion Battery 5120 Wh 51.2Vdc 100Ah, 95% DOD, 442*452.6*161 mm, 42 kg, Single string quantity 20 units, Cycle life > 6,000",
     specifications: ["5.12 kWh", "51.2Vdc", "100Ah", "95% DOD", "442*452.6*161 mm", "42 kg", "Single string quantity 20 units", "Cycle life > 6,000"],
     warranty: "5 Years",
     sourceNote: sourceDataSheetNote,
-    page: 3
+    page: 2
   }),
-  makeProduct("PYLONTECH", {
-    name: "High Voltage Lithium-Ion Phosphate Battery Storage System",
-    model: "PYLONBAT-POWCUBE-M1C",
-    category: "batteries-storage",
-    description: "High Voltage Lithium-lon Phosphate Battery storage system, 4.74 KWH, 32VDC, 148 AH, Dimension(W*D*H,mm)330*628*150.5, 48KG, IP20",
-    specifications: ["4.74 KWH", "32VDC", "148 AH", "330*628*150.5 mm", "48KG", "IP20"],
-    warranty: "5 Years",
-    sourceNote: sourceDataSheetNote,
-    page: 3
-  }),
-  makeProduct("PYLONTECH", {
-    name: "High-voltage lithium battery module",
-    model: "PYLON-SC1000-200L-C",
-    category: "batteries-storage",
-    description: "High-voltage lithium battery module from Pylontech, designed for scalable energy storage systems with high efficiency, long cycle life, and reliable performance.",
-    warranty: "5 Years",
-    sourceNote: sourceDataSheetNote,
-    reviewNote: "The source places this module in the Battery rows; its source-stated type is retained.",
-    page: 3
-  }),
-  makeProduct("PYLONTECH", {
-    name: "Battery Rack",
-    model: "PYLONRACK-RK2130-M1",
-    category: "energy-storage-components",
-    description: "Dedicated battery rack for Pylontech HV batteries, used to safely mount, organize, and support multiple battery modules in a structured installation.",
-    warranty: "5 Years",
-    sourceNote: sourceDataSheetNote,
-    page: 3
-  }),
-  makeProduct("PYLONTECH", {
-    name: "Battery Cable Kit",
-    model: "PYLONCABLEKIT-M1C",
-    category: "energy-storage-components",
-    description: "Original Pylontech cable kit including communication and power cables, required for proper connection between battery modules, rack, and inverter/BMS.",
-    warranty: "5 Years",
-    sourceNote: sourceDataSheetNote,
-    page: 3
-  }),
-  makeProduct("PYLONTECH", {
+  makeProduct("PYLON-TECH", {
     name: "External Cable Kit",
     model: "KIT-USC",
     category: "energy-storage-components",
     description: "External Cable Kit-USC (Connect Battery to Inverter)",
     sourceNote: sourceDataSheetNote,
-    page: 3
+    page: 2
   }),
 
   makeProduct("TSTY Transformer", {
@@ -711,7 +802,7 @@ const products = [
     category: "mounting-accessories",
     description: "Kit for 8 units of solar panels of frame size 30/35mm. Set includes 4 units rail 4.7 meters each, 2 rail joiner, 14 mid clamps, 8 end clamps, 16 L-foot, 2 grounding lugs.",
     specifications: ["For 8 solar panels", "Frame size 30/35mm", "4 rails, 4.7 meters each", "2 rail joiners", "14 mid clamps", "8 end clamps", "16 L-foot", "2 grounding lugs"],
-    page: 3
+    page: 4
   }),
   ...[
     ["ANTAIRAILCG010-01", "Rail", "ANTAI RAIL 4.7M", ["4.7M"]],
@@ -779,7 +870,7 @@ const products = [
     description,
     specifications,
     ...(warranty ? { warranty } : {}),
-    page: category === "solar-connectors" || category === "solar-cables" ? 5 : 4
+    page: category === "fuses" || category === "solar-connectors" || category === "solar-cables" ? 5 : 4
   }))
 ];
 

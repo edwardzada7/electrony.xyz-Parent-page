@@ -16,6 +16,41 @@ const { calculateSolarPackagePricing } = context.window.ElectronyEnergyPricing;
 const packageById = (id) => packages.find((solarPackage) => solarPackage.id === id);
 const pricingFor = (id, catalogue = products) => calculateSolarPackagePricing(packageById(id), catalogue);
 
+test("reconciles all source catalogue products and preserves explicit price provenance", () => {
+  assert.equal(products.length, 130);
+  assert.equal(new Set(products.map((product) => product.id)).size, products.length);
+  assert.equal(new Set(products.map((product) => `${product.brand}|${product.model}`)).size, products.length);
+  assert.equal(products.filter((product) => product.priceNgn !== null).length, 128);
+
+  products.forEach((product) => {
+    assert.equal(product.source.document, "POWER-SOLAR PL-1.pdf", product.model);
+    assert.ok(product.source.page >= 1 && product.source.page <= 5, product.model);
+    assert.equal(product.priceSource.document, "POWER-SOLAR PL-1.pdf", product.model);
+    assert.equal(product.priceSource.page, product.source.page, product.model);
+    if (product.priceNgn === null) {
+      assert.equal(product.priceDisplay, null, product.model);
+    } else {
+      assert.ok(Number.isSafeInteger(product.priceNgn) && product.priceNgn > 0, product.model);
+      assert.equal(Number(product.priceDisplay.replaceAll(",", "")), product.priceNgn, product.model);
+    }
+  });
+
+  const productByModel = new Map(products.map((product) => [`${product.brand}|${product.model}`, product]));
+  assert.deepEqual(
+    [...products].filter((product) => product.priceNgn === null).map((product) => `${product.brand}|${product.model}`).sort(),
+    ["ANTAI|PV ROOF MOUNTING SET", "SUNTREE|SUNDB24WAY"]
+  );
+  assert.equal(productByModel.get("SUNTREE|SUNBRKAC32AMPS-2P").priceDisplay, "2,700.00");
+  assert.equal(productByModel.get("HUAWEI|HUWSMARTMODUL1000A01").source.page, 3);
+  assert.equal(productByModel.get("HUAWEI|SMART LOGGER 3000A01EU").source.page, 3);
+  assert.equal(productByModel.get("GROWATT|ABM 5.5-A1-H").warranty, undefined);
+  assert.equal(productByModel.get("GROWATT|ABM 5-LS-B1-H").warranty, undefined);
+  assert.equal(
+    productByModel.get("GROWATT|SIM 6000ES PLUS-H + BATTERY + BASE 6KW + 5.5 KWH").warranty,
+    "INVERTER 2 YEARS & BATTEY 5 YEARS"
+  );
+});
+
 test("calculates every confirmed line and package subtotal in exact naira", () => {
   const expected = [
     ["basic-small-home-office", 591200, null, 3],
@@ -36,7 +71,10 @@ test("calculates every confirmed line and package subtotal in exact naira", () =
 test("maps the listed models to the exact catalogue products and quantities", () => {
   const basic = packageById("basic-small-home-office");
   assert.equal(basic.capacity, "3.6 kW");
-  assert.equal(basic.components.find((component) => component.category === "Solar panels").productId, "jinko-585n-72hl4-bd");
+  const basicPanels = basic.components.find((component) => component.category === "Solar panels");
+  assert.equal(basicPanels.productId, undefined);
+  assert.equal(basicPanels.model, "585N-72HL4-BD");
+  assert.equal(basicPanels.manufacturer, "JINKO");
   assert.equal(basic.components.find((component) => component.category === "Inverter").productId, "growatt-sph-3600tl-bl-up");
 
   const mediumPanels = pricingFor("medium-home-office").lines.find((line) => line.component.category === "Solar panels");

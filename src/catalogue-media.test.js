@@ -18,19 +18,22 @@ function resolvePageAsset(pageDirectory, assetUrl) {
   return path.join(projectRoot, decodeURIComponent(url.pathname.slice(1)));
 }
 
-test("Energy product image mappings preserve all 123 catalogue records", () => {
+test("Energy product image mappings preserve all 130 catalogue records", () => {
   const products = loadCatalogueScript("energy-catalogue.js").ElectronyEnergyProducts;
-  assert.equal(products.length, 123);
-  assert.equal(new Set(products.map((product) => product.id)).size, 123);
+  assert.equal(products.length, 130);
+  assert.equal(new Set(products.map((product) => product.id)).size, 130);
 
   const productImages = products.filter((product) => product.image.url.includes("/products/"));
-  assert.equal(productImages.length, 25);
+  assert.equal(productImages.length, 26);
   for (const product of productImages) {
     assert.ok(product.image.alt);
     assert.ok(fs.existsSync(resolvePageAsset("energy", product.image.url)), product.image.url);
   }
   for (const product of products) {
     assert.ok(fs.existsSync(resolvePageAsset("energy", product.image.url)), product.image.url);
+    if (product.brandLogo) {
+      assert.ok(fs.existsSync(resolvePageAsset("energy", product.brandLogo)), product.brandLogo);
+    }
   }
 
   const uploadedImages = ["jinko", "huawei", "growatt", "hisense", "deye"].flatMap((brand) => {
@@ -44,20 +47,21 @@ test("Energy product image mappings preserve all 123 catalogue records", () => {
     const url = new URL(product.image.url, "https://catalogue.example/energy/");
     return decodeURIComponent(url.pathname.split("/products/")[1]);
   }));
-  assert.equal(mappedImagePaths.size, 19);
+  assert.equal(mappedImagePaths.size, 18);
   assert.deepEqual(
     uploadedImages.filter((filename) => !mappedImagePaths.has(filename)).sort(),
     [
+      "growatt/spf-off-grid-inverter-family.jpg",
       "huawei/ATS 63A.jpg",
       "huawei/Huawei-Auto-Transfer-Switch-100A-Max-220380Vac-3-Phase.jpg"
     ].sort()
   );
 
   const jinko = products.filter((product) => product.brand === "JINKO");
-  assert.equal(jinko.length, 6);
-  assert.equal(new Set(jinko.slice(0, 3).map((product) => product.image.url)).size, 1);
-  assert.equal(new Set(jinko.slice(3).map((product) => product.image.url)).size, 1);
-  assert.notEqual(jinko[0].image.url, jinko[3].image.url);
+  assert.equal(jinko.length, 8);
+  assert.equal(new Set(jinko.slice(0, 4).map((product) => product.image.url)).size, 1);
+  assert.equal(new Set(jinko.slice(4).map((product) => product.image.url)).size, 1);
+  assert.notEqual(jinko[0].image.url, jinko[4].image.url);
 
   const unmatchedHuaweiImages = [
     "ATS 63A.jpg",
@@ -74,9 +78,8 @@ test("Energy product image mappings preserve all 123 catalogue records", () => {
   assert.equal(hisenseBattery.image.url, "../assets/catalogue/energy/products/hisense/lifepo4-51-2v-100ah-battery-family.jpg");
   assert.match(hisenseBattery.image.note, /exact model is not identifiable/i);
 
-  const growattInverter = productByModel.get("SPF 3000TL-HVM-24");
-  assert.equal(growattInverter.image.url, "../assets/catalogue/energy/products/growatt/spf-off-grid-inverter-family.jpg");
-  assert.match(growattInverter.image.note, /does not confirm the SPF model/i);
+  assert.equal(productByModel.get("SPF 3000TL-HVM-24"), undefined);
+  assert.equal(productByModel.get("SPF 6000ES").image.url, "../assets/catalogue/energy-inverter.svg");
 
   const deyeControlBoxes = [
     productByModel.get("CONTROL BOX HV BOS-B-PDU-2-A"),

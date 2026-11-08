@@ -36,7 +36,7 @@ const packageCatalogueData = [
     components: [
       packageComponent("Inverter", "growatt-sph-3600tl-bl-up", 1, "Hybrid 3.6kW, 2MPPT, single phase"),
       enquiryComponent("Battery", "GROWATT", "ABM5.5-A1-H / HOPE5L-B1 (source lists both)", 1, "5.12kWh/5.5kWh lithium-ion, 48V; exact model and capacity are unresolved."),
-      packageComponent("Solar panels", "jinko-585n-72hl4-bd", 6, "585W bifacial half-cut"),
+      enquiryComponent("Solar panels", "JINKO", "585N-72HL4-BD", 6, "585W bifacial half-cut; this package-guide model is not listed in the latest product catalogue."),
       ...antaiMountingKit(1),
       packageComponent("Protection", "suntree-sunacguard63a-230v", 1, "AC voltage guard 63A"),
       enquiryComponent("Protection", "SUNTREE", "AC breaker 32A (pole/model not specified)", 1, "AC breaker 32A; package source does not identify the pole configuration."),
@@ -79,7 +79,7 @@ const packageCatalogueData = [
     components: [
       enquiryComponent("Inverter", "DEYE", "8K-SG04LP3-EU", 1, "8kW, 3-phase, low-voltage hybrid inverter; this exact model has no confirmed price in the updated list."),
       packageComponent("Battery", "deye-batse-f16-c", 1, "16kWh low-voltage lithium battery (48V)"),
-      enquiryComponent("Solar panels", "JINKO", "720N-66HL5-BD", 12, "720W bifacial half-cut; this exact panel model has no confirmed price in the updated list."),
+      enquiryComponent("Solar panels", "JINKO", "720N-66HL5-BD", 12, "720W bifacial half-cut; this package-guide model is not listed in the latest product catalogue."),
       enquiryComponent("Mounting", "ANTAI", "Mounting Kit + Accessories", 2, "Rail sets + mid/end clamps; exact kit composition/model is not specified."),
       packageComponent("Accessories", "huawei-ats-63a", 1, "Auto transfer switch 63A, 3-phase"),
       enquiryComponent("Protection", "SUNTREE", "AC MCCB 100A (pole/model not specified)", 1, "AC MCCB 100A; pole configuration is not specified."),

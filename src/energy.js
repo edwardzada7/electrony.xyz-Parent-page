@@ -147,6 +147,10 @@ function createElement(tagName, className, text) {
   return element;
 }
 
+function cataloguePriceLabel(product) {
+  return product.priceNgn === null ? "Request current price" : `₦${product.priceDisplay}`;
+}
+
 function createEnergyProductCard(product) {
   const card = createElement("article", "energy-product-card");
   const visual = createElement("div", "energy-product-card__image");
@@ -186,9 +190,14 @@ function createEnergyProductCard(product) {
   const model = product.model
     ? createElement("p", "energy-product-card__model", product.model)
     : null;
+  const price = createElement("p", "energy-product-card__price", cataloguePriceLabel(product));
+  price.setAttribute("aria-label", product.priceNgn === null
+    ? "Request current price"
+    : `Catalogue price ${cataloguePriceLabel(product)}`);
   const description = createElement("p", "energy-product-card__description", product.description);
   body.append(brandLine, category, title);
   if (model) body.appendChild(model);
+  body.appendChild(price);
   if (description.textContent) body.appendChild(description);
 
   if (product.specifications.length) {
@@ -307,8 +316,8 @@ function createPackageCard(solarPackage, comparison = null) {
     const amounts = createElement("dl", "energy-package-pricing__amounts");
     [
       ["Quantity", `${line.component.quantity} ${line.component.unit}${line.component.quantity === 1 ? "" : "s"}`],
-      ["Unit price", line.unitPriceNgn === null ? "Price on enquiry" : formatNaira(line.unitPriceNgn)],
-      ["Line total", line.lineTotalNgn === null ? "Price on enquiry" : formatNaira(line.lineTotalNgn)]
+      ["Unit price", line.unitPriceNgn === null ? "Request current price" : cataloguePriceLabel(line.product)],
+      ["Line total", line.lineTotalNgn === null ? "Request current price" : formatNaira(line.lineTotalNgn)]
     ].forEach(([label, amount]) => {
       const entry = createElement("div");
       entry.append(createElement("dt", "", label), createElement("dd", "", amount));
@@ -339,7 +348,7 @@ function createPackageCard(solarPackage, comparison = null) {
   card.appendChild(createElement("p", "energy-package-card__suitability",
     "Package suitability is not guaranteed. Final system design requires load assessment and site evaluation, including battery/inverter compatibility, PV string sizing and project-specific circuit protection."));
   const source = createElement("p", "energy-package-card__source", `Source: ${solarPackage.source.document}, page ${solarPackage.source.page}.`);
-  const priceSource = createElement("p", "energy-package-card__source", "Individual product prices: POWER-SOLAR PL-1.pdf (5 November 2026).");
+  const priceSource = createElement("p", "energy-package-card__source", "Individual product catalogue prices: POWER-SOLAR PL-1.pdf (5 November 2026). Confirm current prices before an order is accepted; no stock or availability is implied.");
   const footer = createElement("div", "energy-package-card__footer");
   const quote = document.createElement("a");
   quote.className = "button energy-button energy-button--primary";
@@ -573,7 +582,7 @@ function requestSolarPackage(solarPackage, estimate = null) {
     `Solar package enquiry: ${solarPackage.name} — ${solarPackage.capacity}`,
     `Intended application in source: ${solarPackage.application}`,
     ...pricing.lines.map((line) =>
-      `${line.component.category}: ${line.manufacturer} ${line.model}; ${line.component.details}; quantity ${line.component.quantity} ${line.component.unit}; unit price ${line.unitPriceNgn === null ? "Price on enquiry" : formatNaira(line.unitPriceNgn)}; line total ${line.lineTotalNgn === null ? "Price on enquiry" : formatNaira(line.lineTotalNgn)}.`),
+      `${line.component.category}: ${line.manufacturer} ${line.model}; ${line.component.details}; quantity ${line.component.quantity} ${line.component.unit}; unit price ${line.unitPriceNgn === null ? "Request current price" : cataloguePriceLabel(line.product)}; line total ${line.lineTotalNgn === null ? "Request current price" : formatNaira(line.lineTotalNgn)}.`),
     pricing.complete
       ? `Calculated package component total: ${formatNaira(pricing.totalNgn)}.`
       : `Full package component total unavailable because ${pricing.unpricedLines.length} required component ${pricing.unpricedLines.length === 1 ? "has" : "have"} no confirmed price.${pricing.subtotalNgn === null ? "" : ` Partial subtotal for confirmed-price components only: ${formatNaira(pricing.subtotalNgn)}.`}`,
@@ -629,6 +638,9 @@ function renderProductDetails(product, calculationSummary = "") {
     image.hidden = false;
   }
   document.querySelector("#energy-dialog-category").textContent = energyCategories[product.category] || "Energy equipment";
+  document.querySelector("#energy-dialog-price").textContent = product.priceNgn === null
+    ? "Request current price"
+    : `Catalogue price: ${cataloguePriceLabel(product)} · Confirm before an order is accepted`;
   document.querySelector("#energy-dialog-description").textContent = product.description;
   const specificationList = document.querySelector("#energy-dialog-specs");
   const specificationsSection = document.querySelector("#energy-dialog-specs-section");
@@ -664,6 +676,7 @@ function requestProduct(product, calculationSummary = "") {
     product.description ? `Source description: ${product.description}` : "",
     product.specifications.length ? `Specifications: ${product.specifications.join("; ")}` : "",
     product.warranty ? `Source-stated warranty: ${product.warranty}` : "",
+    `Catalogue price: ${cataloguePriceLabel(product)}`,
     `Source: ${product.source.document}, page ${product.source.page}.`,
     product.sourceNote ? `Source note: ${product.sourceNote}.` : "",
     calculationSummary ? `Energy calculator estimates:\n${calculationSummary}` : "",
