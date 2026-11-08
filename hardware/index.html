@@ -269,7 +269,7 @@
             <span id="hardware-page-status" aria-live="polite"></span>
             <button type="button" class="hardware-filter" id="hardware-page-next">Next</button>
           </nav>
-          <p class="hardware-data-note">Source price columns and undated bundle offers are not published as current selling prices. Confirm current prices, warranty terms, availability and supply details on enquiry. Category artwork is illustrative, and no cart or checkout is available.</p>
+          <p class="hardware-data-note">Prices shown in naira are transcribed from the cited supplier lists and must be confirmed before an order is accepted. Missing or conflicting prices are not published. The undated promotion sheet is excluded; availability and delivery are not confirmed. Category artwork is illustrative, and no cart or checkout is available.</p>
         </div>
       </section>
 
@@ -357,6 +357,7 @@
                 <input id="quote-product" name="product" maxlength="160" required aria-describedby="quote-product-error">
                 <span class="hardware-field-error" id="quote-product-error"></span>
               </div>
+              <input id="quote-context" name="catalogue-context" type="hidden" data-message-label="Catalogue product details">
               <div class="hardware-field">
                 <label for="quote-model">Brand or model, if known</label>
                 <input id="quote-model" name="model" maxlength="120" data-message-label="Brand or model">

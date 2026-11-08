@@ -91,35 +91,120 @@ test("Energy product image mappings preserve all 123 catalogue records", () => {
   assert.equal(mappingRows.length, 34);
 });
 
-test("Hardware source catalogue contains traceable products without source prices", () => {
+test("Hardware catalogue preserves revised source records, prices, and traceability", () => {
   const window = loadCatalogueScript("hardware-products.js");
   const products = window.ElectronyHardwareSourceProducts;
-  assert.equal(products.length, 396);
+  const sourceDocuments = window.ElectronyHardwareSourceDocuments;
+  assert.equal(products.length, 483);
   assert.deepEqual(
-    ["Hisense", "LG", "MAXI"].map((brand) => products.filter((product) => product.brand === brand).length),
-    [145, 135, 116]
+    ["Hisense", "LG", "MAXI", "MORA", null].map((brand) => products.filter((product) => product.brand === brand).length),
+    [180, 151, 149, 1, 2]
   );
   assert.equal(new Set(products.map((product) => product.id)).size, products.length);
+  const normalizeModel = (model) => model.toLocaleUpperCase().replace(/[^A-Z0-9]/g, "");
+  const uniqueModels = products.map((product) => `${product.brand || "unknown"}:${normalizeModel(product.model)}`);
+  assert.equal(new Set(uniqueModels).size, products.length);
+
+  const revisedDocuments = new Set(["Hisense-1.pdf", "LG-1.pdf", "MAXI-1.pdf"]);
+  const revisedProducts = products.filter((product) => revisedDocuments.has(product.source.document));
+  assert.equal(revisedProducts.length, 405);
+  assert.deepEqual(
+    Array.from(sourceDocuments.filter((source) => revisedDocuments.has(source.document)), (source) => source.version),
+    ["1.7", "1.7", "1.7"]
+  );
+  assert.equal(sourceDocuments.find((source) => source.document === "PROMO LIST-1.pdf").validityDate, null);
+  assert.equal(sourceDocuments.find((source) => source.document === "PROMO LIST-1.pdf").published, false);
+
   for (const product of products) {
     assert.ok(product.model);
-    assert.ok(product.description);
     assert.ok(product.source.document);
     assert.ok(Number.isInteger(product.source.page));
     assert.ok(fs.existsSync(path.join(projectRoot, "hardware", product.source.document)));
-    assert.equal(Object.hasOwn(product, "price"), false);
+    assert.ok(["listed", "not-listed", "conflict"].includes(product.priceStatus));
     assert.ok(fs.existsSync(resolvePageAsset("hardware", product.image.url)), product.image.url);
+    assert.match(product.image.alt, /illustrative/i);
+    assert.match(product.image.alt, /not a product photograph/i);
+    for (const source of [product.source, ...(product.sources || [])]) {
+      assert.ok(fs.existsSync(path.join(projectRoot, "hardware", source.document)));
+      assert.ok(Number.isInteger(source.page));
+    }
+
+    if (product.priceStatus === "listed") {
+      assert.equal(product.price.currency, "NGN");
+      assert.match(product.price.display, /^₦[\d,]+(?:\.\d{2})?$/);
+      const source = product.priceSource || product.source;
+      const observation = product.priceObservations.find((item) =>
+        item.document === source.document && item.page === source.page
+      );
+      assert.ok(observation, `${product.model} price source is recorded`);
+      assert.equal(product.price.display, `₦${observation.rawAmount}`);
+      assert.equal(product.price.amount, observation.rawAmount.replace(/,/g, ""));
+    } else {
+      assert.equal(product.price, null);
+    }
   }
+
+  const universalBracket = products.filter((product) => normalizeModel(product.model) === "BRACKETUNIVERSAL");
+  assert.equal(universalBracket.length, 1);
+  assert.equal(universalBracket[0].brand, null);
+  assert.equal(universalBracket[0].category, "consumer-electronics");
+  assert.equal(universalBracket[0].priceStatus, "conflict");
+  assert.deepEqual(
+    Array.from(universalBracket[0].priceObservations, (observation) => observation.rawAmount).sort(),
+    ["4,600", "6,500", "6,500"]
+  );
+
+  const unpricedModel = products.find((product) => product.model === "HISAF08AFBK1S4");
+  assert.equal(unpricedModel.price, null);
+  assert.equal(unpricedModel.priceStatus, "not-listed");
+  assert.equal(products.filter((product) => normalizeModel(product.model) === "MAXIINSTALLATIONKITPLUSA").length, 1);
+  assert.equal(products.filter((product) => normalizeModel(product.model) === "MAXIINSTALLATIONKITPLUSB").length, 1);
+  assert.equal(products.filter((product) => product.warrantyStatus === "needs-confirmation").length, 1);
+
+  const currentSourcePaths = [...revisedDocuments];
+  assert.ok(currentSourcePaths.every((filename) => sourceDocuments.some((source) => source.document === filename)));
+
   const productByModel = new Map(products.map((product) => [product.model, product]));
   assert.equal(productByModel.get("INV6KS-AA1").category, "solar-energy");
   assert.equal(productByModel.get("BATHEL5-E-BB1").category, "solar-energy");
   assert.equal(productByModel.get("LGTV43LR600").category, "consumer-electronics");
   assert.equal(productByModel.get("WM1I6022BKWF").category, "appliances");
   assert.equal(productByModel.get("HISMWO34MOBS10HG").category, "appliances");
-  assert.equal(productByModel.get("REF331SLBB").category, "appliances");
+  assert.equal(productByModel.get("REF 331 SLBB").category, "appliances");
   assert.equal(productByModel.get("MAXIUPS600DG").category, "electrical-power");
   assert.equal(productByModel.get("SPLIT1HPINV").category, "appliances");
   assert.equal(productByModel.get("MON27G3Q").category, "computers");
-  assert.equal(productByModel.get("BRACKETUNIVERSAL").category, "consumer-electronics");
+  assert.equal(productByModel.get("BRACKET UNIVERSAL").category, "consumer-electronics");
+  assert.equal(productByModel.get("WM0Z6DRP24").description, "2 in 1 ,Washer (13KG), Dryer (8KG), Direct Drive Motor, Smart,True Steam ,  Silver");
+  assert.equal(
+    productByModel.get("HISIRON1800GRT").description,
+    "steam iron,1800W,water spray,ceramic soleplate,250ml water tank,stam level, water button,steam boost,360 power cord"
+  );
+  assert.match(productByModel.get("HISIRON28SIWES1").description, /2800W/);
+  assert.equal(
+    productByModel.get("MON34G6Q").description,
+    "34'' Gaming monitor,1000R,200 Hz ,1ms,90% DCI-P3,FreeSync Premium ,Display HDR 400"
+  );
+  assert.match(productByModel.get("MON 34G6K-PRO").description, /3440x1440p WQHD/);
+  assert.equal(productByModel.get("LGAUD301STAGE").category, "consumer-electronics");
+  assert.match(productByModel.get("LGAUD301STAGE").description, /60W, 6\.5” woofer/);
+  assert.doesNotMatch(productByModel.get("AUD 9RNC (Baba)").description, /60W, 6\.5” woofer/);
+  assert.match(productByModel.get("MAXIHOODD002BL").description, /1 Wx2 pcs Led Lamp/);
+  assert.doesNotMatch(productByModel.get("MAXIHOODD0029GR").description, /^1 Wx2 pcs Led Lamp/);
+});
+
+test("Hardware enquiry context keeps product details and accepted-only submission behavior", () => {
+  const hardwareScript = fs.readFileSync(path.join(projectRoot, "src", "hardware.js"), "utf8");
+  const contactScript = fs.readFileSync(path.join(projectRoot, "src", "contact-form.js"), "utf8");
+  const hardwarePage = fs.readFileSync(path.join(projectRoot, "hardware", "index.html"), "utf8");
+  assert.match(hardwareScript, /document\.createElement\("details"\)/);
+  assert.match(hardwareScript, /new URLSearchParams\(window\.location\.search\)\.get\("product"\)/);
+  assert.match(hardwareScript, /Catalogue URL: \$\{productUrl\.href\}/);
+  assert.match(hardwareScript, /product\.description \? `Source-listed details:/);
+  assert.match(hardwarePage, /id="quote-context"[^>]+data-message-label="Catalogue product details"/);
+  assert.match(contactScript, /fetch\("\/api\/contact"/);
+  assert.match(contactScript, /submitButton\.disabled = true/);
+  assert.match(contactScript, /result\.ok !== true/);
 });
 
 test("ROX uploads retain verified model attribution and keep other media shared", () => {
