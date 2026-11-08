@@ -79,6 +79,17 @@ function safeImageUrl(value) {
   }
 }
 
+function safeSourceUrl(value) {
+  if (typeof value !== "string" || !value.trim()) return null;
+  try {
+    const sourceUrl = new URL(value, document.baseURI);
+    if (sourceUrl.protocol !== "https:" || sourceUrl.username || sourceUrl.password) return null;
+    return sourceUrl.href;
+  } catch {
+    return null;
+  }
+}
+
 function getYouTubeVideoId(value) {
   if (typeof value !== "string" || !value.trim()) return "";
   const candidate = value.trim();
@@ -652,10 +663,18 @@ function renderProductDetails(product, calculationSummary = "") {
   document.querySelector("#energy-dialog-warranty").textContent = product.warranty
     ? `Warranty stated in source: ${product.warranty}`
     : "Warranty was not stated in the supplied catalogue.";
-  document.querySelector("#energy-dialog-source").textContent = [
-    `Source: ${product.source.document}, page ${product.source.page}.`,
-    product.sourceNote ? `Source note: ${product.sourceNote}.` : ""
-  ].filter(Boolean).join(" ");
+  const sourceDetails = document.querySelector("#energy-dialog-source");
+  sourceDetails.replaceChildren();
+  sourceDetails.append(`Source: ${product.source.document}, page ${product.source.page}.`);
+  if (product.sourceNote) sourceDetails.append(` Source note: ${product.sourceNote}.`);
+  const sourceUrl = safeSourceUrl(product.sourceUrl);
+  if (sourceUrl) {
+    const sourceLink = createElement("a", "", "View full specifications");
+    sourceLink.href = sourceUrl;
+    sourceLink.target = "_blank";
+    sourceLink.rel = "noopener noreferrer";
+    sourceDetails.append(" ", sourceLink);
+  }
 
   const videoSection = document.querySelector("#energy-dialog-video");
   const videoFrame = document.querySelector("#energy-dialog-video-frame");
@@ -679,6 +698,7 @@ function requestProduct(product, calculationSummary = "") {
     `Catalogue price: ${cataloguePriceLabel(product)}`,
     `Source: ${product.source.document}, page ${product.source.page}.`,
     product.sourceNote ? `Source note: ${product.sourceNote}.` : "",
+    safeSourceUrl(product.sourceUrl) ? `Full specifications: ${safeSourceUrl(product.sourceUrl)}` : "",
     calculationSummary ? `Energy calculator estimates:\n${calculationSummary}` : "",
     "Please confirm current availability, compatibility and suitability for my application."
   ].filter(Boolean).join("\n");

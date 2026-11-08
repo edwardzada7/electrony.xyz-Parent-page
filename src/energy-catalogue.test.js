@@ -62,7 +62,18 @@ const additionalAmounts = new Map([
     ["LUNA 2000-97KWH", 19000000],
     ["LUNA 2000-129KWH", 19000000],
     ["LUNA 2000-215KWH", 19000000]
-  ].map(([model, amount]) => [`HUAWEI|${model}`, amount])
+  ].map(([model, amount]) => [`HUAWEI|${model}`, amount]),
+  ["HISENSE|INV6KS-AA1", 45000],
+  ["HISENSE|BATHEL5-E-BB1", 95500],
+  ...[
+    ["KETRANS50KVA-11/04", 1000000],
+    ["KETRANS100KVA-11/04", 1000000],
+    ["KETRANS200KVA-11/04", 1000000],
+    ["KETRANS315KVA-11/04", 1000000],
+    ["KETRANS500KVA-11/04", 1000000],
+    ["KETRANS800KVA-11/04", 2000000],
+    ["KETRANS1000KVA-11/04", 2000000]
+  ].map(([model, amount]) => [`HISENSE|${model}`, amount])
 ]);
 
 function loadCatalogue() {
@@ -93,12 +104,13 @@ test("Energy price adjustments are computed once from confirmed base prices", ()
   assert.equal(products.length, 130);
   assert.equal(new Set(products.map((product) => product.id)).size, products.length);
   assert.equal(new Set(products.map((product) => `${product.brand}|${product.model}`)).size, products.length);
-  assert.equal(additionalAmounts.size, 48);
+  assert.equal(additionalAmounts.size, 55);
   assert.equal(adjustedProducts.length, additionalAmounts.size);
 
   for (const [key, amountNgn] of additionalAmounts) {
     const product = byModel.get(key);
     assert.ok(product, `Missing catalogue product ${key}`);
+    assert.equal(product.basePriceNgn, product.priceAdjustment.previousPriceNgn);
     assert.ok(Number.isSafeInteger(product.priceAdjustment.previousPriceNgn));
     assert.equal(product.priceAdjustment.id, `${adjustmentId}:${product.id}`);
     assert.equal(product.priceAdjustment.batchId, adjustmentId);
@@ -113,7 +125,11 @@ test("Energy price adjustments are computed once from confirmed base prices", ()
   assert.equal(byModel.get("DEYE|8K-SG06LP1-EU").priceDisplay.endsWith(".00"), true);
   assert.ok(products.filter((product) => product.category === "solar-panels")
     .every((product) => product.priceAdjustment?.amountNgn === 19000));
-  assert.equal(products.filter((product) => product.brand === "HISENSE" && product.category === "transformers").length, 0);
+  assert.equal(products.filter((product) => product.brand === "HISENSE" && product.category === "transformers").length, 7);
+  assert.ok(products.every((product) => product.priceNgn === null
+    ? product.basePriceNgn === null
+    : Number.isSafeInteger(product.basePriceNgn)
+      && product.priceNgn === product.basePriceNgn + (product.priceAdjustment?.amountNgn || 0)));
 
   const repeatedLoad = productMap(loadCatalogue());
   for (const [key, product] of byModel) {
@@ -130,7 +146,7 @@ test("Energy price adjustments are computed once from confirmed base prices", ()
   }
 });
 
-test("Phase 1 image assignments use the requested local assets only", () => {
+test("Catalogue image assignments use the requested local assets only", () => {
   const products = loadCatalogue();
   const byModel = productMap(products);
   const deyeInverterModels = [
@@ -187,5 +203,27 @@ test("Phase 1 image assignments use the requested local assets only", () => {
   ].forEach((model) => assertImage(byModel.get(`HUAWEI|${model}`), "LUNA 2000-97KWH.png"));
 
   assert.equal(byModel.get("HUAWEI|PVDU-8kW").image.url, "../assets/catalogue/energy/products/huawei/PVDU-8kW.jpg");
-  assert.equal(byModel.get("HISENSE|INV6KS-AA1").image.url, "../assets/catalogue/energy-inverter.svg");
+  assertImage(byModel.get("HISENSE|INV6KS-AA1"), "Hisense inverter.webp");
+  assertImage(byModel.get("HISENSE|BATHEL5-E-BB1"), "Hisense battery.webp");
+  assert.ok(products.filter((product) => product.brand === "HUAWEI")
+    .every((product) => product.sourceNote === "Please ask your sales rep for date sheet"));
+  [
+    "LUNA 2000-97KWH",
+    "LUNA 2000-129KWH",
+    "LUNA 2000-215KWH"
+  ].forEach((model) => {
+    assert.equal(byModel.get(`HUAWEI|${model}`).sourceUrl, "https://solar.huawei.com/en/professionals/all-products/LUNA2000-97-129-161-200kwh/specs");
+  });
+});
+
+test("Hisense transformers are searchable and filterable", () => {
+  const window = {};
+  const source = fs.readFileSync(path.join(projectRoot, "src/energy-catalogue.js"), "utf8");
+  vm.runInNewContext(source, { window }, { filename: "energy-catalogue.js" });
+  const matches = window.ElectronyEnergyCatalogue.filterEnergyProducts(
+    window.ElectronyEnergyProducts,
+    { query: "KETRANS800KVA", brand: "HISENSE", category: "transformers" },
+    window.ElectronyEnergyCategories
+  );
+  assert.deepEqual([...matches].map((product) => product.model), ["KETRANS800KVA-11/04"]);
 });

@@ -21,7 +21,7 @@ The original uploads remain unchanged in this directory. Product photos are refe
 | `Deye-control-box-1.webp` | `assets/catalogue/energy/products/deye/battery-control-box-family.webp` | Deye | High-voltage battery control-box family; shared by `CONTROL BOX HV BOS-B-PDU-2-A` and `CONTROL BOX HV BOS-G-PDU-PRO` | Not applicable | Energy-storage component | [Deye product catalogue](https://www.deyeinverter.com/product/) | medium | Model number is not visible. The same local image is reused for both control-box records; exact variant is not asserted. |
 | `FUTURE-H ALL IN ONE  SOLUTION.jpg` | — | Unknown | Switching/distribution equipment; model not visible | Not confirmed | Electrical component | — | unmatched | The visible hardware does not establish a Future-H system identity; filename is not used as evidence. |
 | `Growatt-SPF-3000TL-HVM-24-3kW-24V-Hybrid-Inverter.jpg` | `assets/catalogue/energy/products/growatt/spf-off-grid-inverter-family.jpg` | Growatt | SPF 3000TL-HVM-24; not listed in the updated product catalogue | Filename states 3 kW / 24 V; not legible in image | Inverter | [Growatt product catalogue](https://en.growatt.com/products) | unmatched | Kept out of the catalogue because the updated PDF does not list this model; not reused for SPF 6000ES because the photo is not sufficiently representative of that different product. |
-| `MED-d1b620c7fce65969d09d73f115d8746b2e4665c56635afac45761ce391f1d72c.jpg` | `assets/catalogue/energy/products/hisense/lifepo4-51-2v-100ah-battery-family.jpg` | Hisense | Low-voltage LiFePO4 battery family; used for `BATHEL5-E-BB1` | 51.2 V / 100 Ah visible (5.12 kWh nominal) | Battery | [Hisense global site](https://global.hisense.com/) | medium | Image label supports the voltage/capacity family. The model label is not visible; the official global site does not provide an accessible matching solar-battery datasheet, so the SKU remains unconfirmed. |
+| `MED-d1b620c7fce65969d09d73f115d8746b2e4665c56635afac45761ce391f1d72c.jpg` | — (no longer assigned) | Hisense | Low-voltage LiFePO4 battery family; exact model not visible | 51.2 V / 100 Ah visible (5.12 kWh nominal) | Battery | [Hisense global site](https://global.hisense.com/) | medium | This family-level image was replaced for `BATHEL5-E-BB1` by the user-supplied model-family photo listed below. |
 | `Screenshot2024-12-19at08-03-04BatteryDeyeFORTHEPURPOSESOFTHISREGULATION.png` | — | Deye | Storage equipment; model not visible | Not confirmed | Battery / energy storage | — | unmatched | The image does not expose a legible model or capacity; filename is not sufficient evidence. |
 | `bos-g-pro-18_1_1.jpg` | — | Deye | High-voltage battery stack; model not verified | Not confirmed | Battery | — | unmatched | Deye branding and stacked modules visible; cannot distinguish the catalogued battery variants. |
 | `deye-6kva-hybrid-inverter-sysytem.jpg` | — | Deye | Hybrid inverter family; model not visible | Not confirmed | Inverter | — | unmatched | Deye logo and inverter are visible; the image does not establish a 6 kVA model. |
@@ -41,7 +41,7 @@ The original uploads remain unchanged in this directory. Product photos are refe
 
 ## Phase 1 uploaded image assignments
 
-These are local files in this directory; the catalogue references them directly without creating duplicate copies.
+These are local files in this directory; the catalogue references them directly without creating duplicate copies. The eight embedded images on page 1 of the five-page source PDF are manufacturer logos, not product photos.
 
 - `deye inverter.webp`: all 11 listed Deye inverter models. The photograph is family-level and does not identify a specific SKU.
 - `deye battery.webp`: the six listed Deye battery models only: `BATSE-F16-C`, `SE-F5-L`, `BOS-GM-5.1 HV`, `BOS-G-PRO51`, `GB-W-12`, and `BOS-B-PACK16`.
@@ -53,6 +53,13 @@ These are local files in this directory; the catalogue references them directly 
 - `HIGH EFFICIENCY INVERTER MODULE.jpeg`: Huawei model `I23003`.
 - `LUNA 2000-97KWH.png`: all three Huawei LUNA 2000 models.
 
-`32-114725_1.jpg` is a Huawei inverter-like product photograph, not a transformer, and is not assigned because it is not the specified model image. `deye accessories.jpg` does not identify an exact catalogue model, so it remains unassigned. No uploaded Hisense transformer photograph or Hisense transformer product record was found. The existing transformer records identify their manufacturer as unspecified; they remain unchanged.
+`32-114725_1.jpg` is a Huawei inverter-like product photograph, not a transformer, and is not assigned because it is not the specified model image. `deye accessories.jpg` does not identify an exact catalogue model, so it remains unassigned. The seven KETRANS transformer records are listed within the PDF's Hisense product section and are now categorized under Hisense.
 
-Phase 1 price adjustments retain the confirmed source prices as their baseline. Final catalogue prices are computed once from that baseline and each affected record exposes its adjustment ID, amount, and previous price as metadata.
+## Phase 2 Hisense image assignments
+
+| Original filename | Brand | Product/model | Capacity | Product category | Confidence | Notes |
+|---|---|---|---|---|---|---|
+| `Hisense inverter.webp` | Hisense | `INV6KS-AA1` | Model rating/specifications are from the PDF; the photo does not show a model label | Inverter | High for brand/category; model photo is not individually verifiable | Assigned as requested to the only Hisense inverter listed in the PDF. |
+| `Hisense battery.webp` | Hisense | `BATHEL5-E-BB1` | 51.2 V / 100 Ah shown | Battery | High for brand/capacity family | The image also shows the parallel cable kit; the precise model marking is not visible. |
+
+Phase 1 price adjustments retain confirmed source prices as their baseline. Final catalogue prices are computed once from that baseline; adjusted records expose the base price, adjustment amount, and final price separately.

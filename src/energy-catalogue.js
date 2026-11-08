@@ -12,13 +12,13 @@ const confirmedPrices = Object.freeze({
   "JINKO|725N-66HL5-BD": { amountNgn: 155000, display: "155,000", page: 1 },
   "HISENSE|INV6KS-AA1": { amountNgn: 359000, display: "359,000", page: 1 },
   "HISENSE|BATHEL5-E-BB1": { amountNgn: 810000, display: "810,000", page: 1 },
-  "Manufacturer not specified|KETRANS50KVA-11/04": { amountNgn: 2700000, display: "2,700,000", page: 1 },
-  "Manufacturer not specified|KETRANS100KVA-11/04": { amountNgn: 3750000, display: "3,750,000", page: 1 },
-  "Manufacturer not specified|KETRANS200KVA-11/04": { amountNgn: 5600000, display: "5,600,000", page: 1 },
-  "Manufacturer not specified|KETRANS315KVA-11/04": { amountNgn: 7350000, display: "7,350,000", page: 1 },
-  "Manufacturer not specified|KETRANS500KVA-11/04": { amountNgn: 9550000, display: "9,550,000", page: 1 },
-  "Manufacturer not specified|KETRANS800KVA-11/04": { amountNgn: 15250000, display: "15,250,000", page: 1 },
-  "Manufacturer not specified|KETRANS1000KVA-11/04": { amountNgn: 16450000, display: "16,450,000", page: 1 },
+  "HISENSE|KETRANS50KVA-11/04": { amountNgn: 2700000, display: "2,700,000", page: 1 },
+  "HISENSE|KETRANS100KVA-11/04": { amountNgn: 3750000, display: "3,750,000", page: 1 },
+  "HISENSE|KETRANS200KVA-11/04": { amountNgn: 5600000, display: "5,600,000", page: 1 },
+  "HISENSE|KETRANS315KVA-11/04": { amountNgn: 7350000, display: "7,350,000", page: 1 },
+  "HISENSE|KETRANS500KVA-11/04": { amountNgn: 9550000, display: "9,550,000", page: 1 },
+  "HISENSE|KETRANS800KVA-11/04": { amountNgn: 15250000, display: "15,250,000", page: 1 },
+  "HISENSE|KETRANS1000KVA-11/04": { amountNgn: 16450000, display: "16,450,000", page: 1 },
   "DEYE|6/6KOG03LP1": { amountNgn: 463000, display: "463,000", page: 1 },
   "DEYE|8K-SG06LP1-EU": { amountNgn: 1255000, display: "1,255,000.00", page: 1 },
   "DEYE|12K-SG05LP3-E": { amountNgn: 1859000, display: "1,859,000.00", page: 1 },
@@ -296,6 +296,7 @@ function makeProduct(brand, details) {
     : adjustmentAmountNgn > 0
       ? formatAdjustedPrice(priceNgn, confirmedPrice.display)
       : confirmedPrice.display;
+  const sourceNote = details.sourceNote || (brand === "HUAWEI" ? sourceDataSheetNote : null);
   return Object.freeze({
     id: slug,
     brand,
@@ -306,6 +307,7 @@ function makeProduct(brand, details) {
     enquiryCategory: enquiryCategories[details.category],
     description: details.description || "",
     specifications: Object.freeze(details.specifications || []),
+    basePriceNgn: isValidBasePrice ? basePriceNgn : null,
     priceNgn,
     priceDisplay,
     ...(priceAdjustment ? { priceAdjustment } : {}),
@@ -315,7 +317,8 @@ function makeProduct(brand, details) {
     }),
     ...(details.warranty ? { warranty: details.warranty } : {}),
     source: Object.freeze({ document: sourceDocument, page: details.page }),
-    ...(details.sourceNote ? { sourceNote: details.sourceNote } : {}),
+    ...(sourceNote ? { sourceNote } : {}),
+    ...(details.sourceUrl ? { sourceUrl: details.sourceUrl } : {}),
     ...(details.reviewNote ? { reviewNote: details.reviewNote } : {}),
     ...(details.video ? { video: details.video } : {}),
     image: Object.freeze({
@@ -512,6 +515,7 @@ const products = [
     category: "energy-storage-systems",
     description,
     specifications: [capacity],
+    sourceUrl: "https://solar.huawei.com/en/professionals/all-products/LUNA2000-97-129-161-200kwh/specs",
     image: {
       url: "/energy/LUNA%202000-97KWH.png",
       alt: `Huawei ${model} battery energy storage system; the requested LUNA 2000-97KWH photograph is used.`
@@ -621,6 +625,10 @@ const products = [
     category: "solar-inverters",
     description: "6 KW, 48V, 9000 W MPPT Input, Built-in 120A MPPT Solar Charger, Wide Solar Input Range 60-500V, Support Lithium & Lead-acid Battery, Wifi Monitoring & Management, Dual AC Output, Parallel Support Up-to 9 Inverters",
     specifications: ["6 KW", "48V", "9000 W MPPT Input", "120A MPPT Solar Charger", "60-500V solar input", "Parallel support up to 9 inverters"],
+    image: {
+      url: "/energy/Hisense%20inverter.webp",
+      alt: "Hisense inverter product photo; exact model is not visible."
+    },
     warranty: "2 Years",
     page: 1
   }),
@@ -631,9 +639,9 @@ const products = [
     description: "5.12 LOW VOLTAGE KWH 51.2V 100AH, COMES WITH A FREE PARALLEL CABLE KIT HISBATCABLEKIT-5-LV",
     specifications: ["5.12 kWh", "51.2V", "100Ah"],
     image: {
-      url: "../assets/catalogue/energy/products/hisense/lifepo4-51-2v-100ah-battery-family.jpg",
-      alt: "Hisense 51.2V 100Ah LiFePO4 battery family image; the exact model is not visible.",
-      note: "Family-level image: visible rating is 51.2V 100Ah; the exact model is not identifiable from this photo."
+      url: "/energy/Hisense%20battery.webp",
+      alt: "Hisense 51.2V 100Ah battery product photo; model label is not visible.",
+      note: "The image shows a 51.2V 100Ah battery and parallel cable kit; the exact model is not visible."
     },
     warranty: "5 Years",
     page: 1
@@ -647,14 +655,13 @@ const products = [
     ["KETRANS500KVA-11/04", "500KVA", "STEPDOWN/UP 500KVA11/0.4KV,50Hz ,3Phase,"],
     ["KETRANS800KVA-11/04", "800KVA", "STEPDOWN/UP 800KVA11/0.4KV,50Hz ,3Phase,"],
     ["KETRANS1000KVA-11/04", "1000KVA", "STEPDOWN/UP 1000KVA11/0.4KV,50Hz ,3Phase,"]
-  ].map(([model, rating, description]) => makeProduct("Manufacturer not specified", {
+  ].map(([model, rating, description]) => makeProduct("HISENSE", {
     name: "Transformer",
     model,
     category: "transformers",
     description,
     specifications: [rating, "11/0.4KV", "50Hz", "3Phase"],
     warranty: "2 Years",
-    reviewNote: "The source does not identify a manufacturer for this transformer. Its KETRANS model number is retained as printed.",
     page: 1
   })),
 
