@@ -27,18 +27,26 @@
         "@context": "https://schema.org",
         "@graph": [
           {
+            "@type": "Organization",
+            "@id": "https://auto.electrony.xyz/#organization",
+            "name": "Electrony Automobile",
+            "url": "https://auto.electrony.xyz/",
+            "parentOrganization": { "@id": "https://electrony.xyz/#organization" },
+            "logo": "https://auto.electrony.xyz/assets/brand/electrony-e-logo.png"
+          },
+          {
             "@type": "WebSite",
             "@id": "https://auto.electrony.xyz/#website",
             "url": "https://auto.electrony.xyz/",
             "name": "Electrony Automobile",
-            "publisher": { "@id": "https://electrony.xyz/#organization" }
+            "publisher": { "@id": "https://auto.electrony.xyz/#organization" }
           },
           {
             "@type": "WebPage",
             "@id": "https://auto.electrony.xyz/#webpage",
             "url": "https://auto.electrony.xyz/",
             "name": "Electrony Automobile | Source-documented vehicle catalogue",
-            "description": "Explore 17 source-documented NAMMI, Dongfeng, VOYAH and M-HERO vehicles, including Dongfeng pickups. Compare powertrains, brochure specifications and request current details.",
+            "description": "Explore 17 source-documented NAMMI, Dongfeng, VOYAH and M-HERO vehicles, plus the ROX 01 and ROX ADAMAS collection.",
             "isPartOf": { "@id": "https://auto.electrony.xyz/#website" }
           }
         ]
