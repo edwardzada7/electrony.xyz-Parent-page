@@ -13,6 +13,26 @@ const publicOrigins = Object.freeze({
   bills: "https://bills.electrony.xyz",
   accounts: "https://accounts.electrony.xyz"
 });
+const sitemapPaths = Object.freeze({
+  parent: ["/", "/bills/"],
+  automobile: ["/"],
+  energy: ["/"],
+  hardware: ["/"],
+  software: ["/"],
+  bills: ["/"],
+  accounts: ["/"]
+});
+const privatePaths = [
+  "/api/",
+  "/accounts/",
+  "/admin/",
+  "/auth/",
+  "/checkout/",
+  "/dashboard/",
+  "/login/",
+  "/oauth/",
+  "/private/"
+];
 const billsFrontendFiles = [
   "assets/brand/electrony-e-logo.png",
   "assets/brand/electrony-xyz-logo .png",
@@ -109,6 +129,12 @@ function prepareBillsEntrypoint() {
     html = replaceRequired(html, original, replacement, original);
   }
 
+  html = replaceRequired(
+    html,
+    '<meta name="robots" content="noindex,follow">',
+    "",
+    "parent-only Bills checkout noindex directive"
+  );
   return html;
 }
 
@@ -194,14 +220,51 @@ function copyAccountsFrontend() {
   }
 }
 
+function htmlFiles(directory) {
+  return fs.readdirSync(directory, { withFileTypes: true }).flatMap((entry) => {
+    const entryPath = path.join(directory, entry.name);
+    if (entry.isDirectory()) return htmlFiles(entryPath);
+    return entry.isFile() && /\.html?$/i.test(entry.name) ? [entryPath] : [];
+  });
+}
+
+function markNonIndexableHtml(site) {
+  const indexablePaths = new Set(sitemapPaths[site]);
+  for (const filePath of htmlFiles(outputDirectory)) {
+    const relativePath = path.relative(outputDirectory, filePath).split(path.sep).join("/");
+    const pagePath = relativePath === "index.html"
+      ? "/"
+      : `/${relativePath.replace(/\/index\.html?$/i, "/")}`;
+    if (indexablePaths.has(pagePath)) continue;
+
+    let html = fs.readFileSync(filePath, "utf8");
+    if (/<meta\s+name=["']robots["']/i.test(html)) continue;
+    if (!/<head(?:\s[^>]*)?>/i.test(html)) {
+      throw new Error(`Unable to add a noindex directive to ${relativePath}: missing <head>.`);
+    }
+    html = html.replace(/<head(?:\s[^>]*)?>/i, (head) => `${head}\n    <meta name="robots" content="noindex,follow">`);
+    fs.writeFileSync(filePath, html);
+  }
+}
+
 function writeCrawlFiles(site) {
   const origin = publicOrigins[site];
-  if (!origin) throw new Error(`No public origin is configured for the ${site} site.`);
+  const pages = sitemapPaths[site];
+  if (!origin || !pages) throw new Error(`No public crawl configuration is configured for the ${site} site.`);
 
-  const pages = site === "parent" ? ["/", "/bills/", "/software/"] : ["/"];
+  markNonIndexableHtml(site);
   const entries = pages.map((page) => `  <url><loc>${origin}${page}</loc></url>`).join("\n");
   const sitemap = `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${entries}\n</urlset>\n`;
-  fs.writeFileSync(path.join(outputDirectory, "robots.txt"), `User-agent: *\nAllow: /\nSitemap: ${origin}/sitemap.xml\n`);
+  const disallowRules = [...privatePaths];
+  if (site === "parent") disallowRules.push("/bills/app/");
+  const robots = [
+    "User-agent: *",
+    "Allow: /",
+    ...disallowRules.map((route) => `Disallow: ${route}`),
+    `Sitemap: ${origin}/sitemap.xml`,
+    ""
+  ].join("\n");
+  fs.writeFileSync(path.join(outputDirectory, "robots.txt"), robots);
   fs.writeFileSync(path.join(outputDirectory, "sitemap.xml"), sitemap);
 }
 

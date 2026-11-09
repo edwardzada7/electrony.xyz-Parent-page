@@ -27,11 +27,19 @@
         "@context": "https://schema.org",
         "@graph": [
           {
+            "@type": "Organization",
+            "@id": "https://hardware.electrony.xyz/#organization",
+            "name": "Electrony Hardware",
+            "url": "https://hardware.electrony.xyz/",
+            "parentOrganization": { "@id": "https://electrony.xyz/#organization" },
+            "logo": "https://hardware.electrony.xyz/assets/brand/electrony-e-logo.png"
+          },
+          {
             "@type": "WebSite",
             "@id": "https://hardware.electrony.xyz/#website",
             "url": "https://hardware.electrony.xyz/",
             "name": "Electrony Hardware",
-            "publisher": { "@id": "https://electrony.xyz/#organization" }
+            "publisher": { "@id": "https://hardware.electrony.xyz/#organization" }
           },
           {
             "@type": "WebPage",

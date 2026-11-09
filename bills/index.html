@@ -25,12 +25,25 @@
     <script type="application/ld+json">
       {
         "@context": "https://schema.org",
-        "@type": "WebPage",
-        "@id": "https://electrony.xyz/bills/#webpage",
-        "url": "https://electrony.xyz/bills/",
-        "name": "Electrony Bills — Pay Bills. Stay Connected.",
-        "description": "Explore Electrony Bills services for electricity, airtime, data and TV subscriptions, with service details and supported options available before checkout.",
-        "isPartOf": { "@id": "https://electrony.xyz/#website" }
+        "@graph": [
+          {
+            "@type": "Service",
+            "@id": "https://electrony.xyz/bills/#service",
+            "name": "Electrony Bills utility payments",
+            "serviceType": "Electricity, airtime, data and TV subscription payments",
+            "provider": { "@id": "https://electrony.xyz/#organization" },
+            "url": "https://bills.electrony.xyz/"
+          },
+          {
+            "@type": "WebPage",
+            "@id": "https://electrony.xyz/bills/#webpage",
+            "url": "https://electrony.xyz/bills/",
+            "name": "Electrony Bills — Pay Bills. Stay Connected.",
+            "description": "Explore Electrony Bills services for electricity, airtime, data and TV subscriptions, with service details and supported options available before checkout.",
+            "isPartOf": { "@id": "https://electrony.xyz/#website" },
+            "about": { "@id": "https://electrony.xyz/bills/#service" }
+          }
+        ]
       }
     </script>
     <link rel="icon" href="/assets/favicons/electrony/favicon.ico" sizes="32x32" type="image/x-icon">

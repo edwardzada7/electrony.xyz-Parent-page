@@ -27,11 +27,27 @@
         "@context": "https://schema.org",
         "@graph": [
           {
+            "@type": "Organization",
+            "@id": "https://energy.electrony.xyz/#organization",
+            "name": "Electrony Energy",
+            "url": "https://energy.electrony.xyz/",
+            "parentOrganization": { "@id": "https://electrony.xyz/#organization" },
+            "logo": "https://energy.electrony.xyz/assets/brand/electrony-e-logo.png"
+          },
+          {
             "@type": "WebSite",
             "@id": "https://energy.electrony.xyz/#website",
             "url": "https://energy.electrony.xyz/",
             "name": "Electrony Energy",
-            "publisher": { "@id": "https://electrony.xyz/#organization" }
+            "publisher": { "@id": "https://energy.electrony.xyz/#organization" }
+          },
+          {
+            "@type": "Service",
+            "@id": "https://energy.electrony.xyz/#energy-solutions",
+            "name": "Solar energy and power solutions",
+            "serviceType": "Solar power products, energy storage and power system solutions",
+            "provider": { "@id": "https://energy.electrony.xyz/#organization" },
+            "url": "https://energy.electrony.xyz/#solutions"
           },
           {
             "@type": "WebPage",
@@ -39,7 +55,8 @@
             "url": "https://energy.electrony.xyz/",
             "name": "Electrony Energy — Calculate Your Power Needs",
             "description": "Estimate your appliance load and explore power products from the Electrony Energy catalogue. Request a quote for products and projects.",
-            "isPartOf": { "@id": "https://energy.electrony.xyz/#website" }
+            "isPartOf": { "@id": "https://energy.electrony.xyz/#website" },
+            "about": { "@id": "https://energy.electrony.xyz/#energy-solutions" }
           }
         ]
       }

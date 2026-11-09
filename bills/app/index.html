@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="theme-color" content="#071d18">
     <meta name="description" content="Explore Electrony Bills utility services with guest checkout support. Purchases remain unavailable until authorized vending and payment providers are configured.">
+    <meta name="robots" content="noindex,follow">
     <link rel="canonical" href="https://bills.electrony.xyz/">
     <meta property="og:type" content="website">
     <meta property="og:site_name" content="Electrony Bills">
@@ -27,11 +28,27 @@
         "@context": "https://schema.org",
         "@graph": [
           {
+            "@type": "Organization",
+            "@id": "https://bills.electrony.xyz/#organization",
+            "name": "Electrony Bills",
+            "url": "https://bills.electrony.xyz/",
+            "parentOrganization": { "@id": "https://electrony.xyz/#organization" },
+            "logo": "https://bills.electrony.xyz/assets/brand/electrony-e-logo.png"
+          },
+          {
             "@type": "WebSite",
             "@id": "https://bills.electrony.xyz/#website",
             "url": "https://bills.electrony.xyz/",
             "name": "Electrony Bills",
-            "publisher": { "@id": "https://electrony.xyz/#organization" }
+            "publisher": { "@id": "https://bills.electrony.xyz/#organization" }
+          },
+          {
+            "@type": "Service",
+            "@id": "https://bills.electrony.xyz/#utility-payments",
+            "name": "Electrony Bills utility payments",
+            "serviceType": "Electricity, airtime, data and TV subscription payments",
+            "provider": { "@id": "https://bills.electrony.xyz/#organization" },
+            "url": "https://bills.electrony.xyz/"
           },
           {
             "@type": "WebPage",
@@ -39,7 +56,8 @@
             "url": "https://bills.electrony.xyz/",
             "name": "Electrony Bills | Utility Service Checkout",
             "description": "Explore Electrony Bills utility services with guest checkout support. Purchases remain unavailable until authorized vending and payment providers are configured.",
-            "isPartOf": { "@id": "https://bills.electrony.xyz/#website" }
+            "isPartOf": { "@id": "https://bills.electrony.xyz/#website" },
+            "about": { "@id": "https://bills.electrony.xyz/#utility-payments" }
           }
         ]
       }
