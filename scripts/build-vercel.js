@@ -20,19 +20,8 @@ const sitemapPaths = Object.freeze({
   hardware: ["/"],
   software: ["/"],
   bills: ["/"],
-  accounts: ["/"]
+  accounts: []
 });
-const privatePaths = [
-  "/api/",
-  "/accounts/",
-  "/admin/",
-  "/auth/",
-  "/checkout/",
-  "/dashboard/",
-  "/login/",
-  "/oauth/",
-  "/private/"
-];
 const billsFrontendFiles = [
   "assets/brand/electrony-e-logo.png",
   "assets/brand/electrony-xyz-logo .png",
@@ -255,12 +244,13 @@ function writeCrawlFiles(site) {
   markNonIndexableHtml(site);
   const entries = pages.map((page) => `  <url><loc>${origin}${page}</loc></url>`).join("\n");
   const sitemap = `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${entries}\n</urlset>\n`;
-  const disallowRules = [...privatePaths];
-  if (site === "parent") disallowRules.push("/bills/app/");
+  const apiDisallowRules = ["parent", "automobile", "energy", "hardware"].includes(site)
+    ? ["Disallow: /api/contact"]
+    : [];
   const robots = [
     "User-agent: *",
     "Allow: /",
-    ...disallowRules.map((route) => `Disallow: ${route}`),
+    ...apiDisallowRules,
     `Sitemap: ${origin}/sitemap.xml`,
     ""
   ].join("\n");

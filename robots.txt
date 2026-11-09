@@ -1,14 +1,5 @@
 User-agent: *
 Allow: /
-Disallow: /accounts/
-Disallow: /admin/
-Disallow: /api/
-Disallow: /auth/
-Disallow: /bills/app/
-Disallow: /checkout/
-Disallow: /dashboard/
-Disallow: /login/
-Disallow: /oauth/
-Disallow: /private/
+Disallow: /api/contact
 
 Sitemap: https://electrony.xyz/sitemap.xml
