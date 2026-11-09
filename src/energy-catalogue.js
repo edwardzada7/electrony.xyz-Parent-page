@@ -133,6 +133,7 @@ const confirmedPrices = Object.freeze({
   "SUNTREE|SUNPVCABLE1C6MMBLACK": { amountNgn: 1500, display: "1,500.00", page: 5 }
 });
 const priceAdjustmentId = "energy-price-adjustments-2026-11-phase-1";
+const additionalPriceAdjustmentId = "energy-price-additions-2026-11-phase-2";
 const explicitPriceAdjustments = Object.freeze({
   "DEYE|6/6KOG03LP1": 50000,
   "DEYE|8K-SG06LP1-EU": 135000,
@@ -174,6 +175,17 @@ const explicitPriceAdjustments = Object.freeze({
   "HUAWEI|LUNA 2000-215KWH": 19000000,
   "HISENSE|INV6KS-AA1": 45000,
   "HISENSE|BATHEL5-E-BB1": 95500
+});
+const explicitPriceAdditions = Object.freeze({
+  "HUAWEI|INSTALLATION TRAY": 230000,
+  "HUAWEI|ATS 63A": 200000,
+  "HUAWEI|ATS 100A": 300000,
+  "HUAWEI|LQUID LEVEL SENSOR": 150000,
+  "HUAWEI|TOUCH SCREEN": 70000,
+  "HUAWEI|MERC-1300WP": 15000,
+  "HUAWEI|DTSU666-HW": 30000,
+  "HUAWEI|HUWSMARTMODUL1000A01": 100000,
+  "HUAWEI|SMART LOGGER 3000A01EU": 100000
 });
 const brandLogos = Object.freeze({
   JINKO: "../assets/catalogue/energy/brands/jinko.png",
@@ -248,16 +260,26 @@ const categoryImages = Object.freeze({
   "solar-cables": ["energy-cables.svg", "Illustrative electrical cable category artwork; not a product photograph."]
 });
 
-function getPriceAdjustmentAmount(brand, details) {
-  if (details.category === "solar-panels") return 19000;
+function getPriceAdjustment(brand, details) {
+  if (details.category === "solar-panels") return { amountNgn: 19000, batchId: priceAdjustmentId };
   if (brand === "HISENSE") {
-    if (details.category === "solar-inverters") return 45000;
-    if (details.category === "batteries-storage") return 95500;
+    if (details.category === "solar-inverters") return { amountNgn: 45000, batchId: priceAdjustmentId };
+    if (details.category === "batteries-storage") return { amountNgn: 95500, batchId: priceAdjustmentId };
     if (details.category === "transformers") {
-      return /(?:^|[^0-9])(?:800|1000)\s*KVA/i.test(details.model || "") ? 2000000 : 1000000;
+      return {
+        amountNgn: /(?:^|[^0-9])(?:800|1000)\s*KVA/i.test(details.model || "") ? 2000000 : 1000000,
+        batchId: priceAdjustmentId
+      };
     }
   }
-  return explicitPriceAdjustments[`${brand}|${details.model || ""}`] || 0;
+  const key = `${brand}|${details.model || ""}`;
+  if (explicitPriceAdjustments[key]) {
+    return { amountNgn: explicitPriceAdjustments[key], batchId: priceAdjustmentId };
+  }
+  if (explicitPriceAdditions[key]) {
+    return { amountNgn: explicitPriceAdditions[key], batchId: additionalPriceAdjustmentId };
+  }
+  return null;
 }
 
 function formatAdjustedPrice(priceNgn, originalDisplay) {
@@ -280,13 +302,14 @@ function makeProduct(brand, details) {
   const isValidBasePrice = Number.isSafeInteger(basePriceNgn)
     && basePriceNgn >= 0
     && typeof confirmedPrice?.display === "string";
-  const adjustmentAmountNgn = getPriceAdjustmentAmount(brand, details);
+  const adjustment = getPriceAdjustment(brand, details);
+  const adjustmentAmountNgn = adjustment?.amountNgn || 0;
   const calculatedPriceNgn = isValidBasePrice ? basePriceNgn + adjustmentAmountNgn : null;
   const priceNgn = Number.isSafeInteger(calculatedPriceNgn) ? calculatedPriceNgn : null;
   const priceAdjustment = adjustmentAmountNgn > 0 && isValidBasePrice && priceNgn !== null
     ? Object.freeze({
-      id: `${priceAdjustmentId}:${slug}`,
-      batchId: priceAdjustmentId,
+      id: `${adjustment.batchId}:${slug}`,
+      batchId: adjustment.batchId,
       amountNgn: adjustmentAmountNgn,
       previousPriceNgn: basePriceNgn
     })
@@ -529,7 +552,7 @@ const products = [
     category: "energy-storage-components",
     description: "LUNA BESS BATTERY INSTALLATION TRAY",
     image: {
-      url: "../assets/catalogue/energy/products/huawei/INSTALLATION TRAY.webp",
+      url: "/energy/Huawei%20installation%20tray.webp",
       alt: "Installation tray for a Huawei LUNA battery energy storage system."
     },
     page: 3
@@ -540,6 +563,10 @@ const products = [
     category: "energy-storage-components",
     description: "Auto Transform Switch 63A Max, 220/380Vac, 3 Phase, SPD Class B",
     specifications: ["63A Max", "220/380Vac", "3 Phase", "SPD Class B"],
+    image: {
+      url: "/energy/Huawei%20ATS%2063A.jpeg",
+      alt: "63A automatic transfer switch."
+    },
     warranty: "5 Years",
     page: 3
   }),
@@ -549,6 +576,10 @@ const products = [
     category: "energy-storage-components",
     description: "Auto Transform Switch 100A Max, 220/380Vac, 3 Phase",
     specifications: ["100A Max", "220/380Vac", "3 Phase"],
+    image: {
+      url: "../assets/catalogue/energy/products/huawei/Huawei-Auto-Transfer-Switch-100A-Max-220380Vac-3-Phase.jpg",
+      alt: "Huawei 100A automatic transfer switch."
+    },
     warranty: "5 Years",
     page: 3
   }),
@@ -559,8 +590,8 @@ const products = [
     description: "Two Wire 4-20mA, Measuring Range 2m, Cable Length 25m, With Flange Plate",
     specifications: ["Two Wire 4-20mA", "Measuring Range 2m", "Cable Length 25m", "With Flange Plate"],
     image: {
-      url: "../assets/catalogue/energy/products/huawei/LQUID LEVEL SENSOR.webp",
-      alt: "Huawei liquid-level sensor probe with cable."
+      url: "/energy/Hisense%20LQUID%20LEVEL%20SENSOR.png",
+      alt: "Liquid-level sensor probe with cable."
     },
     warranty: "5 Years",
     page: 3
@@ -580,7 +611,7 @@ const products = [
     description: "Smart Optimizer 1300W",
     specifications: ["1300W"],
     image: {
-      url: "../assets/catalogue/energy/products/huawei/MERC-1300WP.jpg",
+      url: "/energy/MERC-1300WP.jpg",
       alt: "Huawei MERC-1300WP smart power optimizer."
     },
     warranty: "5 Years",
@@ -592,7 +623,7 @@ const products = [
     category: "power-meters",
     description: "SMART POWER METER DTSU666-HW",
     image: {
-      url: "../assets/catalogue/energy/products/huawei/DTSU666-HW.jpg",
+      url: "/energy/DTSU666-HW.avif",
       alt: "Huawei DTSU666-HW smart power meter."
     },
     page: 3
@@ -604,7 +635,7 @@ const products = [
     description: "Smart Module/data logger 1000A",
     specifications: ["1000A"],
     image: {
-      url: "../assets/catalogue/energy/products/huawei/HUWSMARTMODUL1000A01.webp",
+      url: "/energy/HUWSMARTMODUL1000A01.webp",
       alt: "Huawei SmartModule for PV system monitoring."
     },
     page: 3
@@ -615,6 +646,10 @@ const products = [
     category: "monitoring-communications",
     description: "Dedicated to monitoring and managing a PV power generating system. It can connect up to 80 devices and centrally monitors information regarding connected solar modules and inverters.",
     specifications: ["Connects up to 80 devices"],
+    image: {
+      url: "/energy/SMART%20LOGGER%203000A01EU.webp",
+      alt: "Huawei SmartLogger 3000A01EU."
+    },
     warranty: "5 Years",
     page: 3
   }),
@@ -661,6 +696,10 @@ const products = [
     category: "transformers",
     description,
     specifications: [rating, "11/0.4KV", "50Hz", "3Phase"],
+    image: {
+      url: "/energy/Hisense%20transformer.webp",
+      alt: `Hisense transformer product photo for the ${rating} model.`
+    },
     warranty: "2 Years",
     page: 1
   })),

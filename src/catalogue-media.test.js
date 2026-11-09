@@ -24,7 +24,7 @@ test("Energy product image mappings preserve all 130 catalogue records", () => {
   assert.equal(new Set(products.map((product) => product.id)).size, 130);
 
   const productImages = products.filter((product) => product.image.url.includes("/products/"));
-  assert.equal(productImages.length, 17);
+  assert.equal(productImages.length, 13);
   for (const product of productImages) {
     assert.ok(product.image.alt);
     assert.ok(fs.existsSync(resolvePageAsset("energy", product.image.url)), product.image.url);
@@ -49,7 +49,7 @@ test("Energy product image mappings preserve all 130 catalogue records", () => {
       ? decodeURIComponent(url.pathname.split("/products/")[1])
       : null;
   }).filter(Boolean));
-  assert.equal(mappedImagePaths.size, 10);
+  assert.equal(mappedImagePaths.size, 6);
   assert.deepEqual(
     uploadedImages.filter((filename) => !mappedImagePaths.has(filename)).sort(),
     [
@@ -57,13 +57,17 @@ test("Energy product image mappings preserve all 130 catalogue records", () => {
       "hisense/lifepo4-51-2v-100ah-battery-family.jpg",
       "huawei/ATS 63A.jpg",
       "huawei/BATTERY CABINET.jpeg",
+      "huawei/DTSU666-HW.jpg",
       "huawei/HUWINV100KTL-M2.png",
       "huawei/HUWINV150K-MG0.jpg",
-      "huawei/Huawei-Auto-Transfer-Switch-100A-Max-220380Vac-3-Phase.jpg",
+      "huawei/HUWSMARTMODUL1000A01.webp",
+      "huawei/INSTALLATION TRAY.webp",
       "huawei/LITHIUM BATTERY.jpeg",
+      "huawei/LQUID LEVEL SENSOR.webp",
       "huawei/LUNA 2000-215KWH.webp",
       "huawei/LUNA 2000-97KWH.webp",
-      "huawei/POWER CABINET.jpeg"
+      "huawei/MERC-1300WP.jpg",
+      "huawei/POWER CABINET.jpeg",
     ].sort()
   );
 
@@ -73,10 +77,7 @@ test("Energy product image mappings preserve all 130 catalogue records", () => {
   assert.equal(new Set(jinko.slice(4).map((product) => product.image.url)).size, 1);
   assert.notEqual(jinko[0].image.url, jinko[4].image.url);
 
-  const unmatchedHuaweiImages = [
-    "ATS 63A.jpg",
-    "Huawei-Auto-Transfer-Switch-100A-Max-220380Vac-3-Phase.jpg"
-  ];
+  const unmatchedHuaweiImages = ["ATS 63A.jpg"];
   const huaweiDirectory = path.join(projectRoot, "assets/catalogue/energy/products/huawei");
   for (const filename of unmatchedHuaweiImages) {
     assert.ok(fs.existsSync(path.join(huaweiDirectory, filename)));

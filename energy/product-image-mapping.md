@@ -63,3 +63,13 @@ These are local files in this directory; the catalogue references them directly 
 | `Hisense battery.webp` | Hisense | `BATHEL5-E-BB1` | 51.2 V / 100 Ah shown | Battery | High for brand/capacity family | The image also shows the parallel cable kit; the precise model marking is not visible. |
 
 Phase 1 price adjustments retain confirmed source prices as their baseline. Final catalogue prices are computed once from that baseline; adjusted records expose the base price, adjustment amount, and final price separately.
+
+## Phase 3 uploaded image assignments
+
+- `Hisense transformer.webp` is shared by all seven Hisense KETRANS transformer capacities only.
+- `Huawei installation tray.webp` is assigned to Huawei `INSTALLATION TRAY`.
+- `Huawei ATS 63A.jpeg` is assigned only to Huawei `ATS 63A`; the separate existing 100A transfer-switch photo remains assigned to `ATS 100A`.
+- `Hisense LQUID LEVEL SENSOR.png` is assigned to `LQUID LEVEL SENSOR`.
+- `MERC-1300WP.jpg`, `DTSU666-HW.avif`, `HUWSMARTMODUL1000A01.webp`, and `SMART LOGGER 3000A01EU.webp` are each assigned to their matching Huawei model.
+
+The Phase 3 price additions are calculated from the confirmed page 3 PDF base prices and applied once as a separate adjustment batch. Each record retains its PDF base price, batch addition, and computed final price.

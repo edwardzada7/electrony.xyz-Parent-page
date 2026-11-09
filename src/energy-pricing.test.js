@@ -55,7 +55,7 @@ test("calculates every confirmed line and package subtotal in exact naira", () =
   const expected = [
     ["basic-small-home-office", 591200, null, 3],
     ["medium-home-office", 2579400, null, 3],
-    ["premium-executive-corporate", 3540000, null, 5],
+    ["premium-executive-corporate", 3740000, null, 5],
     ["heavy-commercial-industrial", 29692800, 29692800, 0]
   ];
 

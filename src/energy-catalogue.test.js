@@ -6,6 +6,29 @@ const { test } = require("node:test");
 
 const projectRoot = path.resolve(__dirname, "..");
 const adjustmentId = "energy-price-adjustments-2026-11-phase-1";
+const additionalAdjustmentId = "energy-price-additions-2026-11-phase-2";
+const additionalAdjustmentKeys = new Set([
+  "HUAWEI|INSTALLATION TRAY",
+  "HUAWEI|ATS 63A",
+  "HUAWEI|ATS 100A",
+  "HUAWEI|LQUID LEVEL SENSOR",
+  "HUAWEI|TOUCH SCREEN",
+  "HUAWEI|MERC-1300WP",
+  "HUAWEI|DTSU666-HW",
+  "HUAWEI|HUWSMARTMODUL1000A01",
+  "HUAWEI|SMART LOGGER 3000A01EU"
+]);
+const phaseTwoExpectedPrices = new Map([
+  ["HUAWEI|INSTALLATION TRAY", [2150000, 230000, 2380000]],
+  ["HUAWEI|ATS 63A", [1040000, 200000, 1240000]],
+  ["HUAWEI|ATS 100A", [1525000, 300000, 1825000]],
+  ["HUAWEI|LQUID LEVEL SENSOR", [795000, 150000, 945000]],
+  ["HUAWEI|TOUCH SCREEN", [440000, 70000, 510000]],
+  ["HUAWEI|MERC-1300WP", [95000, 15000, 110000]],
+  ["HUAWEI|DTSU666-HW", [160000, 30000, 190000]],
+  ["HUAWEI|HUWSMARTMODUL1000A01", [800000, 100000, 900000]],
+  ["HUAWEI|SMART LOGGER 3000A01EU", [619000, 100000, 719000]]
+]);
 const additionalAmounts = new Map([
   ...[
     "525M-72HL4-TV",
@@ -63,6 +86,17 @@ const additionalAmounts = new Map([
     ["LUNA 2000-129KWH", 19000000],
     ["LUNA 2000-215KWH", 19000000]
   ].map(([model, amount]) => [`HUAWEI|${model}`, amount]),
+  ...[
+    ["INSTALLATION TRAY", 230000],
+    ["ATS 63A", 200000],
+    ["ATS 100A", 300000],
+    ["LQUID LEVEL SENSOR", 150000],
+    ["TOUCH SCREEN", 70000],
+    ["MERC-1300WP", 15000],
+    ["DTSU666-HW", 30000],
+    ["HUWSMARTMODUL1000A01", 100000],
+    ["SMART LOGGER 3000A01EU", 100000]
+  ].map(([model, amount]) => [`HUAWEI|${model}`, amount]),
   ["HISENSE|INV6KS-AA1", 45000],
   ["HISENSE|BATHEL5-E-BB1", 95500],
   ...[
@@ -104,18 +138,25 @@ test("Energy price adjustments are computed once from confirmed base prices", ()
   assert.equal(products.length, 130);
   assert.equal(new Set(products.map((product) => product.id)).size, products.length);
   assert.equal(new Set(products.map((product) => `${product.brand}|${product.model}`)).size, products.length);
-  assert.equal(additionalAmounts.size, 55);
+  assert.equal(additionalAmounts.size, 64);
   assert.equal(adjustedProducts.length, additionalAmounts.size);
 
   for (const [key, amountNgn] of additionalAmounts) {
     const product = byModel.get(key);
+    const batchId = additionalAdjustmentKeys.has(key) ? additionalAdjustmentId : adjustmentId;
     assert.ok(product, `Missing catalogue product ${key}`);
     assert.equal(product.basePriceNgn, product.priceAdjustment.previousPriceNgn);
     assert.ok(Number.isSafeInteger(product.priceAdjustment.previousPriceNgn));
-    assert.equal(product.priceAdjustment.id, `${adjustmentId}:${product.id}`);
-    assert.equal(product.priceAdjustment.batchId, adjustmentId);
+    assert.equal(product.priceAdjustment.id, `${batchId}:${product.id}`);
+    assert.equal(product.priceAdjustment.batchId, batchId);
     assert.equal(product.priceAdjustment.amountNgn, amountNgn);
     assert.equal(product.priceNgn, product.priceAdjustment.previousPriceNgn + amountNgn);
+    if (phaseTwoExpectedPrices.has(key)) {
+      const [basePriceNgn, additionNgn, finalPriceNgn] = phaseTwoExpectedPrices.get(key);
+      assert.equal(product.basePriceNgn, basePriceNgn, key);
+      assert.equal(product.priceAdjustment.amountNgn, additionNgn, key);
+      assert.equal(product.priceNgn, finalPriceNgn, key);
+    }
     assert.match(product.priceDisplay, /^\d{1,3}(?:,\d{3})*(?:\.00)?$/);
     assert.equal(Number(product.priceDisplay.replaceAll(",", "").replace(/\.00$/, "")), product.priceNgn);
     assert.ok(Object.isFrozen(product.priceAdjustment));
@@ -203,6 +244,26 @@ test("Catalogue image assignments use the requested local assets only", () => {
   ].forEach((model) => assertImage(byModel.get(`HUAWEI|${model}`), "LUNA 2000-97KWH.png"));
 
   assert.equal(byModel.get("HUAWEI|PVDU-8kW").image.url, "../assets/catalogue/energy/products/huawei/PVDU-8kW.jpg");
+  assertImage(byModel.get("HUAWEI|INSTALLATION TRAY"), "Huawei installation tray.webp");
+  assertImage(byModel.get("HUAWEI|ATS 63A"), "Huawei ATS 63A.jpeg");
+  assert.equal(
+    byModel.get("HUAWEI|ATS 100A").image.url,
+    "../assets/catalogue/energy/products/huawei/Huawei-Auto-Transfer-Switch-100A-Max-220380Vac-3-Phase.jpg"
+  );
+  assert.ok(fs.statSync(path.join(
+    projectRoot,
+    "assets/catalogue/energy/products/huawei/Huawei-Auto-Transfer-Switch-100A-Max-220380Vac-3-Phase.jpg"
+  )).size > 0);
+  assert.notEqual(byModel.get("HUAWEI|ATS 63A").image.url, byModel.get("HUAWEI|ATS 100A").image.url);
+  assertImage(byModel.get("HUAWEI|LQUID LEVEL SENSOR"), "Hisense LQUID LEVEL SENSOR.png");
+  assertImage(byModel.get("HUAWEI|MERC-1300WP"), "MERC-1300WP.jpg");
+  assertImage(byModel.get("HUAWEI|DTSU666-HW"), "DTSU666-HW.avif");
+  assertImage(byModel.get("HUAWEI|HUWSMARTMODUL1000A01"), "HUWSMARTMODUL1000A01.webp");
+  assertImage(byModel.get("HUAWEI|SMART LOGGER 3000A01EU"), "SMART LOGGER 3000A01EU.webp");
+  assert.ok(products.filter((product) => product.brand === "HISENSE" && product.category === "transformers")
+    .every((product) => product.image.url === "/energy/Hisense%20transformer.webp"));
+  assert.ok(products.filter((product) => product.brand === "HISENSE" && product.category !== "transformers")
+    .every((product) => product.image.url !== "/energy/Hisense%20transformer.webp"));
   assertImage(byModel.get("HISENSE|INV6KS-AA1"), "Hisense inverter.webp");
   assertImage(byModel.get("HISENSE|BATHEL5-E-BB1"), "Hisense battery.webp");
   assert.ok(products.filter((product) => product.brand === "HUAWEI")
