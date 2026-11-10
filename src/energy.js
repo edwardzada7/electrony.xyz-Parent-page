@@ -276,6 +276,7 @@ function renderEnergyCatalogue() {
 
 function createPackageCard(solarPackage, comparison = null) {
   const card = createElement("article", "energy-package-card");
+  if (!comparison) card.id = `solar-package-${solarPackage.id}`;
   const pricing = window.ElectronyEnergyPricing.calculateSolarPackagePricing(solarPackage, energyProducts);
   const application = createElement("p", "energy-package-card__application", solarPackage.application);
   const title = createElement("h3", "energy-package-card__title", solarPackage.name);
@@ -285,8 +286,8 @@ function createPackageCard(solarPackage, comparison = null) {
     : null;
   const summary = createElement("ul", "energy-package-card__summary");
   summary.append(
-    createElement("li", "", `Inverter: ${formatPackageWatts(solarPackage.inverterWatts)}; ${solarPackage.components[0].details}.`),
-    createElement("li", "", `Solar array: ${solarPackage.panelCount} × ${solarPackage.panelWatts}W panels (${formatPackageWatts(solarPackage.panelCount * solarPackage.panelWatts)} rated total).`),
+    createElement("li", "", `Inverter: ${formatPackageWatts(solarPackage.inverterWatts)}; ${solarPackage.components[0].details}`),
+    createElement("li", "", `Solar array: ${solarPackage.panelCount} × ${solarPackage.panelWatts}W panels (${formatPackageWatts(solarPackage.solarArrayWatts)} rated total).`),
     createElement("li", "", solarPackage.batterySummary)
   );
   card.append(title, capacity, application);
@@ -310,7 +311,9 @@ function createPackageCard(solarPackage, comparison = null) {
           ? `${formatPackageEnergy(solarPackage.batteryNominalWh)} stated nominal battery capacity is below the ${formatPackageEnergy(comparison.estimate.batteryNominalWh)} calculator estimate.`
           : `Battery capacity cannot be compared with the ${formatPackageEnergy(comparison.estimate.batteryNominalWh)} calculator estimate because the package source is ambiguous.`));
     }
-    comparisonList.appendChild(createElement("li", "", "The source does not state daily energy capacity in kWh/day, so daily consumption cannot be compared."));
+    if (comparison.recommendationReason) {
+      comparisonList.appendChild(createElement("li", "", comparison.recommendationReason));
+    }
     card.appendChild(comparisonList);
   }
 
@@ -350,16 +353,13 @@ function createPackageCard(solarPackage, comparison = null) {
   );
   details.append(disclosure, componentList, pricingSummary);
   card.appendChild(details);
-  if (solarPackage.reviewNote) {
-    card.appendChild(createElement("p", "energy-package-card__review", `Source detail to confirm: ${solarPackage.reviewNote}`));
-  }
-  if (solarPackage.pricingNote) {
-    card.appendChild(createElement("p", "energy-package-card__review", solarPackage.pricingNote));
-  }
+  card.appendChild(createElement("p", "energy-package-card__review", `Compatibility: ${solarPackage.compatibilityNotes}`));
+  card.appendChild(createElement("p", "energy-package-card__source", `Installation: ${solarPackage.installationNotes}`));
   card.appendChild(createElement("p", "energy-package-card__suitability",
     "Package suitability is not guaranteed. Final system design requires load assessment and site evaluation, including battery/inverter compatibility, PV string sizing and project-specific circuit protection."));
   const source = createElement("p", "energy-package-card__source", `Source: ${solarPackage.source.document}, page ${solarPackage.source.page}.`);
-  const priceSource = createElement("p", "energy-package-card__source", "Individual product catalogue prices: POWER-SOLAR PL-1.pdf (5 November 2026). Confirm current prices before an order is accepted; no stock or availability is implied.");
+  const compositionSource = createElement("p", "energy-package-card__source", `Package quantities adapted from ${solarPackage.compositionSource.document}, page ${solarPackage.compositionSource.page}.`);
+  const priceSource = createElement("p", "energy-package-card__source", "Current item prices are drawn from the product catalogue and recalculated for each package. Confirm prices before an order is accepted; no stock or availability is implied.");
   const footer = createElement("div", "energy-package-card__footer");
   const quote = document.createElement("a");
   quote.className = "button energy-button energy-button--primary";
@@ -369,8 +369,13 @@ function createPackageCard(solarPackage, comparison = null) {
     event.preventDefault();
     requestSolarPackage(solarPackage, comparison?.estimate || null);
   });
+  if (comparison) {
+    const viewPackage = createElement("a", "energy-text-link", "View full package breakdown");
+    viewPackage.href = `#solar-package-${solarPackage.id}`;
+    footer.appendChild(viewPackage);
+  }
   footer.appendChild(quote);
-  card.append(source, priceSource, footer);
+  card.append(source, compositionSource, priceSource, footer);
   card.insertBefore(pricingSummary.cloneNode(true), details);
   return card;
 }
@@ -567,8 +572,12 @@ function renderSolarPackageCatalogue() {
 function renderSolarPackageRecommendations(estimate) {
   packageResultsRecommendedGrid.replaceChildren();
   packageResultsExploreGrid.replaceChildren();
+  const pricedPackages = solarPackages.filter((solarPackage) => {
+    const pricing = window.ElectronyEnergyPricing.calculateSolarPackagePricing(solarPackage, energyProducts);
+    return pricing.complete && pricing.totalNgn !== null;
+  });
   const { recommended, explore } = window.ElectronyEnergyCalculations
-    .recommendSolarPackages(solarPackages, estimate);
+    .recommendSolarPackages(pricedPackages, estimate);
   const recommendationCandidates = recommended.map((comparison) => ({ ...comparison, estimate }));
   const exploreCandidates = explore.map((comparison) => ({ ...comparison, estimate }));
   recommendationCandidates.forEach((comparison) => {
@@ -581,8 +590,9 @@ function renderSolarPackageRecommendations(estimate) {
   packageResultsEmpty.hidden = recommendationCandidates.length > 0;
   packageResultsEmpty.textContent = recommendationCandidates.length
     ? ""
-    : "No package meets all comparable calculator ratings. The package source also lacks daily energy capacity and other design details, so request a tailored assessment.";
-  packageResultsIntro.textContent = "Ordered by closest documented inverter, panel-array and (when supplied) battery ratings. These are preliminary comparisons, not confirmed system matches; phase, MPPT/string design, operating conditions and compatibility still require assessment.";
+    : "No fully priced package meets the calculated inverter, solar-array and (when supplied) battery requirements. Request a custom system assessment rather than selecting an undersized package.";
+  packageResultsIntro.textContent = "The recommendation is the smallest listed package whose inverter rating, panel-array capacity and (when you entered backup hours) nominal battery capacity meet the calculated requirements. Other packages are shown separately for comparison. This is a preliminary sizing guide, not a guarantee of performance or engineering approval.";
+  return recommendationCandidates[0]?.package || null;
 }
 
 function requestSolarPackage(solarPackage, estimate = null) {
@@ -591,7 +601,7 @@ function requestSolarPackage(solarPackage, estimate = null) {
   productInput.value = solarPackage.name;
   requirementsInput.value = [
     `Solar package enquiry: ${solarPackage.name} — ${solarPackage.capacity}`,
-    `Intended application in source: ${solarPackage.application}`,
+    `Intended application: ${solarPackage.application}`,
     ...pricing.lines.map((line) =>
       `${line.component.category}: ${line.manufacturer} ${line.model}; ${line.component.details}; quantity ${line.component.quantity} ${line.component.unit}; unit price ${line.unitPriceNgn === null ? "Request current price" : cataloguePriceLabel(line.product)}; line total ${line.lineTotalNgn === null ? "Request current price" : formatNaira(line.lineTotalNgn)}.`),
     pricing.complete
@@ -602,8 +612,10 @@ function requestSolarPackage(solarPackage, estimate = null) {
       : "",
     "Displayed component prices exclude installation, transportation, labour, taxes, engineering and other fees not explicitly priced in the catalogue.",
     solarPackage.reviewNote ? `Please confirm: ${solarPackage.reviewNote}` : "",
-    solarPackage.pricingNote ? `Pricing note: ${solarPackage.pricingNote}` : "",
     `Source: ${solarPackage.source.document}, page ${solarPackage.source.page}.`,
+    `Package quantities: ${solarPackage.compositionSource.document}, page ${solarPackage.compositionSource.page}.`,
+    `Compatibility notes: ${solarPackage.compatibilityNotes}`,
+    `Installation notes: ${solarPackage.installationNotes}`,
     "Package suitability is not guaranteed. Please perform load assessment and site evaluation and confirm battery/inverter compatibility, PV string sizing and project-specific circuit protection.",
     estimate ? window.ElectronyEnergyCalculationSummary : "",
     "Please confirm current prices, availability, electrical compatibility and suitability for my application."

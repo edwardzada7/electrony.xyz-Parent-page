@@ -3175,7 +3175,8 @@
 }
 
 .energy-package-card__footer {
-  display: flex;
+  display: grid;
+  gap: 0.65rem;
   padding-top: 0.25rem;
 }
 

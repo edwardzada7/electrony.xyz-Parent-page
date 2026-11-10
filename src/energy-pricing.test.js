@@ -36,6 +36,8 @@ test("reconciles all source catalogue products and preserves explicit price prov
   });
 
   const productByModel = new Map(products.map((product) => [`${product.brand}|${product.model}`, product]));
+  assert.equal(products.some((product) => product.model === "585N-72HL4-BD"), false);
+  assert.equal(products.some((product) => product.model === "720N-66HL5-BD"), false);
   assert.deepEqual(
     [...products].filter((product) => product.priceNgn === null).map((product) => `${product.brand}|${product.model}`).sort(),
     ["ANTAI|PV ROOF MOUNTING SET", "SUNTREE|SUNDB24WAY"]
@@ -49,13 +51,18 @@ test("reconciles all source catalogue products and preserves explicit price prov
     productByModel.get("GROWATT|SIM 6000ES PLUS-H + BATTERY + BASE 6KW + 5.5 KWH").warranty,
     "INVERTER 2 YEARS & BATTEY 5 YEARS"
   );
+  assert.equal(
+    productByModel.get("GROWATT|SIM 6000ES PLUS-H + BATTERY + BASE 6KW + 5.12 kwh").priceNgn,
+    1583000
+  );
+  assert.equal(productByModel.get("DEYE|8K-SG06LP1-EU").priceNgn, 1390000);
 });
 
-test("calculates every confirmed line and package subtotal in exact naira", () => {
+test("calculates complete current package prices in exact naira", () => {
   const expected = [
-    ["basic-small-home-office", 791200, null, 3],
-    ["medium-home-office", 2819400, null, 3],
-    ["premium-executive-corporate", 3740000, null, 5],
+    ["basic-small-home-office", 2714900, 2714900, 0],
+    ["medium-home-office", 3287400, 3287400, 0],
+    ["premium-executive-corporate", 6274400, 6274400, 0],
     ["heavy-commercial-industrial", 29692800, 29692800, 0]
   ];
 
@@ -68,20 +75,36 @@ test("calculates every confirmed line and package subtotal in exact naira", () =
   });
 });
 
-test("maps the listed models to the exact catalogue products and quantities", () => {
+test("packages use the current listed product models and guide component quantities", () => {
   const basic = packageById("basic-small-home-office");
-  assert.equal(basic.capacity, "3.6 kW");
+  assert.equal(basic.name, "Small Home Solar Package");
+  assert.equal(basic.inverterWatts, 3600);
+  assert.equal(basic.batteryNominalWh, 5120);
   const basicPanels = basic.components.find((component) => component.category === "Solar panels");
-  assert.equal(basicPanels.productId, undefined);
-  assert.equal(basicPanels.model, "585N-72HL4-BD");
-  assert.equal(basicPanels.manufacturer, "JINKO");
+  assert.equal(basicPanels.productId, "jinko-525m-72hl4-tv");
+  assert.equal(basicPanels.quantity, 8);
   assert.equal(basic.components.find((component) => component.category === "Inverter").productId, "growatt-sph-3600tl-bl-up");
 
+  const medium = packageById("medium-home-office");
+  assert.equal(medium.name, "Medium Home Solar Package");
+  assert.equal(medium.batteryNominalWh, 5120);
+  assert.equal(medium.components.filter((component) => component.category === "Integrated inverter and battery").length, 1);
+  assert.equal(medium.components.some((component) => component.category === "Battery"), false);
+  assert.equal(
+    medium.components.find((component) => component.category === "Integrated inverter and battery").productId,
+    "growatt-sim-6000es-plus-h-battery-base-6kw-5-12-kwh"
+  );
   const mediumPanels = pricingFor("medium-home-office").lines.find((line) => line.component.category === "Solar panels");
   assert.equal(mediumPanels.model, "620N-66HL4-BD");
   assert.equal(mediumPanels.component.quantity, 10);
   assert.equal(mediumPanels.unitPriceNgn, 141500);
   assert.equal(mediumPanels.lineTotalNgn, 1415000);
+
+  const large = pricingFor("premium-executive-corporate");
+  assert.equal(large.lines.find((line) => line.component.category === "Inverter").model, "8K-SG06LP1-EU");
+  assert.equal(large.lines.find((line) => line.component.category === "Inverter").unitPriceNgn, 1390000);
+  assert.equal(large.lines.find((line) => line.component.category === "Battery").model, "BATSE-F16-C");
+  assert.equal(large.lines.find((line) => line.component.category === "Solar panels").component.quantity, 12);
 
   const heavy = pricingFor("heavy-commercial-industrial");
   const heavyPanels = heavy.lines.find((line) => line.component.category === "Solar panels");

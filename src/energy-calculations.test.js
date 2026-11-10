@@ -158,43 +158,102 @@ test("does not fabricate catalogue matches when no supported rating is available
   assert.equal(recommendations.panels.length, 0);
 });
 
-test("package catalogue contains only the four source-backed packages and flags the ambiguous battery", () => {
+test("package catalogue contains the four reconciled, priceable customer packages", () => {
   assert.equal(solarPackages.length, 4);
   assert.deepEqual(Array.from(solarPackages, (solarPackage) => solarPackage.name), [
-    "Basic / Small Home & Office (3.6 kW System)",
-    "Medium Home / Medium Office (6 kW System)",
-    "Premium Executive Home / Corporate Office (8 kW – 10 kW System)",
-    "Heavy Commercial / Industrial Setup (50 kW System)"
+    "Small Home Solar Package",
+    "Medium Home Solar Package",
+    "Large Home / Executive Solar Package",
+    "Industrial / Company Solar Package"
   ]);
   solarPackages.forEach((solarPackage) => {
     assert.ok(solarPackage.components.length > 0);
-    assert.equal(solarPackage.source.document, "Solar_Power_Solution_Packages.pdf");
+    assert.equal(solarPackage.source.document, "POWER-SOLAR PL-1.pdf");
+    assert.equal(solarPackage.compositionSource.document, "Solar_Power_Solution_Packages.pdf");
+    assert.ok(solarPackage.solarArrayWatts > 0);
+    assert.ok(solarPackage.batteryNominalWh > 0);
+    assert.ok(solarPackage.compatibilityNotes);
+    assert.ok(solarPackage.installationNotes);
     assert.equal("price" in solarPackage, false);
   });
-  assert.match(solarPackages[0].reviewNote, /5\.12kWh\/5\.5kWh/);
-  assert.equal(solarPackages[0].batteryNominalWh, null);
+  assert.equal(solarPackages[0].panelCount * solarPackages[0].panelWatts, solarPackages[0].solarArrayWatts);
+  assert.equal(solarPackages[1].batteryNominalWh, 5120);
+  assert.equal(solarPackages[1].components.some((component) => component.category === "Battery"), false);
 });
 
-test("package comparisons use only corresponding inverter, array and battery ratings", () => {
-  const withBackup = recommendSolarPackages(solarPackages, {
-    inverterW: 7000,
-    solarW: 8000,
-    batteryNominalWh: 10000
-  });
-  assert.deepEqual(Array.from(withBackup.recommended, ({ package: solarPackage }) => solarPackage.id), [
-    "premium-executive-corporate",
-    "heavy-commercial-industrial"
-  ]);
-  assert.ok(withBackup.explore.some(({ package: solarPackage, batteryStatus }) =>
-    solarPackage.id === "basic-small-home-office" && batteryStatus === "undocumented"));
-  assert.equal("dailyEnergyWh" in solarPackages[0], false);
+test("calculator chooses the smallest package that meets inverter, solar and backup requirements", () => {
+  const assumptions = {
+    days: 30,
+    backupHours: 2,
+    designMargin: 25,
+    batteryUsable: 80,
+    efficiency: 90,
+    peakSunHours: 5,
+    solarLosses: 20
+  };
+  const recommendationFor = (watts, hours, backupHours) => {
+    const estimate = calculateEnergyEstimate({
+      appliances: [{ quantity: 1, watts, hours }],
+      assumptions: { ...assumptions, backupHours }
+    });
+    const result = recommendSolarPackages(solarPackages, estimate);
+    return { estimate, result };
+  };
+  const scenarios = [
+    [1500, 1, 2, "basic-small-home-office"],
+    [4000, 6, 0.5, "medium-home-office"],
+    [6200, 30000 / 6200, 0.5, "premium-executive-corporate"],
+    [40000, 5, 0.5, "heavy-commercial-industrial"]
+  ];
 
-  const withoutBackup = recommendSolarPackages(solarPackages, {
-    inverterW: 5000,
-    solarW: 5000,
-    batteryNominalWh: null
+  scenarios.forEach(([watts, hours, backupHours, expectedPackageId]) => {
+    const { estimate, result } = recommendationFor(watts, hours, backupHours);
+    assert.equal(result.recommended.length, 1);
+    assert.equal(result.recommended[0].package.id, expectedPackageId);
+    assert.equal(result.recommended[0].recommended, true);
+    assert.equal(result.recommended[0].inverterMeets, true);
+    assert.equal(result.recommended[0].solarMeets, true);
+    assert.equal(result.recommended[0].batteryStatus, "meets");
+    assert.ok(result.recommended[0].package.batteryNominalWh >= estimate.batteryNominalWh);
   });
-  assert.ok(withoutBackup.recommended.some(({ package: solarPackage }) => solarPackage.id === "medium-home-office"));
+});
+
+test("calculator requests a custom assessment when all package inverter ratings are too small", () => {
+  const estimate = calculateEnergyEstimate({
+    appliances: [{ quantity: 1, watts: 50000, hours: 2 }],
+    assumptions: {
+      days: 30,
+      backupHours: 0.5,
+      designMargin: 25,
+      batteryUsable: 80,
+      efficiency: 90,
+      peakSunHours: 5,
+      solarLosses: 20
+    }
+  });
+  const result = recommendSolarPackages(solarPackages, estimate);
+  assert.equal(result.recommended.length, 0);
+  assert.equal(result.explore.length, 4);
+  assert.ok(result.explore.every(({ inverterMeets }) => !inverterMeets));
+});
+
+test("backup duration prevents a package with insufficient integrated storage from being recommended", () => {
+  const estimate = calculateEnergyEstimate({
+    appliances: [{ quantity: 1, watts: 4000, hours: 6 }],
+    assumptions: {
+      days: 30,
+      backupHours: 2,
+      designMargin: 25,
+      batteryUsable: 80,
+      efficiency: 90,
+      peakSunHours: 5,
+      solarLosses: 20
+    }
+  });
+  const result = recommendSolarPackages(solarPackages, estimate);
+  assert.equal(result.recommended.length, 1);
+  assert.equal(result.recommended[0].package.id, "premium-executive-corporate");
+  assert.equal(result.explore.find(({ package: solarPackage }) => solarPackage.id === "medium-home-office").batteryStatus, "below");
 });
 
 test("catalogue search, brand and category filters combine and find products beyond the first page", () => {

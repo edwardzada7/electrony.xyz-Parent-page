@@ -174,7 +174,7 @@ function createRecommendationCard({ product, capacity, label, reason }) {
   return card;
 }
 
-function renderRecommendations(result) {
+function renderRecommendations(result, recommendedPackage = null) {
   recommendationProducts.replaceChildren();
   const recommendationMessages = [];
   const {
@@ -195,6 +195,10 @@ function renderRecommendations(result) {
 
   if (result.batteryNominalWh === null) {
     recommendationMessages.push("Battery sizing was skipped because no backup duration was entered.");
+  } else if (recommendedPackage && recommendedPackage.batteryNominalWh >= result.batteryNominalWh) {
+    recommendationMessages.push(
+      `${recommendedPackage.name} already includes ${formatEnergyNumber(recommendedPackage.batteryNominalWh / 1000)} kWh nominal battery capacity, meeting this estimate; no additional battery is recommended.`
+    );
   } else if (batteryMatches.length) {
     batteryMatches.forEach((entry) => recommendationProducts.appendChild(createRecommendationCard({
       ...entry,
@@ -334,8 +338,8 @@ function calculateEnergy() {
   resultElements.solar.textContent = `${formatEnergyNumber(solarW)} W (${formatEnergyNumber(solarW / 1000)} kW)`;
   resultElements.solarAssumption.textContent = `${formatEnergyNumber(dailyWh)} Wh/day ÷ (${formatEnergyNumber(assumptions.peakSunHours)} peak-sun-hours × ${formatEnergyNumber(100 - assumptions.solarLosses)}% system yield), rounded up to 100 W.`;
   updateBreakdown(appliances);
-  renderRecommendations(result);
-  renderSolarPackageRecommendations(result);
+  const recommendedPackage = renderSolarPackageRecommendations(result);
+  renderRecommendations(result, recommendedPackage);
   window.ElectronyEnergyCalculationSummary = createEnquirySummary(result);
   calculatorResults.hidden = false;
   setCalculatorStatus();

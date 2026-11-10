@@ -1,11 +1,8 @@
-const packageSource = "Solar_Power_Solution_Packages.pdf";
+const packageCatalogueDocument = "POWER-SOLAR PL-1.pdf";
+const packageCompositionDocument = "Solar_Power_Solution_Packages.pdf";
 
 function packageComponent(category, productId, quantity, details, unit = "unit") {
   return { category, productId, quantity, details, unit };
-}
-
-function enquiryComponent(category, manufacturer, model, quantity, details, unit = "unit") {
-  return { category, manufacturer, model, quantity, details, unit };
 }
 
 function antaiMountingKit(setCount) {
@@ -18,100 +15,125 @@ function antaiMountingKit(setCount) {
     ["antai-antailugtyn16-01", "Mounting · grounding lug", 2, "Grounding lug"]
   ];
   return parts.map(([productId, category, quantityPerSet, details]) =>
-    packageComponent(category, productId, quantityPerSet * setCount, `${details}; ${setCount} documented 8-panel mounting ${setCount === 1 ? "set" : "sets"}.`));
+    packageComponent(
+      category,
+      productId,
+      quantityPerSet * setCount,
+      `${details}; ${setCount} documented 8-panel mounting ${setCount === 1 ? "set" : "sets"}.`,
+      category.endsWith("rail") ? "rail" : "unit"
+    ));
 }
 
 const packageCatalogueData = [
   {
     id: "basic-small-home-office",
-    name: "Basic / Small Home & Office (3.6 kW System)",
-    capacity: "3.6 kW",
-    application: "Ideal for basic residential loads (fans, TV, fridge, lighting, laptops, and 1HP inverter AC).",
+    name: "Small Home Solar Package",
+    capacity: "3.6 kW inverter",
+    application: "Smaller homes with lighting, fans, television, refrigeration and other modest essential loads.",
+    loadCategory: "Small home",
     inverterWatts: 3600,
-    panelCount: 6,
-    panelWatts: 585,
-    batteryNominalWh: null,
-    batterySummary: "1 lithium-ion battery, 48V; the source lists 5.12kWh/5.5kWh and two model names.",
-    reviewNote: "The source pairs Growatt ABM5.5-A1-H / HOPE5L-B1 with 5.12kWh/5.5kWh. Confirm which battery model and capacity apply.",
+    panelCount: 8,
+    panelWatts: 525,
+    solarArrayWatts: 4200,
+    batteryNominalWh: 5120,
+    batterySummary: "5.12 kWh, 51.2 V Growatt HOPE5L-B1 lithium battery (separate battery).",
+    compatibilityNotes: "The package guide lists the 3.6 kW Growatt SPH inverter with Growatt 48 V batteries but does not confirm HOPE5L-B1 compatibility with this exact inverter. Confirm the battery BMS protocol and approved pairing before supply.",
+    installationNotes: "The panel count and mounting set follow the guide's 8-panel Antai mounting-set quantity. Confirm roof structure, string voltage/current, protection ratings, and installation design on site.",
     components: [
-      packageComponent("Inverter", "growatt-sph-3600tl-bl-up", 1, "Hybrid 3.6kW, 2MPPT, single phase"),
-      enquiryComponent("Battery", "GROWATT", "ABM5.5-A1-H / HOPE5L-B1 (source lists both)", 1, "5.12kWh/5.5kWh lithium-ion, 48V; exact model and capacity are unresolved."),
-      enquiryComponent("Solar panels", "JINKO", "585N-72HL4-BD", 6, "585W bifacial half-cut; this package-guide model is not listed in the latest product catalogue."),
+      packageComponent("Inverter", "growatt-sph-3600tl-bl-up", 1, "Growatt SPH 3600TL-BL-UP; 3.6 kW hybrid, 2 MPPT, single phase."),
+      packageComponent("Battery", "growatt-hope5l-b1", 1, "Growatt HOPE5L-B1; 5.12 kWh, 51.2 V lithium-ion battery."),
+      packageComponent("Solar panels", "jinko-525m-72hl4-tv", 8, "Jinko 525M-72HL4-TV; 525 W bifacial half-cut.", "panel"),
       ...antaiMountingKit(1),
-      packageComponent("Protection", "suntree-sunacguard63a-230v", 1, "AC voltage guard 63A"),
-      enquiryComponent("Protection", "SUNTREE", "AC breaker 32A (pole/model not specified)", 1, "AC breaker 32A; package source does not identify the pole configuration."),
-      packageComponent("Distribution", "suntree-sundb6way", 1, "6-way DB plastic enclosure")
+      packageComponent("Protection", "suntree-sunacguard63a-230v", 1, "Suntree 63 A, 2-pole AC voltage guard."),
+      packageComponent("Protection", "suntree-sunbrkac32amps-2p", 1, "Suntree 32 A, 2-pole AC breaker."),
+      packageComponent("Distribution", "suntree-sundb6way", 1, "Suntree 6-way IP40 distribution box.")
     ],
-    source: { document: packageSource, page: 1 }
+    source: { document: packageCatalogueDocument, page: 1 },
+    compositionSource: { document: packageCompositionDocument, page: 1 }
   },
   {
     id: "medium-home-office",
-    name: "Medium Home / Medium Office (6 kW System)",
-    capacity: "6 kW",
-    application: "Ideal for standard households or medium offices (multiple refrigerators, freezers, 1.5HP–2HP inverter ACs, office PCs).",
+    name: "Medium Home Solar Package",
+    capacity: "6 kW inverter",
+    application: "Medium household or home-office loads with multiple appliances and a moderate backup requirement.",
+    loadCategory: "Medium home / home office",
     inverterWatts: 6000,
     panelCount: 10,
     panelWatts: 620,
-    batteryNominalWh: 5500,
-    batterySummary: "1 Growatt ABM5.5-A1-H, 5.5kWh, 48V lithium battery.",
-    pricingNote: "The updated catalogue price for SIM 6000ES PLUS-H is for a battery-inclusive bundle, not this package's separately listed inverter + base; it is not used to avoid a model mismatch and double counting.",
+    solarArrayWatts: 6200,
+    batteryNominalWh: 5120,
+    batterySummary: "5.12 kWh battery is integrated in the Growatt Future-H Solution 2; no separate battery is charged.",
+    compatibilityNotes: "The listed Future-H Solution 2 is a combined 6 kW inverter, battery and base system. Its integrated 5.12 kWh battery is counted once. Confirm PV string design, load phase and the complete system's suitability before installation.",
+    installationNotes: "Ten panels and two Antai mounting sets follow the existing package guide. Confirm module/string voltage and current against the Future-H system limits and verify roof structure and site conditions.",
     components: [
-      enquiryComponent("Inverter", "GROWATT", "SIM6000ESPLUS-H + BASE", 1, "Integrated 6kW inverter system; the package does not specify the battery-inclusive catalogue bundle."),
-      packageComponent("Battery", "growatt-abm-5-5-a1-h", 1, "5.5kWh, 48V lithium battery"),
-      packageComponent("Solar panels", "jinko-620n-66hl4-bd", 10, "620W bifacial half-cut"),
+      packageComponent("Integrated inverter and battery", "growatt-sim-6000es-plus-h-battery-base-6kw-5-12-kwh", 1, "Growatt Future-H All-in-One Solution 2: SIM 6000ES PLUS-H inverter, integrated 5.12 kWh battery and 6 kW base."),
+      packageComponent("Solar panels", "jinko-620n-66hl4-bd", 10, "Jinko 620N-66HL4-BD; 620 W bifacial half-cut.", "panel"),
       ...antaiMountingKit(2),
-      enquiryComponent("Protection", "SUNTREE", "AC surge protector 20kA (voltage/pole variant not specified)", 1, "AC surge protection, 20kA; exact voltage and pole variant are not specified."),
-      enquiryComponent("Protection", "SUNTREE", "DC isolator 32A (voltage/pole variant not specified)", 1, "DC isolator 32A; exact voltage and pole variant are not specified."),
-      packageComponent("Distribution", "suntree-sundb12way", 1, "12-way DB enclosure box")
+      packageComponent("Protection", "suntree-sunacsurge20ka-275v", 1, "Suntree 10–20 kA, 275 VAC, 2-pole AC surge protector."),
+      packageComponent("Protection", "suntree-sundciso32a-1000v-4p", 1, "Suntree 32 A, 1000 V, 4-pole DC isolator."),
+      packageComponent("Distribution", "suntree-sundb12way", 1, "Suntree 12-way IP40 distribution box.")
     ],
-    source: { document: packageSource, page: 1 }
+    source: { document: packageCatalogueDocument, page: 3 },
+    compositionSource: { document: packageCompositionDocument, page: 1 }
   },
   {
     id: "premium-executive-corporate",
-    name: "Premium Executive Home / Corporate Office (8 kW – 10 kW System)",
-    capacity: "8–10 kW",
-    application: "Designed for high-demand residential usage (multiple air conditioners, water pumps) or medium enterprise offices.",
+    name: "Large Home / Executive Solar Package",
+    capacity: "8 kW inverter",
+    application: "Larger homes and executive or corporate offices with higher connected loads and extended storage needs.",
+    loadCategory: "Large home / executive",
     inverterWatts: 8000,
     panelCount: 12,
-    panelWatts: 720,
+    panelWatts: 725,
+    solarArrayWatts: 8700,
     batteryNominalWh: 16000,
-    batterySummary: "1 Deye BATSE-F16-C, 16kWh low-voltage lithium battery (48V).",
+    batterySummary: "16 kWh, 48 V Deye BATSE-F16-C low-voltage lithium battery (separate battery).",
+    compatibilityNotes: "The Deye 8K-SG06LP1-EU supports 48 V low-voltage batteries and BATSE-F16-C is listed as 16 kWh / 48 V. The PDF does not confirm the inverter/battery BMS pairing; verify the approved compatibility list before supply. The listed Deye inverter is single-phase.",
+    installationNotes: "Twelve Jinko modules and two Antai mounting sets follow the package guide's panel and mounting quantities, updated to a currently listed 725 W panel. Verify the inverter's permitted PV input, string voltage/current, protective-device coordination, roof design and phase requirements.",
     components: [
-      enquiryComponent("Inverter", "DEYE", "8K-SG04LP3-EU", 1, "8kW, 3-phase, low-voltage hybrid inverter; this exact model has no confirmed price in the updated list."),
-      packageComponent("Battery", "deye-batse-f16-c", 1, "16kWh low-voltage lithium battery (48V)"),
-      enquiryComponent("Solar panels", "JINKO", "720N-66HL5-BD", 12, "720W bifacial half-cut; this package-guide model is not listed in the latest product catalogue."),
-      enquiryComponent("Mounting", "ANTAI", "Mounting Kit + Accessories", 2, "Rail sets + mid/end clamps; exact kit composition/model is not specified."),
-      packageComponent("Accessories", "huawei-ats-63a", 1, "Auto transfer switch 63A, 3-phase"),
-      enquiryComponent("Protection", "SUNTREE", "AC MCCB 100A (pole/model not specified)", 1, "AC MCCB 100A; pole configuration is not specified."),
-      enquiryComponent("Protection", "SUNTREE", "DC surge protector (rating/model not specified)", 1, "DC surge protector; voltage and model are not specified.")
+      packageComponent("Inverter", "deye-8k-sg06lp1-eu", 1, "Deye 8K-SG06LP1-EU; 8 kW, single phase, 48 V low-voltage battery support."),
+      packageComponent("Battery", "deye-batse-f16-c", 1, "Deye BATSE-F16-C; 16 kWh, 48 V low-voltage lithium battery."),
+      packageComponent("Solar panels", "jinko-725n-66hl5-bd", 12, "Jinko 725N-66HL5-BD; 725 W bifacial half-cut.", "panel"),
+      ...antaiMountingKit(2),
+      packageComponent("Protection", "suntree-sunbrkac63amps-2p", 1, "Suntree 63 A, 2-pole AC breaker."),
+      packageComponent("Protection", "suntree-sunacguard63a-230v", 1, "Suntree 63 A, 2-pole AC voltage guard."),
+      packageComponent("Protection", "suntree-sundcsurge20ka-1000v", 1, "Suntree 20 kA, 1000 V, 2-pole DC surge protector."),
+      packageComponent("Distribution", "suntree-sundb12way", 1, "Suntree 12-way IP40 distribution box.")
     ],
-    source: { document: packageSource, page: 2 }
+    source: { document: packageCatalogueDocument, page: 1 },
+    compositionSource: { document: packageCompositionDocument, page: 2 }
   },
   {
     id: "heavy-commercial-industrial",
-    name: "Heavy Commercial / Industrial Setup (50 kW System)",
-    capacity: "50 kW",
-    application: "Designed for factories, commercial complexes, large corporate headquarters, or mini-grids.",
+    name: "Industrial / Company Solar Package",
+    capacity: "50 kW three-phase inverter",
+    application: "Commercial and industrial sites requiring a three-phase, high-voltage battery system.",
+    loadCategory: "Industrial / company",
     inverterWatts: 50000,
     panelCount: 70,
     panelWatts: 725,
+    solarArrayWatts: 50750,
     batteryNominalWh: 48000,
-    batterySummary: "3 Deye BOS-B-PACK16 high-voltage battery packs, 16kWh each (48kWh total as listed capacity).",
+    batterySummary: "48 kWh nominal high-voltage storage: three Deye BOS-B-PACK16 16 kWh battery packs, with the matching Deye control box and rack.",
+    compatibilityNotes: "The Deye 50K-SG01HP3-E is a 50 kW three-phase high-voltage hybrid inverter; the package guide pairs it with three BOS-B-PACK16 high-voltage packs, one BOS-B-PRO control box and the 13-layer Deye rack. Confirm the exact high-voltage battery stack, control-box and inverter compatibility before supply.",
+    installationNotes: "Seventy 725 W modules total 50.75 kWp. Nine 8-panel Antai mounting sets cover up to 72 panels. PV string/MPPT layout, high-voltage battery commissioning, 250 A protection coordination, structural works and site engineering require qualified design.",
     components: [
-      packageComponent("Inverter", "deye-50k-sg01hp3-e", 1, "50kW, 3-phase, high-voltage hybrid inverter"),
-      packageComponent("Battery", "deye-bos-b-pack16", 3, "HV battery pack 16kWh B-PRO"),
-      packageComponent("Battery control", "deye-control-box-hv-bos-b-pdu-2-a", 1, "BOS-B-PRO16KWH control box-ACC"),
-      packageComponent("Battery rack", "deye-deyerack-3u-h", 1, "13-layer rack for HV battery"),
-      packageComponent("Solar panels", "jinko-725n-66hl5-bd", 70, "725W bifacial half-cut"),
+      packageComponent("Inverter", "deye-50k-sg01hp3-e", 1, "Deye 50K-SG01HP3-E; 50 kW, three-phase, high-voltage hybrid inverter."),
+      packageComponent("Battery", "deye-bos-b-pack16", 3, "Deye BOS-B-PACK16; 16 kWh high-voltage B-PRO battery pack.", "battery pack"),
+      packageComponent("Battery control", "deye-control-box-hv-bos-b-pdu-2-a", 1, "Deye BOS-B-PRO16KWH control box with accessories."),
+      packageComponent("Battery rack", "deye-deyerack-3u-h", 1, "Deye 13-layer high-voltage battery rack."),
+      packageComponent("Solar panels", "jinko-725n-66hl5-bd", 70, "Jinko 725N-66HL5-BD; 725 W bifacial half-cut.", "panel"),
       ...antaiMountingKit(9),
-      packageComponent("Protection / MCCB", "suntree-sunacmccb250a-4p", 1, "AC MCCB 250A, 4-pole")
+      packageComponent("Protection / MCCB", "suntree-sunacmccb250a-4p", 1, "Suntree 250 A, 4-pole AC MCCB.")
     ],
-    source: { document: packageSource, page: 2 }
+    source: { document: packageCatalogueDocument, page: 2 },
+    compositionSource: { document: packageCompositionDocument, page: 2 }
   }
 ];
 
 window.ElectronySolarPackages = Object.freeze(packageCatalogueData.map((solarPackage) => Object.freeze({
   ...solarPackage,
   components: Object.freeze(solarPackage.components.map((component) => Object.freeze(component))),
-  source: Object.freeze(solarPackage.source)
+  source: Object.freeze(solarPackage.source),
+  compositionSource: Object.freeze(solarPackage.compositionSource)
 })));
