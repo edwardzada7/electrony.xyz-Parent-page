@@ -73,3 +73,14 @@ Phase 1 price adjustments retain confirmed source prices as their baseline. Fina
 - `MERC-1300WP.jpg`, `DTSU666-HW.avif`, `HUWSMARTMODUL1000A01.webp`, and `SMART LOGGER 3000A01EU.webp` are each assigned to their matching Huawei model.
 
 The Phase 3 price additions are calculated from the confirmed page 3 PDF base prices and applied once as a separate adjustment batch. Each record retains its PDF base price, batch addition, and computed final price.
+
+## Phase 4 Growatt and transformer image assignments
+
+- `Growatt Sim 6000.webp` is shared by the separate SIM 6000 package listings for 5.5 kWh and 5.12 kWh.
+- `ABM 5.5-A1-H.webp` is assigned to both separate battery listings, `ABM 5.5-A1-H` and `ABM 5-LS-B1-H`, as requested.
+- `HOPE5L-B1_growatt.png` and `HOPE16LM-A1.webp` are assigned to their matching Growatt battery models.
+- `SPF 6000ES.jpg`, `SPH 3600TL-BL-UP.png`, `SPH 5000TL-BL-UP.png`, and `WIT-100K-HU.jpg` are assigned to their matching inverters.
+- `ACE-209H-2H.jpg`, `SEM-XA-RM SMART ENERGY METER.webp`, and `Growatt ct600.jpg` are assigned to their matching storage system, meter, and current transformer.
+- `400kva 400-400v.webp` is shared by the separate 400kVA and 600kVA transformer listings.
+
+The page 3 PDF base prices are retained, and the 15 requested Growatt and transformer additions are stored as a separate price-adjustment batch. Final prices are calculated once from each source base price.

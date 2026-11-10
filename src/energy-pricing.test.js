@@ -53,8 +53,8 @@ test("reconciles all source catalogue products and preserves explicit price prov
 
 test("calculates every confirmed line and package subtotal in exact naira", () => {
   const expected = [
-    ["basic-small-home-office", 591200, null, 3],
-    ["medium-home-office", 2579400, null, 3],
+    ["basic-small-home-office", 791200, null, 3],
+    ["medium-home-office", 2819400, null, 3],
     ["premium-executive-corporate", 3740000, null, 5],
     ["heavy-commercial-industrial", 29692800, 29692800, 0]
   ];

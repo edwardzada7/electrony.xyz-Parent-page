@@ -134,6 +134,7 @@ const confirmedPrices = Object.freeze({
 });
 const priceAdjustmentId = "energy-price-adjustments-2026-11-phase-1";
 const additionalPriceAdjustmentId = "energy-price-additions-2026-11-phase-2";
+const growattPriceAdjustmentId = "energy-price-additions-2026-11-phase-3";
 const explicitPriceAdjustments = Object.freeze({
   "DEYE|6/6KOG03LP1": 50000,
   "DEYE|8K-SG06LP1-EU": 135000,
@@ -185,7 +186,22 @@ const explicitPriceAdditions = Object.freeze({
   "HUAWEI|MERC-1300WP": 15000,
   "HUAWEI|DTSU666-HW": 30000,
   "HUAWEI|HUWSMARTMODUL1000A01": 100000,
-  "HUAWEI|SMART LOGGER 3000A01EU": 100000
+  "HUAWEI|SMART LOGGER 3000A01EU": 100000,
+  "GROWATT|SIM 6000ES PLUS-H + BATTERY + BASE 6KW + 5.5 KWH": 150000,
+  "GROWATT|ABM 5.5-A1-H": 240000,
+  "GROWATT|SIM 6000ES PLUS-H + BATTERY + BASE 6KW + 5.12 kwh": 130000,
+  "GROWATT|ABM 5-LS-B1-H": 200000,
+  "GROWATT|HOPE5L-B1": 250000,
+  "GROWATT|HOPE16LM-A1": 235000,
+  "GROWATT|SPF 6000ES": 200000,
+  "GROWATT|SPH 3600TL-BL-UP": 200000,
+  "GROWATT|SPH 5000TL-BL-UP": 350000,
+  "GROWATT|WIT-100K-HU": 1100000,
+  "GROWATT|ACE-209H-2H": 5500000,
+  "GROWATT|SEM-XA-RM": 100000,
+  "GROWATT|CT 600/5A": 50000,
+  "TSTY Transformer|400kva 400-400v": 200000,
+  "TSTY Transformer|600kva 400-400v": 300000
 });
 const brandLogos = Object.freeze({
   JINKO: "../assets/catalogue/energy/brands/jinko.png",
@@ -277,7 +293,10 @@ function getPriceAdjustment(brand, details) {
     return { amountNgn: explicitPriceAdjustments[key], batchId: priceAdjustmentId };
   }
   if (explicitPriceAdditions[key]) {
-    return { amountNgn: explicitPriceAdditions[key], batchId: additionalPriceAdjustmentId };
+    const batchId = brand === "GROWATT" || brand === "TSTY Transformer"
+      ? growattPriceAdjustmentId
+      : additionalPriceAdjustmentId;
+    return { amountNgn: explicitPriceAdditions[key], batchId };
   }
   return null;
 }
@@ -713,6 +732,10 @@ const products = [
     category: "complete-systems",
     description,
     specifications,
+    image: {
+      url: "/energy/Growatt%20Sim%206000.webp",
+      alt: `Growatt SIM 6000 integrated system for ${specifications[1]} battery capacity.`
+    },
     warranty: "INVERTER 2 YEARS & BATTEY 5 YEARS",
     sourceNote: sourceDataSheetNote,
     reviewNote: "The source warranty cell spans the integrated system and battery rows.",
@@ -724,6 +747,10 @@ const products = [
     category: "batteries-storage",
     description: "Rechargeable Lithium Ion Battery 5.5 Kwh, 51.2 Vdc 100Ah, 98% DOD, 43 Kg, Cycle life > 6,000, IP 20",
     specifications: ["5.5 Kwh", "51.2 Vdc", "100Ah", "98% DOD", "43 Kg", "Cycle life > 6,000", "IP 20"],
+    image: {
+      url: "/energy/ABM%205.5-A1-H.webp",
+      alt: "Growatt ABM 5.5-A1-H lithium-ion battery."
+    },
     sourceNote: sourceDataSheetNote,
     page: 3
   }),
@@ -733,6 +760,10 @@ const products = [
     category: "batteries-storage",
     description: "Rechargeable Lithium Ion Battery 5.12 Kwh, 51.2 Vdc 100Ah, 93% DOD, 440*540*130.5 mm, 45 Kg, Single string quantity 12 units, Cycle life > 6,000, IP 20",
     specifications: ["5.12 Kwh", "51.2 Vdc", "100Ah", "93% DOD", "440*540*130.5 mm", "45 Kg", "Single string quantity 12 units", "Cycle life > 6,000", "IP 20"],
+    image: {
+      url: "/energy/ABM%205.5-A1-H.webp",
+      alt: "Growatt ABM 5.5-A1-H battery image used for the ABM 5-LS-B1-H product listing."
+    },
     sourceNote: sourceDataSheetNote,
     page: 3
   }),
@@ -742,6 +773,10 @@ const products = [
     category: "batteries-storage",
     description: "Rechargeable Lithium Ion Battery 5.12 KWH, 51.2 V, DoD up to 98%, Dimension (W/D/H): 440*480*130.5mm, 43 ± 2Kg, Max.48 packs parallel, IP20 + free cable kit",
     specifications: ["5.12 KWH", "51.2 V", "DoD up to 98%", "440*480*130.5mm", "43 ± 2Kg", "Max.48 packs parallel", "IP20"],
+    image: {
+      url: "/energy/HOPE5L-B1_growatt.png",
+      alt: "Growatt HOPE5L-B1 lithium-ion battery."
+    },
     warranty: "5 Years",
     sourceNote: sourceDataSheetNote,
     page: 3
@@ -752,6 +787,10 @@ const products = [
     category: "batteries-storage",
     description: "Rechargeable Lithium Ion Battery 16 kwh, 51.2V, Operating voltage: 40~58.4V, Cycle life: 6000 (0.5C, 95% DOD), IP 20, 48 pcs in parallel",
     specifications: ["16 kwh", "51.2V", "40~58.4V", "6000 cycles (0.5C, 95% DOD)", "IP 20", "48 pcs in parallel"],
+    image: {
+      url: "/energy/HOPE16LM-A1.webp",
+      alt: "Growatt HOPE16LM-A1 lithium-ion battery."
+    },
     warranty: "5 Years",
     sourceNote: sourceDataSheetNote,
     page: 3
@@ -767,6 +806,16 @@ const products = [
     category: "solar-inverters",
     description,
     specifications,
+    image: {
+      url: model === "SPF 6000ES"
+        ? "/energy/SPF%206000ES.jpg"
+        : model === "SPH 3600TL-BL-UP"
+          ? "/energy/SPH%203600TL-BL-UP.png"
+          : model === "SPH 5000TL-BL-UP"
+            ? "/energy/SPH%205000TL-BL-UP.png"
+            : "/energy/WIT-100K-HU.jpg",
+      alt: `Growatt ${model} inverter.`
+    },
     warranty,
     sourceNote: sourceDataSheetNote,
     page: 3
@@ -777,6 +826,10 @@ const products = [
     category: "energy-storage-systems",
     description: "209.6 Kwh BESS, Parallel up to 13 Units, 280Ah, Easy Installation",
     specifications: ["209.6 Kwh", "Parallel up to 13 Units", "280Ah"],
+    image: {
+      url: "/energy/ACE-209H-2H.jpg",
+      alt: "Growatt ACE-209H-2H battery energy storage system."
+    },
     warranty: "5 Years",
     sourceNote: sourceDataSheetNote,
     page: 3
@@ -787,6 +840,10 @@ const products = [
     category: "power-meters",
     description: "Online monitoring and export limitation for the whole system, Up to 48 units of inverters in monitoring, Support Ethernet, RS485 communication, ommunication",
     specifications: ["Monitoring and export limitation", "Up to 48 inverters", "Ethernet", "RS485 communication"],
+    image: {
+      url: "/energy/SEM-XA-RM%20SMART%20ENERGY%20METER.webp",
+      alt: "Growatt SEM-XA-RM smart energy meter."
+    },
     warranty: "1 Year",
     sourceNote: sourceDataSheetNote,
     page: 3
@@ -797,6 +854,10 @@ const products = [
     category: "energy-storage-components",
     description: "CT 600A/5A",
     specifications: ["600A/5A"],
+    image: {
+      url: "/energy/Growatt%20ct600.jpg",
+      alt: "Growatt 600A/5A current transformer."
+    },
     warranty: "1 Year",
     sourceNote: sourceDataSheetNote,
     page: 3
@@ -919,6 +980,10 @@ const products = [
     category: "transformers",
     description: "400 Kva Isolation transformer, Oil immersed, 1415*985*1096 mm, 3 phase",
     specifications: ["400 Kva", "Oil immersed", "1415*985*1096 mm", "3 phase"],
+    image: {
+      url: "/energy/400kva%20400-400v.webp",
+      alt: "TSTY 400kVA 400-400V oil-immersed isolation transformer."
+    },
     warranty: "2 Years",
     sourceNote: sourceDataSheetNote,
     page: 3
@@ -929,6 +994,10 @@ const products = [
     category: "transformers",
     description: "650 Kva Isolation transformer, Oil immersed, 1535*1040*1170 mm, 3 phase",
     specifications: ["650 Kva (description)", "Oil immersed", "1535*1040*1170 mm", "3 phase"],
+    image: {
+      url: "/energy/400kva%20400-400v.webp",
+      alt: "TSTY 400kVA 400-400V transformer image used for the 600kVA catalogue listing."
+    },
     warranty: "2 Years",
     sourceNote: sourceDataSheetNote,
     reviewNote: "The source model label says 600kva while its description says 650 Kva; both values are retained as printed.",

@@ -7,6 +7,7 @@ const { test } = require("node:test");
 const projectRoot = path.resolve(__dirname, "..");
 const adjustmentId = "energy-price-adjustments-2026-11-phase-1";
 const additionalAdjustmentId = "energy-price-additions-2026-11-phase-2";
+const growattAdjustmentId = "energy-price-additions-2026-11-phase-3";
 const additionalAdjustmentKeys = new Set([
   "HUAWEI|INSTALLATION TRAY",
   "HUAWEI|ATS 63A",
@@ -29,6 +30,24 @@ const phaseTwoExpectedPrices = new Map([
   ["HUAWEI|HUWSMARTMODUL1000A01", [800000, 100000, 900000]],
   ["HUAWEI|SMART LOGGER 3000A01EU", [619000, 100000, 719000]]
 ]);
+const growattExpectedPrices = new Map([
+  ["GROWATT|SIM 6000ES PLUS-H + BATTERY + BASE 6KW + 5.5 KWH", [1492000, 150000, 1642000]],
+  ["GROWATT|ABM 5.5-A1-H", [899000, 240000, 1139000]],
+  ["GROWATT|SIM 6000ES PLUS-H + BATTERY + BASE 6KW + 5.12 kwh", [1453000, 130000, 1583000]],
+  ["GROWATT|ABM 5-LS-B1-H", [860000, 200000, 1060000]],
+  ["GROWATT|HOPE5L-B1", [855000, 250000, 1105000]],
+  ["GROWATT|HOPE16LM-A1", [2325000, 235000, 2560000]],
+  ["GROWATT|SPF 6000ES", [455000, 200000, 655000]],
+  ["GROWATT|SPH 3600TL-BL-UP", [450000, 200000, 650000]],
+  ["GROWATT|SPH 5000TL-BL-UP", [500000, 350000, 850000]],
+  ["GROWATT|WIT-100K-HU", [11050000, 1100000, 12150000]],
+  ["GROWATT|ACE-209H-2H", [37000000, 5500000, 42500000]],
+  ["GROWATT|SEM-XA-RM", [1020000, 100000, 1120000]],
+  ["GROWATT|CT 600/5A", [320000, 50000, 370000]],
+  ["TSTY Transformer|400kva 400-400v", [8500000, 200000, 8700000]],
+  ["TSTY Transformer|600kva 400-400v", [12050000, 300000, 12350000]]
+]);
+const growattAdjustmentKeys = new Set(growattExpectedPrices.keys());
 const additionalAmounts = new Map([
   ...[
     "525M-72HL4-TV",
@@ -107,7 +126,8 @@ const additionalAmounts = new Map([
     ["KETRANS500KVA-11/04", 1000000],
     ["KETRANS800KVA-11/04", 2000000],
     ["KETRANS1000KVA-11/04", 2000000]
-  ].map(([model, amount]) => [`HISENSE|${model}`, amount])
+  ].map(([model, amount]) => [`HISENSE|${model}`, amount]),
+  ...Array.from(growattExpectedPrices, ([key, [, amount]]) => [key, amount])
 ]);
 
 function loadCatalogue() {
@@ -138,12 +158,16 @@ test("Energy price adjustments are computed once from confirmed base prices", ()
   assert.equal(products.length, 130);
   assert.equal(new Set(products.map((product) => product.id)).size, products.length);
   assert.equal(new Set(products.map((product) => `${product.brand}|${product.model}`)).size, products.length);
-  assert.equal(additionalAmounts.size, 64);
+  assert.equal(additionalAmounts.size, 79);
   assert.equal(adjustedProducts.length, additionalAmounts.size);
 
   for (const [key, amountNgn] of additionalAmounts) {
     const product = byModel.get(key);
-    const batchId = additionalAdjustmentKeys.has(key) ? additionalAdjustmentId : adjustmentId;
+    const batchId = growattAdjustmentKeys.has(key)
+      ? growattAdjustmentId
+      : additionalAdjustmentKeys.has(key)
+        ? additionalAdjustmentId
+        : adjustmentId;
     assert.ok(product, `Missing catalogue product ${key}`);
     assert.equal(product.basePriceNgn, product.priceAdjustment.previousPriceNgn);
     assert.ok(Number.isSafeInteger(product.priceAdjustment.previousPriceNgn));
@@ -157,6 +181,13 @@ test("Energy price adjustments are computed once from confirmed base prices", ()
       assert.equal(product.priceAdjustment.amountNgn, additionNgn, key);
       assert.equal(product.priceNgn, finalPriceNgn, key);
     }
+    if (growattExpectedPrices.has(key)) {
+      const [basePriceNgn, additionNgn, finalPriceNgn] = growattExpectedPrices.get(key);
+      assert.equal(product.basePriceNgn, basePriceNgn, key);
+      assert.equal(product.priceAdjustment.amountNgn, additionNgn, key);
+      assert.equal(product.priceNgn, finalPriceNgn, key);
+      assert.equal(product.priceAdjustment.batchId, growattAdjustmentId, key);
+    }
     assert.match(product.priceDisplay, /^\d{1,3}(?:,\d{3})*(?:\.00)?$/);
     assert.equal(Number(product.priceDisplay.replaceAll(",", "").replace(/\.00$/, "")), product.priceNgn);
     assert.ok(Object.isFrozen(product.priceAdjustment));
@@ -164,6 +195,8 @@ test("Energy price adjustments are computed once from confirmed base prices", ()
 
   assert.equal(byModel.get("JINKO|525M-72HL4-TV").priceDisplay.endsWith(".00"), false);
   assert.equal(byModel.get("DEYE|8K-SG06LP1-EU").priceDisplay.endsWith(".00"), true);
+  assert.equal(byModel.get("GROWATT|SPH 3600TL-BL-UP").priceNgn, 650000);
+  assert.equal(byModel.get("GROWATT|SPH 5000TL-BL-UP").priceNgn, 850000);
   assert.ok(products.filter((product) => product.category === "solar-panels")
     .every((product) => product.priceAdjustment?.amountNgn === 19000));
   assert.equal(products.filter((product) => product.brand === "HISENSE" && product.category === "transformers").length, 7);
@@ -275,6 +308,40 @@ test("Catalogue image assignments use the requested local assets only", () => {
   ].forEach((model) => {
     assert.equal(byModel.get(`HUAWEI|${model}`).sourceUrl, "https://solar.huawei.com/en/professionals/all-products/LUNA2000-97-129-161-200kwh/specs");
   });
+});
+
+test("Growatt and transformer image mappings resolve to the requested products", () => {
+  const products = loadCatalogue();
+  const byModel = productMap(products);
+  const mappings = new Map([
+    ["GROWATT|SIM 6000ES PLUS-H + BATTERY + BASE 6KW + 5.5 KWH", "Growatt Sim 6000.webp"],
+    ["GROWATT|ABM 5.5-A1-H", "ABM 5.5-A1-H.webp"],
+    ["GROWATT|SIM 6000ES PLUS-H + BATTERY + BASE 6KW + 5.12 kwh", "Growatt Sim 6000.webp"],
+    ["GROWATT|ABM 5-LS-B1-H", "ABM 5.5-A1-H.webp"],
+    ["GROWATT|HOPE5L-B1", "HOPE5L-B1_growatt.png"],
+    ["GROWATT|HOPE16LM-A1", "HOPE16LM-A1.webp"],
+    ["GROWATT|SPF 6000ES", "SPF 6000ES.jpg"],
+    ["GROWATT|SPH 3600TL-BL-UP", "SPH 3600TL-BL-UP.png"],
+    ["GROWATT|SPH 5000TL-BL-UP", "SPH 5000TL-BL-UP.png"],
+    ["GROWATT|WIT-100K-HU", "WIT-100K-HU.jpg"],
+    ["GROWATT|ACE-209H-2H", "ACE-209H-2H.jpg"],
+    ["GROWATT|SEM-XA-RM", "SEM-XA-RM SMART ENERGY METER.webp"],
+    ["GROWATT|CT 600/5A", "Growatt ct600.jpg"],
+    ["TSTY Transformer|400kva 400-400v", "400kva 400-400v.webp"],
+    ["TSTY Transformer|600kva 400-400v", "400kva 400-400v.webp"]
+  ]);
+
+  assert.equal(mappings.size, 15);
+  for (const [key, filename] of mappings) {
+    assert.ok(byModel.has(key), `Missing catalogue product ${key}`);
+    assertImage(byModel.get(key), filename);
+  }
+  assert.notEqual(
+    byModel.get("GROWATT|SIM 6000ES PLUS-H + BATTERY + BASE 6KW + 5.5 KWH").id,
+    byModel.get("GROWATT|SIM 6000ES PLUS-H + BATTERY + BASE 6KW + 5.12 kwh").id
+  );
+  assert.notEqual(byModel.get("GROWATT|ABM 5.5-A1-H").id, byModel.get("GROWATT|ABM 5-LS-B1-H").id);
+  assert.notEqual(byModel.get("TSTY Transformer|400kva 400-400v").id, byModel.get("TSTY Transformer|600kva 400-400v").id);
 });
 
 test("Hisense transformers are searchable and filterable", () => {

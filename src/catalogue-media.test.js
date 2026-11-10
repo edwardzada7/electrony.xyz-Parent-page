@@ -91,7 +91,7 @@ test("Energy product image mappings preserve all 130 catalogue records", () => {
   assert.equal(productByModel.get("INV6KS-AA1").image.url, "/energy/Hisense%20inverter.webp");
 
   assert.equal(productByModel.get("SPF 3000TL-HVM-24"), undefined);
-  assert.equal(productByModel.get("SPF 6000ES").image.url, "../assets/catalogue/energy-inverter.svg");
+  assert.equal(productByModel.get("SPF 6000ES").image.url, "/energy/SPF%206000ES.jpg");
 
   const deyeControlBoxes = [
     productByModel.get("CONTROL BOX HV BOS-B-PDU-2-A"),
