@@ -62,6 +62,8 @@ test("calculates complete current package prices in exact naira", () => {
   const expected = [
     ["basic-small-home-office", 2714900, 2714900, 0],
     ["medium-home-office", 3287400, 3287400, 0],
+    ["medium-home-office-option-2", 3346400, 3346400, 0],
+    ["medium-home-office-option-3", 3287400, 3287400, 0],
     ["premium-executive-corporate", 6274400, 6274400, 0],
     ["heavy-commercial-industrial", 29692800, 29692800, 0]
   ];
@@ -100,6 +102,34 @@ test("packages use the current listed product models and guide component quantit
   assert.equal(mediumPanels.unitPriceNgn, 141500);
   assert.equal(mediumPanels.lineTotalNgn, 1415000);
 
+  const mediumOptions = [
+    ["medium-home-office-option-2", "Medium Home Solar Package — Option 2", "growatt-sim-6000es-plus-h-battery-base-6kw-5-5-kwh", 5500],
+    ["medium-home-office-option-3", "Medium Home Solar Package — Option 3", "growatt-sim-6000es-plus-h-battery-base-6kw-5-12-kwh", 5120]
+  ];
+  const excludedPowerComponents = new Set(["Inverter", "Battery", "Integrated inverter and battery"]);
+  const remainingComponents = (solarPackage) => JSON.parse(JSON.stringify(
+    solarPackage.components.filter((component) => !excludedPowerComponents.has(component.category))
+  ));
+  mediumOptions.forEach(([id, name, productId, batteryNominalWh]) => {
+    const option = packageById(id);
+    const integratedComponents = option.components.filter((component) =>
+      component.category === "Integrated inverter and battery");
+    assert.equal(option.name, name);
+    assert.equal(option.inverterWatts, 6000);
+    assert.equal(option.batteryNominalWh, batteryNominalWh);
+    assert.equal(option.solarArrayWatts, medium.solarArrayWatts);
+    assert.equal(integratedComponents.length, 1);
+    assert.equal(integratedComponents[0].productId, productId);
+    assert.equal(integratedComponents[0].quantity, 1);
+    assert.equal(option.components.some((component) => ["Inverter", "Battery"].includes(component.category)), false);
+    assert.deepEqual(remainingComponents(option), remainingComponents(medium));
+    assert.equal(pricingFor(id).complete, true);
+  });
+  assert.equal(products.find((product) => product.id === mediumOptions[0][2]).name, "Future-H all-in-one solution");
+  assert.equal(products.find((product) => product.id === mediumOptions[1][2]).name, "Future-H all-in-one solution 2");
+  assert.equal(pricingFor("medium-home-office-option-2").lines[0].unitPriceNgn, 1642000);
+  assert.equal(pricingFor("medium-home-office-option-3").lines[0].unitPriceNgn, 1583000);
+
   const large = pricingFor("premium-executive-corporate");
   assert.equal(large.lines.find((line) => line.component.category === "Inverter").model, "8K-SG06LP1-EU");
   assert.equal(large.lines.find((line) => line.component.category === "Inverter").unitPriceNgn, 1390000);
@@ -125,6 +155,11 @@ test("recalculates package prices when a catalogue unit price changes", () => {
       : product);
   const result = pricingFor("heavy-commercial-industrial", catalogueWithPriceChange);
   assert.equal(result.totalNgn, 29762800);
+  const catalogueWithFutureHPriceChange = products.map((product) =>
+    product.id === "growatt-sim-6000es-plus-h-battery-base-6kw-5-5-kwh"
+      ? { ...product, priceNgn: product.priceNgn + 2000 }
+      : product);
+  assert.equal(pricingFor("medium-home-office-option-2", catalogueWithFutureHPriceChange).totalNgn, 3348400);
 });
 
 test("keeps missing prices unpriced and excludes them from partial subtotals", () => {

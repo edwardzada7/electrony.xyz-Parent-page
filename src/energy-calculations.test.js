@@ -12,6 +12,7 @@ const energyCalculationsSource = fs.readFileSync(path.join(__dirname, "energy-ca
 const energyPackageSource = fs.readFileSync(path.join(__dirname, "energy-packages.js"), "utf8");
 const energyPricingSource = fs.readFileSync(path.join(__dirname, "energy-pricing.js"), "utf8");
 const energyCatalogueSource = fs.readFileSync(path.join(__dirname, "energy-catalogue.js"), "utf8");
+const energyPageSource = fs.readFileSync(path.join(projectRoot, "energy/index.html"), "utf8");
 const calculatorContext = { window: {} };
 vm.runInNewContext(calculatorSource, calculatorContext);
 const {
@@ -23,6 +24,7 @@ vm.runInNewContext(energyCatalogueSource, catalogueContext);
 const catalogueProducts = catalogueContext.window.ElectronyEnergyProducts;
 const { recommendEnergyProducts } = calculatorContext.window.ElectronyEnergyCalculations;
 const solarPackageContext = { window: {} };
+vm.runInNewContext(energyCatalogueSource, solarPackageContext);
 vm.runInNewContext(energyPackageSource, solarPackageContext);
 const solarPackages = solarPackageContext.window.ElectronySolarPackages;
 const { filterEnergyProducts, getEnergyProductPage } = catalogueContext.window.ElectronyEnergyCatalogue;
@@ -158,11 +160,13 @@ test("does not fabricate catalogue matches when no supported rating is available
   assert.equal(recommendations.panels.length, 0);
 });
 
-test("package catalogue contains the four reconciled, priceable customer packages", () => {
-  assert.equal(solarPackages.length, 4);
+test("package catalogue contains the six reconciled customer packages", () => {
+  assert.equal(solarPackages.length, 6);
   assert.deepEqual(Array.from(solarPackages, (solarPackage) => solarPackage.name), [
     "Small Home Solar Package",
     "Medium Home Solar Package",
+    "Medium Home Solar Package — Option 2",
+    "Medium Home Solar Package — Option 3",
     "Large Home / Executive Solar Package",
     "Industrial / Company Solar Package"
   ]);
@@ -179,6 +183,13 @@ test("package catalogue contains the four reconciled, priceable customer package
   assert.equal(solarPackages[0].panelCount * solarPackages[0].panelWatts, solarPackages[0].solarArrayWatts);
   assert.equal(solarPackages[1].batteryNominalWh, 5120);
   assert.equal(solarPackages[1].components.some((component) => component.category === "Battery"), false);
+});
+
+test("Energy page replaces the connected-landscape intro with one Solar Packages section", () => {
+  assert.doesNotMatch(energyPageSource, /A connected(?: energy)? landscape/i);
+  assert.doesNotMatch(energyPageSource, /Product image unavailable/i);
+  assert.equal((energyPageSource.match(/<section\b[^>]*id="solar-packages"/g) || []).length, 1);
+  assert.match(energyPageSource, /Six solar packages, aligned to the current product catalogue/);
 });
 
 test("calculator chooses the smallest package that meets inverter, solar and backup requirements", () => {
@@ -218,6 +229,30 @@ test("calculator chooses the smallest package that meets inverter, solar and bac
   });
 });
 
+test("calculator compares the two Future-H options by their catalogue inverter and battery ratings", () => {
+  const result = recommendSolarPackages(solarPackages, {
+    inverterW: 6000,
+    solarW: 6000,
+    batteryNominalWh: 5300
+  });
+  const comparisons = [...result.recommended, ...result.explore];
+  const option2 = comparisons.find(({ package: solarPackage }) =>
+    solarPackage.id === "medium-home-office-option-2");
+  const option3 = comparisons.find(({ package: solarPackage }) =>
+    solarPackage.id === "medium-home-office-option-3");
+
+  assert.ok(option2);
+  assert.ok(option3);
+  assert.equal(option2.inverterMeets, true);
+  assert.equal(option2.solarMeets, true);
+  assert.equal(option2.batteryStatus, "meets");
+  assert.equal(option2.recommended, true);
+  assert.equal(option3.inverterMeets, true);
+  assert.equal(option3.solarMeets, true);
+  assert.equal(option3.batteryStatus, "below");
+  assert.equal(option3.recommended, false);
+});
+
 test("calculator requests a custom assessment when all package inverter ratings are too small", () => {
   const estimate = calculateEnergyEstimate({
     appliances: [{ quantity: 1, watts: 50000, hours: 2 }],
@@ -233,7 +268,7 @@ test("calculator requests a custom assessment when all package inverter ratings 
   });
   const result = recommendSolarPackages(solarPackages, estimate);
   assert.equal(result.recommended.length, 0);
-  assert.equal(result.explore.length, 4);
+  assert.equal(result.explore.length, 6);
   assert.ok(result.explore.every(({ inverterMeets }) => !inverterMeets));
 });
 

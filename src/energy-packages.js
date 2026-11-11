@@ -1,5 +1,9 @@
 const packageCatalogueDocument = "POWER-SOLAR PL-1.pdf";
 const packageCompositionDocument = "Solar_Power_Solution_Packages.pdf";
+if (!Array.isArray(window.ElectronyEnergyProducts)) {
+  throw new Error("Energy product catalogue data did not load.");
+}
+const energyProductsById = new Map(window.ElectronyEnergyProducts.map((product) => [product.id, product]));
 
 function packageComponent(category, productId, quantity, details, unit = "unit") {
   return { category, productId, quantity, details, unit };
@@ -130,6 +134,68 @@ const packageCatalogueData = [
     compositionSource: { document: packageCompositionDocument, page: 2 }
   }
 ];
+
+const mediumHomePackageIndex = packageCatalogueData.findIndex((solarPackage) => solarPackage.id === "medium-home-office");
+if (mediumHomePackageIndex < 0) {
+  throw new Error("The existing Medium Home Solar Package is required to build its catalogue options.");
+}
+const mediumHomePackage = packageCatalogueData[mediumHomePackageIndex];
+const mediumHomeNonInverterComponents = mediumHomePackage.components.filter((component) =>
+  !["Inverter", "Battery", "Integrated inverter and battery"].includes(component.category));
+
+function createMediumHomeOption(id, name, productId) {
+  const featuredProduct = energyProductsById.get(productId);
+  if (!featuredProduct) {
+    throw new Error(`Unknown catalogue product "${productId}" for solar package "${id}".`);
+  }
+  const inverterSpecification = featuredProduct.specifications
+    .map((specification) => specification.match(/^(\d+(?:\.\d+)?)\s*kW$/i))
+    .find(Boolean);
+  const batterySpecification = featuredProduct.specifications
+    .map((specification) => specification.match(/^(\d+(?:\.\d+)?)\s*kWh$/i))
+    .find(Boolean);
+  if (!inverterSpecification || !batterySpecification) {
+    throw new Error(`Catalogue ratings are required for solar package "${id}".`);
+  }
+
+  const inverterKilowatts = Number(inverterSpecification[1]);
+  const batteryKilowattHours = Number(batterySpecification[1]);
+  return {
+    ...mediumHomePackage,
+    id,
+    name,
+    sceneId: "medium-home-office",
+    capacity: `${inverterKilowatts} kW inverter`,
+    inverterWatts: inverterKilowatts * 1000,
+    batteryNominalWh: batteryKilowattHours * 1000,
+    batterySummary: `${batteryKilowattHours} kWh battery is integrated in the ${featuredProduct.name}; no separate battery is charged.`,
+    compatibilityNotes: `The listed ${featuredProduct.name} is a combined ${inverterKilowatts} kW inverter and ${batteryKilowattHours} kWh battery system. Its integrated battery is counted once. Confirm PV string design, load phase and the complete system's suitability before installation.`,
+    components: [
+      packageComponent(
+        "Integrated inverter and battery",
+        featuredProduct.id,
+        1,
+        `${featuredProduct.name} (${featuredProduct.model}); ${inverterSpecification[0]}, integrated ${batterySpecification[0]} battery.`
+      ),
+      ...mediumHomeNonInverterComponents
+    ]
+  };
+}
+
+packageCatalogueData.splice(
+  mediumHomePackageIndex + 1,
+  0,
+  createMediumHomeOption(
+    "medium-home-office-option-2",
+    "Medium Home Solar Package — Option 2",
+    "growatt-sim-6000es-plus-h-battery-base-6kw-5-5-kwh"
+  ),
+  createMediumHomeOption(
+    "medium-home-office-option-3",
+    "Medium Home Solar Package — Option 3",
+    "growatt-sim-6000es-plus-h-battery-base-6kw-5-12-kwh"
+  )
+);
 
 window.ElectronySolarPackages = Object.freeze(packageCatalogueData.map((solarPackage) => Object.freeze({
   ...solarPackage,

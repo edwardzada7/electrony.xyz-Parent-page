@@ -281,6 +281,14 @@ function createPackageCard(solarPackage, comparison = null) {
   const application = createElement("p", "energy-package-card__application", solarPackage.application);
   const title = createElement("h3", "energy-package-card__title", solarPackage.name);
   const capacity = createElement("p", "energy-package-card__capacity", `System capacity: ${solarPackage.capacity}`);
+  const featuredComponent = solarPackage.components.find((component) =>
+    component.category === "Integrated inverter and battery");
+  const featuredProduct = featuredComponent
+    ? energyProducts.find((product) => product.id === featuredComponent.productId)
+    : null;
+  const featuredProductLabel = featuredProduct
+    ? createElement("p", "energy-package-card__featured", `Featured inverter + battery: ${featuredProduct.name}`)
+    : null;
   const badge = comparison
     ? createElement("p", "energy-package-card__badge", comparison.recommended ? "Preliminary rating comparison" : "Explore with Electrony")
     : null;
@@ -291,8 +299,9 @@ function createPackageCard(solarPackage, comparison = null) {
     createElement("li", "", solarPackage.batterySummary)
   );
   card.append(title, capacity, application);
+  if (featuredProductLabel) card.appendChild(featuredProductLabel);
   if (badge) card.appendChild(badge);
-  card.appendChild(createPackageScene(solarPackage.id));
+  card.appendChild(createPackageScene(solarPackage.sceneId || solarPackage.id));
   card.appendChild(summary);
   if (comparison) {
     const comparisonList = createElement("ul", "energy-package-card__comparison");
@@ -640,22 +649,19 @@ function renderProductDetails(product, calculationSummary = "") {
   const imageFigure = document.querySelector("#energy-dialog-image");
   const image = document.querySelector("#energy-dialog-image-photo");
   const imageNote = document.querySelector("#energy-dialog-image-note");
-  const imageFallback = document.querySelector("#energy-dialog-image-fallback");
   const imageUrl = safeImageUrl(product.image?.url);
   image.onerror = null;
   image.removeAttribute("src");
   image.alt = "";
   image.hidden = true;
-  imageFallback.hidden = true;
   imageNote.textContent = product.image?.note || "";
   imageNote.hidden = !product.image?.note;
   imageFigure.hidden = !imageUrl || !product.image?.alt;
   if (imageUrl && product.image?.alt) {
     image.alt = product.image.alt;
     image.onerror = () => {
-      image.hidden = true;
+      imageFigure.hidden = true;
       imageNote.hidden = true;
-      imageFallback.hidden = false;
     };
     image.src = imageUrl;
     image.hidden = false;

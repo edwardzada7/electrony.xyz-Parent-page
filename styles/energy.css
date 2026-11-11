@@ -318,11 +318,6 @@
   color: var(--energy-forest);
 }
 
-.energy-intro {
-  background: var(--energy-paper);
-}
-
-.energy-intro__layout,
 .energy-section-heading {
   display: grid;
   grid-template-columns: minmax(0, 1.1fr) minmax(16rem, 0.9fr);
@@ -330,7 +325,6 @@
   gap: clamp(2rem, 7vw, 7rem);
 }
 
-.energy-intro h2,
 .energy-section-heading h2,
 .energy-audiences h2,
 .energy-quote h2,
@@ -343,17 +337,12 @@
   line-height: 1.04;
 }
 
-.energy-intro__copy p,
 .energy-section-heading > p,
 .energy-audiences__intro > p:last-child {
   margin: 0;
   color: var(--energy-muted);
   font-size: 0.98rem;
   line-height: 1.8;
-}
-
-.energy-intro__copy p + p {
-  margin-top: 1rem;
 }
 
 .energy-section-heading {
@@ -1243,7 +1232,6 @@
     display: none;
   }
 
-  .energy-intro__layout,
   .energy-section-heading,
   .energy-audiences__layout,
   .energy-quote__layout {
@@ -2518,8 +2506,7 @@
   object-fit: contain;
 }
 
-.energy-product-dialog__image figcaption,
-.energy-product-dialog__image-fallback {
+.energy-product-dialog__image figcaption {
   display: block;
   padding: 0 1rem 1rem;
   color: var(--energy-muted);
@@ -2915,6 +2902,18 @@
 .energy-package-card__capacity {
   color: var(--energy-forest);
   font-weight: 600;
+}
+
+.energy-package-card__featured {
+  margin: 0;
+  padding: 0.6rem 0.75rem;
+  border-left: 3px solid var(--energy-forest);
+  background: #f3f8f1;
+  color: var(--energy-forest);
+  font-size: 0.82rem;
+  font-weight: 600;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
 }
 
 .energy-package-card__suitability {
