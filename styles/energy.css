@@ -2619,12 +2619,11 @@
 
 .energy-package-photo {
   display: grid;
-  grid-template-rows: minmax(0, 1fr);
   width: 100%;
-  height: clamp(22rem, 38vw, 30rem);
+  aspect-ratio: 9 / 16;
   place-items: center;
   margin: 0;
-  overflow: hidden;
+  overflow: visible;
   border: 1px solid rgb(77 139 87 / 14%);
   border-radius: 0.75rem;
   background: #f5f8f3;
@@ -2635,6 +2634,7 @@
   width: 100%;
   height: 100%;
   object-fit: contain;
+  object-position: center;
 }
 
 .energy-package-card {

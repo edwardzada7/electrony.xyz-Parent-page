@@ -12,6 +12,7 @@ const energyCalculationsSource = fs.readFileSync(path.join(__dirname, "energy-ca
 const energyPackageSource = fs.readFileSync(path.join(__dirname, "energy-packages.js"), "utf8");
 const energyPricingSource = fs.readFileSync(path.join(__dirname, "energy-pricing.js"), "utf8");
 const energyCatalogueSource = fs.readFileSync(path.join(__dirname, "energy-catalogue.js"), "utf8");
+const energyStylesSource = fs.readFileSync(path.join(projectRoot, "styles/energy.css"), "utf8");
 const energyPageSource = fs.readFileSync(path.join(projectRoot, "energy/index.html"), "utf8");
 const calculatorContext = { window: {} };
 vm.runInNewContext(calculatorSource, calculatorContext);
@@ -71,6 +72,18 @@ test("solar package images map to their exact readable JPG assets", () => {
   const mediumOptions = solarPackages.filter(({ name }) => name.startsWith("Medium Home Solar Package"));
   assert.ok(mediumOptions.length > 1);
   assert.ok(mediumOptions.every(({ image }) => image.url === mediumImageUrl));
+});
+
+test("solar package image cards preserve the full image in a centered responsive frame", () => {
+  const imageFrame = energyStylesSource.match(/\.energy-package-photo\s*\{([^}]*)\}/);
+  const packageImage = energyStylesSource.match(/\.energy-package-photo img\s*\{([^}]*)\}/);
+  assert.ok(imageFrame);
+  assert.ok(packageImage);
+  assert.match(imageFrame[1], /width:\s*100%/);
+  assert.match(imageFrame[1], /aspect-ratio:\s*9\s*\/\s*16/);
+  assert.match(imageFrame[1], /overflow:\s*visible/);
+  assert.match(packageImage[1], /object-fit:\s*contain/);
+  assert.match(packageImage[1], /object-position:\s*center/);
 });
 
 test("calculates multiple appliance loads and rounds system capacity upward", () => {
