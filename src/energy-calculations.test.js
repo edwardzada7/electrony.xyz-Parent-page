@@ -185,6 +185,32 @@ test("package catalogue contains the six reconciled customer packages", () => {
   assert.equal(solarPackages[1].components.some((component) => component.category === "Battery"), false);
 });
 
+test("maps each uploaded solar package image to its matching package", () => {
+  const expectedImages = new Map([
+    ["basic-small-home-office", "Small home Solar package.jpg"],
+    ["medium-home-office", "medium home solar package.jpg"],
+    ["premium-executive-corporate", "Large Home Solar package.jpg"],
+    ["heavy-commercial-industrial", "Industrial solar package.jpg"]
+  ]);
+  const imagePackages = solarPackages.filter((solarPackage) => expectedImages.has(solarPackage.id));
+  const filenames = imagePackages.map((solarPackage) => {
+    assert.ok(solarPackage.image.alt);
+    assert.ok(solarPackage.image.width > 0);
+    assert.ok(solarPackage.image.height > 0);
+    const imageUrl = new URL(solarPackage.image.url, "https://energy.example/energy/");
+    assert.equal(imageUrl.pathname.startsWith("/energy/"), true);
+    const filename = decodeURIComponent(path.basename(imageUrl.pathname));
+    assert.equal(filename, expectedImages.get(solarPackage.id));
+    assert.ok(fs.existsSync(path.join(projectRoot, "energy", filename)), `${filename} should exist`);
+    return filename;
+  });
+  assert.equal(new Set(filenames).size, expectedImages.size);
+  ["medium-home-office-option-2", "medium-home-office-option-3"].forEach((packageId) => {
+    const option = solarPackages.find((solarPackage) => solarPackage.id === packageId);
+    assert.equal(option.image.url, solarPackages.find(({ id }) => id === "medium-home-office").image.url);
+  });
+});
+
 test("Energy page replaces the connected-landscape intro with one Solar Packages section", () => {
   assert.doesNotMatch(energyPageSource, /A connected(?: energy)? landscape/i);
   assert.doesNotMatch(energyPageSource, /Product image unavailable/i);

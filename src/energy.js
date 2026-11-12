@@ -3,12 +3,14 @@ const energyCategories = window.ElectronyEnergyCategories;
 const solarPackages = window.ElectronySolarPackages;
 const energyCatalogue = window.ElectronyEnergyCatalogue;
 const smallHomeSolarGuide = window.ElectronySmallHomeSolarGuide;
+const solarPackageGuides = window.ElectronySolarPackageGuides;
 if (!Array.isArray(energyProducts) || !energyProducts.length || !energyCategories) {
   throw new Error("Energy catalogue data did not load.");
 }
-if (!Array.isArray(solarPackages) || !energyCatalogue || !smallHomeSolarGuide) {
+if (!Array.isArray(solarPackages) || !energyCatalogue || !smallHomeSolarGuide || !Array.isArray(solarPackageGuides)) {
   throw new Error("Solar package catalogue data did not load.");
 }
+const solarPackageGuidesById = new Map(solarPackageGuides.map((guide) => [guide.packageId, guide]));
 
 const searchInput = document.querySelector("#energy-search");
 const clearSearchButton = document.querySelector("#energy-clear-search");
@@ -163,55 +165,75 @@ function cataloguePriceLabel(product) {
   return product.priceNgn === null ? "Request current price" : `₦${product.priceDisplay}`;
 }
 
-function createPackageGuide() {
+function createPackageGuide(guide) {
   const disclosure = document.createElement("details");
   disclosure.className = "energy-package-guide";
-  const trigger = createElement("summary", "energy-package-guide__trigger", smallHomeSolarGuide.trigger);
+  const trigger = createElement("summary", "energy-package-guide__trigger", guide.trigger);
   disclosure.appendChild(trigger);
   const content = createElement("div", "energy-package-guide__content");
 
   const powerSection = createElement("section", "energy-package-guide__section");
   powerSection.appendChild(createElement("h4", "", "Power and energy limits"));
   const specifications = createElement("dl", "energy-package-guide__specifications");
-  smallHomeSolarGuide.specifications.forEach((specification) => {
+  guide.specifications.forEach((specification) => {
     const item = createElement("div", "energy-package-guide__specification");
     item.append(createElement("dt", "", specification.label), createElement("dd", "", specification.value));
     specifications.appendChild(item);
   });
   powerSection.append(
     specifications,
-    createElement("p", "energy-package-guide__lead", smallHomeSolarGuide.maximumLoad.maximum),
-    createElement("p", "", smallHomeSolarGuide.maximumLoad.recommended),
+    createElement("p", "energy-package-guide__lead", guide.maximumLoad.maximum),
+    createElement("p", "", guide.maximumLoad.recommended)
+  );
+  if (guide.systemNote) {
+    powerSection.appendChild(createElement("p", "energy-package-guide__note", guide.systemNote));
+  }
+  if (guide.maximumLoad.warning) {
+    powerSection.appendChild(createElement("p", "energy-package-guide__phase-warning", guide.maximumLoad.warning));
+  }
+  powerSection.append(
     createElement("h5", "", "Overnight / no-sun battery backup"),
-    createElement("p", "", smallHomeSolarGuide.backup.energy)
+    createElement("p", "", guide.backup.energy)
   );
   const backupEstimates = createElement("dl", "energy-package-guide__estimates");
-  smallHomeSolarGuide.backup.estimates.forEach((estimate) => {
+  guide.backup.estimates.forEach((estimate) => {
     const item = createElement("div", "");
     item.append(createElement("dt", "", estimate.load), createElement("dd", "", estimate.backup));
     backupEstimates.appendChild(item);
   });
-  powerSection.append(backupEstimates, createElement("p", "energy-package-guide__note", smallHomeSolarGuide.backup.note));
+  powerSection.append(backupEstimates);
+  if (guide.backup.note) {
+    powerSection.appendChild(createElement("p", "energy-package-guide__note", guide.backup.note));
+  }
   powerSection.append(
     createElement("h5", "", "Daytime solar generation"),
-    createElement("p", "energy-package-guide__lead", smallHomeSolarGuide.daytimeSolar.peak),
-    createElement("p", "", smallHomeSolarGuide.daytimeSolar.period),
-    createElement("p", "", smallHomeSolarGuide.daytimeSolar.charging),
-    createElement("p", "energy-package-guide__note", smallHomeSolarGuide.daytimeSolar.note)
+    createElement("p", "energy-package-guide__lead", guide.daytimeSolar.peak)
   );
+  if (guide.daytimeSolar.period) {
+    powerSection.appendChild(createElement("p", "", guide.daytimeSolar.period));
+  }
+  if (guide.daytimeSolar.charging) {
+    powerSection.appendChild(createElement("p", "", guide.daytimeSolar.charging));
+  }
+  if (guide.daytimeSolar.note) {
+    powerSection.appendChild(createElement("p", "energy-package-guide__note", guide.daytimeSolar.note));
+  }
 
   const everydaySection = createElement("section", "energy-package-guide__section");
-  everydaySection.append(
-    createElement("h4", "", smallHomeSolarGuide.everyday.title),
-    createElement("p", "energy-package-guide__lead", smallHomeSolarGuide.everyday.description),
-    createElement("p", "energy-package-guide__note", smallHomeSolarGuide.everyday.wattageNote)
-  );
+  everydaySection.appendChild(createElement("h4", "", guide.everyday.title));
+  if (guide.everyday.description) {
+    everydaySection.appendChild(createElement("p", "energy-package-guide__lead", guide.everyday.description));
+  }
+  if (guide.everyday.wattageNote) {
+    everydaySection.appendChild(createElement("p", "energy-package-guide__note", guide.everyday.wattageNote));
+  }
   const tableWrap = createElement("div", "energy-package-guide__table-wrap");
   const table = createElement("table", "energy-package-guide__table");
-  table.appendChild(createElement("caption", "", "Estimated appliance load breakdown"));
+  table.appendChild(createElement("caption", "", guide.everyday.tableHeading || "Estimated appliance load breakdown"));
   const header = document.createElement("thead");
   const headerRow = document.createElement("tr");
-  ["Appliance", "Quantity", "Estimated wattage each", "Total load"].forEach((label) => {
+  const applianceLabel = guide.everyday.equipmentLabel || "Appliance";
+  [applianceLabel, "Quantity", "Estimated wattage each", "Total load"].forEach((label) => {
     const cell = createElement("th", "", label);
     cell.scope = "col";
     headerRow.appendChild(cell);
@@ -219,10 +241,10 @@ function createPackageGuide() {
   header.appendChild(headerRow);
   table.appendChild(header);
   const body = document.createElement("tbody");
-  smallHomeSolarGuide.everyday.items.forEach((item) => {
+  guide.everyday.items.forEach((item) => {
     const row = document.createElement("tr");
     [
-      ["Appliance", item.appliance],
+      [applianceLabel, item.appliance],
       ["Quantity", item.quantity],
       ["Estimated wattage each", item.wattage],
       ["Total load", item.total]
@@ -237,10 +259,10 @@ function createPackageGuide() {
   const totalRow = document.createElement("tr");
   totalRow.className = "energy-package-guide__table-total";
   [
-    ["Appliance", "Total simultaneous load"],
+    [applianceLabel, "Total simultaneous load"],
     ["Quantity", ""],
     ["Estimated wattage each", ""],
-    ["Total load", smallHomeSolarGuide.everyday.total]
+    ["Total load", guide.everyday.total]
   ].forEach(([label, value], index) => {
     const cell = index === 0 ? createElement("th", "", value) : createElement("td", "", value);
     if (index === 0) cell.scope = "row";
@@ -250,15 +272,21 @@ function createPackageGuide() {
   body.appendChild(totalRow);
   table.appendChild(body);
   tableWrap.appendChild(table);
-  everydaySection.append(tableWrap, createElement("p", "energy-package-guide__note", smallHomeSolarGuide.everyday.note));
+  everydaySection.appendChild(tableWrap);
+  if (guide.everyday.buffer) {
+    everydaySection.appendChild(createElement("p", "energy-package-guide__lead", guide.everyday.buffer));
+  }
+  if (guide.everyday.note) {
+    everydaySection.appendChild(createElement("p", "energy-package-guide__note", guide.everyday.note));
+  }
 
   const heavySection = createElement("section", "energy-package-guide__section");
-  heavySection.append(
-    createElement("h4", "", smallHomeSolarGuide.heavyAppliances.title),
-    createElement("p", "energy-package-guide__lead", smallHomeSolarGuide.heavyAppliances.description)
-  );
+  heavySection.appendChild(createElement("h4", "", guide.heavyAppliances.title));
+  if (guide.heavyAppliances.description) {
+    heavySection.appendChild(createElement("p", "energy-package-guide__lead", guide.heavyAppliances.description));
+  }
   const heavyList = createElement("ol", "energy-package-guide__heavy-list");
-  smallHomeSolarGuide.heavyAppliances.items.forEach((appliance) => {
+  guide.heavyAppliances.items.forEach((appliance) => {
     const item = document.createElement("li");
     item.appendChild(createElement("h5", "", appliance.name));
     const details = createElement("ul", "");
@@ -266,17 +294,23 @@ function createPackageGuide() {
     item.appendChild(details);
     heavyList.appendChild(item);
   });
-  heavySection.append(heavyList, createElement("p", "energy-package-guide__note", smallHomeSolarGuide.heavyAppliances.note));
+  heavySection.appendChild(heavyList);
+  if (guide.heavyAppliances.note) {
+    heavySection.appendChild(createElement("p", "energy-package-guide__note", guide.heavyAppliances.note));
+  }
 
   const avoidSection = createElement("section", "energy-package-guide__section energy-package-guide__warning");
-  avoidSection.append(createElement("h4", "", smallHomeSolarGuide.avoid.title));
+  avoidSection.append(createElement("h4", "", guide.avoid.title));
   const warningLabel = createElement("p", "energy-package-guide__warning-label", "Caution — avoid these loads:");
   avoidSection.appendChild(warningLabel);
   const avoidList = createElement("ul", "");
-  smallHomeSolarGuide.avoid.items.forEach((item) => avoidList.appendChild(createElement("li", "", item)));
-  avoidSection.append(avoidList, createElement("p", "energy-package-guide__note", smallHomeSolarGuide.avoid.note));
+  guide.avoid.items.forEach((item) => avoidList.appendChild(createElement("li", "", item)));
+  avoidSection.append(avoidList, createElement("p", "energy-package-guide__note", guide.avoid.note));
 
   content.append(powerSection, everydaySection, heavySection, avoidSection);
+  if (guide.disclaimer) {
+    content.appendChild(createElement("p", "energy-package-guide__disclaimer", guide.disclaimer));
+  }
   disclosure.appendChild(content);
   return disclosure;
 }
@@ -420,10 +454,12 @@ function createPackageCard(solarPackage, comparison = null) {
   card.append(title, capacity, application);
   if (featuredProductLabel) card.appendChild(featuredProductLabel);
   if (badge) card.appendChild(badge);
+  card.appendChild(createPackageImage(solarPackage, Boolean(comparison)));
   card.appendChild(createPackageScene(solarPackage.sceneId || solarPackage.id));
   card.appendChild(summary);
-  if (solarPackage.id === smallHomeSolarGuide.packageId) {
-    card.appendChild(createPackageGuide());
+  const packageGuide = solarPackageGuidesById.get(solarPackage.id);
+  if (packageGuide) {
+    card.appendChild(createPackageGuide(packageGuide));
   }
   if (comparison) {
     const comparisonList = createElement("ul", "energy-package-card__comparison");
@@ -509,6 +545,23 @@ function createPackageCard(solarPackage, comparison = null) {
   card.append(source, compositionSource, priceSource, footer);
   card.insertBefore(pricingSummary.cloneNode(true), details);
   return card;
+}
+
+function createPackageImage(solarPackage, prioritize = false) {
+  const imageUrl = safeImageUrl(solarPackage.image?.url);
+  if (!imageUrl || !solarPackage.image?.alt) {
+    throw new Error(`No solar package image is configured for "${solarPackage.id}".`);
+  }
+  const figure = createElement("figure", "energy-package-photo");
+  const image = document.createElement("img");
+  image.src = imageUrl;
+  image.alt = solarPackage.image.alt;
+  image.width = solarPackage.image.width;
+  image.height = solarPackage.image.height;
+  image.loading = prioritize ? "eager" : "lazy";
+  image.decoding = "async";
+  figure.appendChild(image);
+  return figure;
 }
 
 function createPackageScene(packageId) {

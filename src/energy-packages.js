@@ -34,6 +34,12 @@ const packageCatalogueData = [
     name: "Small Home Solar Package",
     capacity: "3.6 kW inverter",
     application: "Smaller homes with lighting, fans, television, refrigeration and other modest essential loads.",
+    image: {
+      url: "../energy/Small home Solar package.jpg",
+      alt: "Small Home Solar Package overview with a Growatt inverter, solar panels, battery and household appliances.",
+      width: 688,
+      height: 1532
+    },
     loadCategory: "Small home",
     inverterWatts: 3600,
     panelCount: 8,
@@ -60,6 +66,12 @@ const packageCatalogueData = [
     name: "Medium Home Solar Package",
     capacity: "6 kW inverter",
     application: "Medium household or home-office loads with multiple appliances and a moderate backup requirement.",
+    image: {
+      url: "../energy/medium home solar package.jpg",
+      alt: "Medium Home Solar Package overview with a Growatt all-in-one inverter, solar panels, integrated battery and home appliances.",
+      width: 768,
+      height: 1376
+    },
     loadCategory: "Medium home / home office",
     inverterWatts: 6000,
     panelCount: 10,
@@ -85,6 +97,12 @@ const packageCatalogueData = [
     name: "Large Home / Executive Solar Package",
     capacity: "8 kW inverter",
     application: "Larger homes and executive or corporate offices with higher connected loads and extended storage needs.",
+    image: {
+      url: "../energy/Large Home Solar package.jpg",
+      alt: "Large Home / Executive Solar Package overview with a Deye inverter, solar panels, battery and home-office loads.",
+      width: 768,
+      height: 1376
+    },
     loadCategory: "Large home / executive",
     inverterWatts: 8000,
     panelCount: 12,
@@ -112,6 +130,12 @@ const packageCatalogueData = [
     name: "Industrial / Company Solar Package",
     capacity: "50 kW three-phase inverter",
     application: "Commercial and industrial sites requiring a three-phase, high-voltage battery system.",
+    image: {
+      url: "../energy/Industrial solar package.jpg",
+      alt: "Industrial / Company Solar Package overview with a Deye three-phase inverter, solar array, battery bank and commercial equipment.",
+      width: 768,
+      height: 1376
+    },
     loadCategory: "Industrial / company",
     inverterWatts: 50000,
     panelCount: 70,
@@ -200,6 +224,7 @@ packageCatalogueData.splice(
 window.ElectronySolarPackages = Object.freeze(packageCatalogueData.map((solarPackage) => Object.freeze({
   ...solarPackage,
   components: Object.freeze(solarPackage.components.map((component) => Object.freeze(component))),
+  image: Object.freeze(solarPackage.image),
   source: Object.freeze(solarPackage.source),
   compositionSource: Object.freeze(solarPackage.compositionSource)
 })));

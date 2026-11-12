@@ -2617,6 +2617,25 @@
   gap: 1rem;
 }
 
+.energy-package-photo {
+  display: grid;
+  width: 100%;
+  height: clamp(22rem, 38vw, 30rem);
+  place-items: center;
+  margin: 0;
+  overflow: hidden;
+  border: 1px solid rgb(77 139 87 / 14%);
+  border-radius: 0.75rem;
+  background: #f5f8f3;
+}
+
+.energy-package-photo img {
+  display: block;
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+}
+
 .energy-package-card {
   display: flex;
   min-width: 0;
@@ -3052,6 +3071,22 @@
 .energy-package-guide__note {
   color: var(--energy-muted);
   font-size: 0.76rem;
+}
+
+.energy-package-guide__phase-warning {
+  padding: 0.7rem 0.8rem;
+  border-left: 4px solid #a34a24;
+  background: #fff7f1;
+  color: #752f18;
+  font-weight: 700;
+}
+
+.energy-package-guide__disclaimer {
+  margin: 0;
+  padding-top: 0.75rem;
+  border-top: 1px solid var(--energy-line);
+  color: var(--energy-muted);
+  font-size: 0.74rem;
 }
 
 .energy-package-guide__specifications {
