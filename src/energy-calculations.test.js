@@ -48,6 +48,31 @@ test("Energy page scripts do not redeclare page-level lexical bindings", () => {
   assert.deepEqual(conflicts, []);
 });
 
+test("solar package images map to their exact readable JPG assets", () => {
+  const expectedImages = new Map([
+    ["Small Home Solar Package", "/energy/Small home Solar package.jpg"],
+    ["Medium Home Solar Package", "/energy/medium home solar package.jpg"],
+    ["Large Home / Executive Solar Package", "/energy/Large Home Solar package.jpg"],
+    ["Industrial / Company Solar Package", "/energy/Industrial solar package.jpg"]
+  ]);
+  const mediumImageUrl = expectedImages.get("Medium Home Solar Package");
+
+  for (const [packageName, imageUrl] of expectedImages) {
+    const solarPackage = solarPackages.find(({ name }) => name === packageName);
+    assert.ok(solarPackage, `Missing solar package "${packageName}"`);
+    assert.equal(solarPackage.image.url, imageUrl);
+    assert.ok(solarPackage.image.alt);
+    assert.ok(fs.existsSync(path.join(projectRoot, imageUrl.slice(1))), imageUrl);
+    for (const pageUrl of ["https://energy.example/", "https://energy.example/energy/"]) {
+      assert.equal(new URL(solarPackage.image.url, pageUrl).pathname, imageUrl.replaceAll(" ", "%20"));
+    }
+  }
+
+  const mediumOptions = solarPackages.filter(({ name }) => name.startsWith("Medium Home Solar Package"));
+  assert.ok(mediumOptions.length > 1);
+  assert.ok(mediumOptions.every(({ image }) => image.url === mediumImageUrl));
+});
+
 test("calculates multiple appliance loads and rounds system capacity upward", () => {
   const result = calculateEnergyEstimate({
     appliances: [
