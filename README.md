@@ -120,11 +120,11 @@ Before deploying, confirm in the identity project that the Bills registration is
 
 ## Electrony Automobile
 
-The public Electrony Automobile page is available at `/automobile/`. Its 17 source-documented vehicle records (13 original models and four Dongfeng pickups) are maintained in [`src/automobile-catalogue.js`](./src/automobile-catalogue.js), separately from the page renderer. Brochure specifications and availability are presented for enquiry, not as confirmation of stock, ownership, authorized-dealer status or manufacturer partnership. Source PDFs are local reference material and are excluded from public builds. The internal landing-page link is maintained in `src/config.js` and the product record in `src/products.js`.
+The public Electrony Automobile page is available at `/automobile/`. Its 17 source-documented vehicle records (13 original models and four Dongfeng pickups) are maintained in [`src/automobile-catalogue.js`](./src/automobile-catalogue.js), separately from the page renderer. Fourteen supplied catalogue prices are displayed from numeric vehicle data; confirm current price and availability by enquiry. Listings do not confirm stock, ownership, authorized-dealer status or manufacturer partnership. Source PDFs are local reference material and are excluded from public builds. The internal landing-page link is maintained in `src/config.js` and the product record in `src/products.js`.
 
 The existing ROX 01 showcase includes a local photo and video gallery; its original showcase image and enquiry action are retained. The uploaded media is presented under the ROX Motor brand rather than attributed to a specific trim because the source leaflet is for ROX ADAMAS and the media filenames do not establish the exact model variant. The two MP4 files in the `dongfeng-z9` asset folder are registered with that existing Z9 entry.
 
-Automobile vehicle details are rendered as hash-based views on the single public page, not as separate product landing pages. Records request confirmation of current price and availability and do not provide verified product identifiers, so the site does not emit Product/Offer markup or a Merchant Center feed. Keep each vehicle detail canonicalized to the Automobile page unless genuine, independently accessible product pages and verified sale data are introduced.
+Automobile vehicle details are rendered as hash-based views on the single public page, not as separate product landing pages. Records do not provide verified product identifiers, so the site does not emit Product/Offer markup or a Merchant Center feed. Keep each vehicle detail canonicalized to the Automobile page unless genuine, independently accessible product pages and verified sale data are introduced.
 
 ## Electrony Hardware
 

@@ -227,7 +227,12 @@ test("ROX uploads retain verified model attribution and keep other media shared"
   assert.equal(catalogue.vehicles.length, 17);
   const pickups = catalogue.vehicles.filter((vehicle) => vehicle.category === "Pickup");
   assert.equal(pickups.length, 4);
-  assert.ok(pickups.every((vehicle) => vehicle.priceLabel === "Price on Request"));
+  assert.deepEqual(Array.from(pickups, (vehicle) => [vehicle.name, vehicle.price]), [
+    ["RICH 6T", 35140100],
+    ["RICH 6", 35140100],
+    ["RICH 7", 41350000],
+    ["Z9", 60000000]
+  ]);
 
   const rox01 = catalogue.legacyShowcaseVehicles.find((vehicle) => vehicle.id === "rox-01");
   const adamas = catalogue.legacyShowcaseVehicles.find((vehicle) => vehicle.id === "rox-adamas");

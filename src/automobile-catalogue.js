@@ -11,7 +11,7 @@ const automobileVehicles = [
     powertrain: "Fully electric (BEV)",
     powertrainKey: "bev",
     seats: "5",
-    priceLabel: "Request current price",
+    price: 29055000,
     statusLabel: "Confirm availability",
     imageAlt: "NAMMI BOX fully electric hatchback in the Fouani Nigeria brochure",
     images: [
@@ -72,7 +72,7 @@ const automobileVehicles = [
     powertrain: "Petrol",
     powertrainKey: "petrol",
     seats: "5",
-    priceLabel: "Request current price",
+    price: 43850000,
     statusLabel: "Confirm availability",
     imageAlt: "Dongfeng MAGE M57 turbo petrol SUV in the Fouani Nigeria brochure",
     images: [
@@ -156,7 +156,7 @@ const automobileVehicles = [
     powertrain: "Extended-range electric (EREV)",
     powertrainKey: "erev",
     seats: "6",
-    priceLabel: "Request current price",
+    price: 63350000,
     statusLabel: "Confirm availability",
     imageAlt: "Dongfeng eπ 008 six-seat extended-range SUV in the Fouani Nigeria brochure",
     images: [
@@ -188,7 +188,7 @@ const automobileVehicles = [
     powertrain: "Petrol",
     powertrainKey: "petrol",
     seats: "5",
-    priceLabel: "Request current price",
+    price: 34160000,
     statusLabel: "Confirm availability",
     imageAlt: "Dongfeng SHINE C65 petrol sedan in the Fouani Nigeria brochure",
     images: [
@@ -217,7 +217,7 @@ const automobileVehicles = [
     powertrain: "Petrol",
     powertrainKey: "petrol",
     seats: "5",
-    priceLabel: "Request current price",
+    price: 34160000,
     statusLabel: "Confirm availability",
     imageAlt: "Dongfeng SHINE GS C68 petrol sport crossover in the Fouani Nigeria brochure",
     images: [
@@ -301,7 +301,7 @@ const automobileVehicles = [
     powertrain: "Extended-range electric (EREV)",
     powertrainKey: "erev",
     seats: "5",
-    priceLabel: "Request current price",
+    price: 90420100,
     statusLabel: "Confirm availability",
     imageAlt: "VOYAH FREE+ range-extended electric SUV in the Fouani Nigeria brochure",
     images: [
@@ -331,7 +331,7 @@ const automobileVehicles = [
     powertrain: "Plug-in hybrid (PHEV)",
     powertrainKey: "phev",
     seats: "5",
-    priceLabel: "Request current price",
+    price: 120550000,
     statusLabel: "Confirm availability",
     imageAlt: "M-HERO II 817 plug-in hybrid off-road SUV in the Fouani Nigeria brochure",
     images: ["../assets/automobile/vehicles/m-hero-ii-817/01-exterior.jpg"],
@@ -360,7 +360,7 @@ const automobileVehicles = [
     powertrain: "Extended-range electric (EREV)",
     powertrainKey: "erev",
     seats: "5",
-    priceLabel: "Request current price",
+    price: 195935000,
     statusLabel: "Confirm availability",
     imageAlt: "M-HERO I extended-range off-road SUV in the Fouani Nigeria brochure",
     images: ["../assets/automobile/vehicles/m-hero-i/01-exterior.jpg"],
@@ -388,7 +388,7 @@ const automobileVehicles = [
     powertrain: "Petrol",
     powertrainKey: "petrol",
     seats: "5",
-    priceLabel: "Price on Request",
+    price: 35140100,
     statusLabel: "Confirm current price and availability",
     imageAlt: "Dongfeng RICH 6T pickup pictured in the Fouani Nigeria pickup brochure",
     images: ["../assets/automobile/vehicles/dongfeng-rich-6t/01-exterior.jpg"],
@@ -412,7 +412,7 @@ const automobileVehicles = [
     powertrain: "Petrol",
     powertrainKey: "petrol",
     seats: "5",
-    priceLabel: "Price on Request",
+    price: 35140100,
     statusLabel: "Confirm current price and availability",
     imageAlt: "Dongfeng RICH 6 pickup pictured in the Fouani Nigeria pickup brochure",
     images: ["../assets/automobile/vehicles/dongfeng-rich-6/01-exterior.jpg"],
@@ -436,7 +436,7 @@ const automobileVehicles = [
     powertrain: "Petrol",
     powertrainKey: "petrol",
     seats: "5",
-    priceLabel: "Price on Request",
+    price: 41350000,
     statusLabel: "Confirm current price and availability",
     imageAlt: "Dongfeng RICH 7 pickup pictured in the Fouani Nigeria pickup brochure",
     images: ["../assets/automobile/vehicles/dongfeng-rich-7/01-exterior.jpg"],
@@ -460,7 +460,7 @@ const automobileVehicles = [
     powertrain: "Petrol",
     powertrainKey: "petrol",
     seats: "5",
-    priceLabel: "Price on Request",
+    price: 60000000,
     statusLabel: "Confirm current price and availability",
     imageAlt: "Dongfeng Z9 pickup pictured in the Fouani Nigeria pickup brochure",
     images: ["../assets/automobile/vehicles/dongfeng-z9/01-exterior.jpg"],
@@ -545,7 +545,7 @@ const legacyShowcaseVehicles = [
     category: "ROX Motor Collection",
     vehicleType: "ROX Motor model",
     powertrain: "",
-    priceLabel: "",
+    price: 114900000,
     statusLabel: "",
     description: "The original ROX model, with the supplied comparison describing a simpler interior and very good off-road capability.",
     images: ["../assets/automobile/vehicles/rox-01.jpg"],
@@ -574,7 +574,7 @@ const legacyShowcaseVehicles = [
     category: "ROX Motor Collection",
     vehicleType: "ROX Motor model",
     powertrain: "",
-    priceLabel: "",
+    price: 121100000,
     statusLabel: "",
     description: "A newer, upgraded ROX model, with the supplied comparison noting additional luxury and capability equipment; fitment depends on version and market.",
     images: [],
@@ -634,11 +634,21 @@ function getYouTubeVideoId(value) {
   return idPattern.test(videoId) ? videoId : "";
 }
 
+function formatVehiclePrice(price) {
+  if (!Number.isSafeInteger(price) || price <= 0) return "";
+  return new Intl.NumberFormat("en-NG", {
+    style: "currency",
+    currency: "NGN",
+    maximumFractionDigits: 0
+  }).format(price);
+}
+
 window.ElectronyAutomobileData = Object.freeze({
   vehicles: automobileVehicles,
   legacyShowcaseVehicles,
   roxComparisonRows,
   roxMotorSharedMedia,
   featuredVideos: [],
-  getYouTubeVideoId
+  getYouTubeVideoId,
+  formatVehiclePrice
 });

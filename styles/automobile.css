@@ -127,6 +127,8 @@
 .automobile-featured-card__body > div > p:last-child { margin: 0; color: var(--color-gray-700); font-size: 0.9rem; }
 .automobile-featured-card__footer, .automobile-vehicle-card__details { display: flex; align-items: center; justify-content: space-between; gap: 1rem; }
 .automobile-featured-card__footer { padding-top: 0.5rem; border-top: 1px solid var(--automobile-border); }
+.automobile-card-price { color: var(--color-ink); font-family: var(--font-label); font-size: 0.78rem; font-weight: 600; letter-spacing: 0.02em; line-height: 1.5; text-transform: none; overflow-wrap: anywhere; }
+.automobile-rox-card .automobile-card-price { color: var(--automobile-white); }
 .automobile-status { display: inline-flex; align-items: center; min-height: 1.7rem; padding: 0.3rem 0.55rem; border: 1px solid currentColor; font-family: var(--font-label); font-size: 0.55rem; letter-spacing: 0.08em; text-transform: uppercase; }
 .status-enquire { color: var(--automobile-red-deep); }
 .automobile-featured-card__footer a, .automobile-vehicle-card__cta { display: inline-flex; min-height: 2.75rem; align-items: center; color: var(--automobile-red-deep); font-family: var(--font-label); font-size: 0.62rem; letter-spacing: 0.1em; text-decoration: none; text-transform: uppercase; }

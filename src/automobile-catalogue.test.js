@@ -16,7 +16,8 @@ const {
   roxComparisonRows,
   roxMotorSharedMedia,
   featuredVideos,
-  getYouTubeVideoId
+  getYouTubeVideoId,
+  formatVehiclePrice
 } = browserContext.window.ElectronyAutomobileData;
 const originalVehicles = vehicles.filter((vehicle) => vehicle.category !== "Pickup");
 const pickupVehicles = vehicles.filter((vehicle) => vehicle.category === "Pickup");
@@ -53,6 +54,148 @@ test("contains each of the 13 original brochure vehicles exactly once", () => {
   }
 });
 
+test("stores the 14 supplied prices on their exact existing vehicle records", () => {
+  const expectedPrices = new Map([
+    ["MAGE M57", 43850000],
+    ["eπ 008", 63350000],
+    ["M-HERO II 817", 120550000],
+    ["NAMMI BOX", 29055000],
+    ["SHINE C65", 34160000],
+    ["SHINE GS C68", 34160000],
+    ["VOYAH FREE+", 90420100],
+    ["M-HERO I", 195935000],
+    ["RICH 6T", 35140100],
+    ["RICH 6", 35140100],
+    ["RICH 7", 41350000],
+    ["Z9", 60000000],
+    ["ROX 01", 114900000],
+    ["ROX ADAMAS", 121100000]
+  ]);
+  const pricedVehicles = [...vehicles, ...legacyShowcaseVehicles].filter((vehicle) => vehicle.price !== undefined);
+  assert.equal(pricedVehicles.length, expectedPrices.size);
+  for (const [name, price] of expectedPrices) {
+    const matches = pricedVehicles.filter((vehicle) => vehicle.name === name);
+    assert.equal(matches.length, 1, `${name} should appear as one priced catalogue record`);
+    assert.equal(matches[0].price, price, `${name} price`);
+  }
+  assert.equal(formatVehiclePrice(43850000), "₦43,850,000");
+  assert.equal(formatVehiclePrice(120550000), "₦120,550,000");
+  assert.equal(formatVehiclePrice(195935000), "₦195,935,000");
+  assert.equal(formatVehiclePrice(0), "");
+  assert.equal(formatVehiclePrice(undefined), "");
+  assert.equal(formatVehiclePrice(Number.NaN), "");
+  assert.equal(formatVehiclePrice(1.5), "");
+});
+
+test("vehicle prices use the shared formatter in cards, details and enquiry context", () => {
+  const html = fs.readFileSync(path.join(repositoryRoot, "automobile", "index.html"), "utf8");
+  assert.match(automobileSource, /function getVehiclePriceLabel\(vehicle\)/);
+  assert.match(automobileSource, /automobile-card-price.*getVehiclePriceLabel\(vehicle\)/);
+  assert.match(automobileSource, /const detailStatus = \[getVehiclePriceLabel\(vehicle\), vehicle\.statusLabel\]/);
+  assert.match(automobileSource, /automobile-enquiry-price"\)\.value = formatAutomobileVehiclePrice\(vehicle\.price\)/);
+  assert.match(automobileSource, /Catalogue price: \$\{price\}/);
+  assert.match(automobileSource, /vehicle\.brand} — \$\{vehicle\.name/);
+  assert.match(html, /data-message-label="Catalogue price" id="automobile-enquiry-price"/);
+});
+
+test("priced vehicle cards and detail views render the catalogue amount", () => {
+  const enquiryValues = {};
+  const renderable = { innerHTML: "", hidden: false, querySelectorAll: () => [] };
+  const form = {
+    querySelector(selector) {
+      return {
+        set value(value) {
+          enquiryValues[selector] = value;
+        }
+      };
+    }
+  };
+  const elements = new Map([
+    ["#vehicle-detail-content", renderable],
+    ["#vehicle-detail-view", renderable],
+    ["#automobile-vehicle-enquiry", form],
+    ["#rox-product-grid", { ...renderable }],
+    ["#rox-comparison-table", { ...renderable }],
+    ["#rox-comparison-mobile", { ...renderable }],
+    ["#featured-grid", { ...renderable }]
+  ]);
+  const rendererContext = vm.createContext({
+    URL,
+    document: {
+      title: "",
+      querySelector: (selector) => elements.get(selector) || { setAttribute() {} },
+      querySelectorAll: () => []
+    },
+    window: {
+      ElectronyAutomobileData: browserContext.window.ElectronyAutomobileData,
+      location: { href: "https://auto.electrony.xyz/" }
+    }
+  });
+  const rendererEnd = automobileSource.indexOf("\nfunction renderVehicleRoute()");
+  vm.runInContext(automobileSource.slice(0, rendererEnd), rendererContext, { filename: "automobile.js" });
+
+  const searchResults = (search) => {
+    rendererContext.searchTerm = search;
+    return Array.from(vm.runInContext(
+      "(activeState.search = searchTerm, getVisibleVehicles().map((vehicle) => vehicle.name))",
+      rendererContext
+    ));
+  };
+  vm.runInContext('activeState.brand = "dongfeng"; activeState.category = "Pickup";', rendererContext);
+  assert.deepEqual(searchResults("rich 6t"), ["RICH 6T"]);
+  vm.runInContext('activeState.brand = "all"; activeState.category = "all"; activeState.filter = "petrol";', rendererContext);
+  assert.deepEqual(searchResults("shine c65"), ["SHINE C65"]);
+  assert.deepEqual(searchResults("shine gs c68"), ["SHINE GS C68"]);
+  vm.runInContext('activeState.filter = "all"; activeState.search = "";', rendererContext);
+
+  rendererContext.testVehicle = vehicles.find((vehicle) => vehicle.name === "RICH 6T");
+  rendererContext.window.ElectronyConfig = { whatsappNumber: "2348012345678" };
+  const enquiryUrl = vm.runInContext("vehicleEnquiryUrl(testVehicle)", rendererContext);
+  const enquiryMessage = new URL(enquiryUrl).searchParams.get("text");
+  assert.ok(enquiryMessage.includes("Dongfeng — RICH 6T"));
+  assert.ok(enquiryMessage.includes("Catalogue price: ₦35,140,100"));
+  rendererContext.window.ElectronyConfig = null;
+  assert.equal(vm.runInContext("vehicleEnquiryUrl(testVehicle)", rendererContext), "#contact");
+
+  for (const [name, price] of [
+    ["MAGE M57", 43850000],
+    ["eπ 008", 63350000],
+    ["M-HERO II 817", 120550000],
+    ["NAMMI BOX", 29055000],
+    ["SHINE C65", 34160000],
+    ["SHINE GS C68", 34160000],
+    ["VOYAH FREE+", 90420100],
+    ["M-HERO I", 195935000],
+    ["RICH 6T", 35140100],
+    ["RICH 6", 35140100],
+    ["RICH 7", 41350000],
+    ["Z9", 60000000],
+    ["ROX 01", 114900000],
+    ["ROX ADAMAS", 121100000]
+  ]) {
+    const vehicle = [...vehicles, ...legacyShowcaseVehicles].find((item) => item.name === name);
+    rendererContext.testVehicle = vehicle;
+    const detailHtml = vm.runInContext("(renderVehicleDetail(testVehicle), document.title, document)", rendererContext);
+    assert.ok(renderable.innerHTML.includes(`Price: ${formatVehiclePrice(price)}`), `${name} detail price`);
+    assert.equal(enquiryValues["#automobile-enquiry-price"], formatVehiclePrice(price), `${name} enquiry price`);
+    const expectedProduct = vehicle.brand === "Dongfeng" ? `${vehicle.brand} ${name}` : `${vehicle.brand} — ${name}`;
+    assert.equal(enquiryValues["#automobile-enquiry-product"], expectedProduct, `${name} enquiry identity`);
+  }
+
+  for (const vehicle of vehicles.filter((item) => item.price !== undefined)) {
+    rendererContext.testVehicle = vehicle;
+    const cardHtml = vm.runInContext("createVehicleMarkup(testVehicle)", rendererContext);
+    assert.ok(cardHtml.includes(`Price: ${formatVehiclePrice(vehicle.price)}`), `${vehicle.name} card price`);
+  }
+
+  vm.runInContext("renderRoxCollection()", rendererContext);
+  const roxCards = elements.get("#rox-product-grid");
+  assert.ok(roxCards.innerHTML.includes(`Price: ${formatVehiclePrice(114900000)}`));
+  assert.ok(roxCards.innerHTML.includes(`Price: ${formatVehiclePrice(121100000)}`));
+  vm.runInContext("renderFeaturedVehicles()", rendererContext);
+  assert.ok(elements.get("#featured-grid").innerHTML.includes(`Price: ${formatVehiclePrice(120550000)}`));
+});
+
 test("each original brochure vehicle retains its sourced specs, source pages and images", () => {
   for (const [index, vehicle] of originalVehicles.entries()) {
     assert.equal(vehicle.source.publisher, "Fouani Nigeria Ltd");
@@ -62,7 +205,7 @@ test("each original brochure vehicle retains its sourced specs, source pages and
     assert.ok(vehicle.powertrain);
     assert.ok(vehicle.headlineSpecifications.length);
     assert.ok(vehicle.specificationGroups.length);
-    assert.equal(vehicle.priceLabel, "Request current price");
+    if (vehicle.price === undefined) assert.equal(vehicle.priceLabel, "Request current price");
     assert.equal(vehicle.statusLabel, "Confirm availability");
     assert.ok(vehicle.images.length);
 
@@ -88,7 +231,7 @@ test("pickup models preserve brochure-specific variants, specs and images while 
     assert.equal(vehicle.source.pdfPage, index + 4);
     assert.equal(vehicle.source.modelPage, index + 1);
     assert.equal(vehicle.source.modelPageCount, 4);
-    assert.equal(vehicle.priceLabel, "Price on Request");
+    assert.ok(vehicle.price > 0);
     assert.equal(vehicle.statusLabel, "Confirm current price and availability");
     assert.ok(vehicle.images.length);
     assert.ok(vehicle.headlineSpecifications.length);
@@ -143,8 +286,8 @@ test("ROX models use the supplied comparison wording and qualified equipment cla
   ]);
   assert.ok(adamas.specificationGroups.some((group) => group.items.some((item) => item.includes("Nappa and comfort features"))));
   assert.ok(adamas.specificationGroups.some((group) => group.items.some((item) => item.includes("connected/cloud features"))));
-  assert.equal(rox01.priceLabel, "");
-  assert.equal(adamas.priceLabel, "");
+  assert.equal(rox01.price, 114900000);
+  assert.equal(adamas.price, 121100000);
   assert.equal(roxMotorSharedMedia.images.length, 5);
   assert.equal(roxMotorSharedMedia.videos.length, 3);
   assert.equal(roxMotorSharedMedia.sharedBrandMedia, true);

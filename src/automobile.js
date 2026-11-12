@@ -2,6 +2,7 @@ const automobileInventory = window.ElectronyAutomobileData.vehicles;
 const legacyAutomobileShowcaseVehicles = window.ElectronyAutomobileData.legacyShowcaseVehicles;
 const featuredAutomobileVideos = window.ElectronyAutomobileData.featuredVideos;
 const parseAutomobileYouTubeVideoId = window.ElectronyAutomobileData.getYouTubeVideoId;
+const formatAutomobileVehiclePrice = window.ElectronyAutomobileData.formatVehiclePrice;
 const automobileRoxComparisonRows = window.ElectronyAutomobileData.roxComparisonRows;
 const automobileRoxSharedMedia = window.ElectronyAutomobileData.roxMotorSharedMedia;
 const allAutomobileVehicles = [...automobileInventory, ...legacyAutomobileShowcaseVehicles];
@@ -42,6 +43,11 @@ function findVehicleById(vehicleId) {
     || (roxMotorSharedMedia.id === vehicleId ? roxMotorSharedMedia : null);
 }
 
+function getVehiclePriceLabel(vehicle) {
+  const formattedPrice = formatAutomobileVehiclePrice(vehicle.price);
+  return formattedPrice ? `Price: ${formattedPrice}` : vehicle.priceLabel || "";
+}
+
 function getAutomobileWhatsAppNumber() {
   const number = String(window.ElectronyConfig?.whatsappNumber || "").replace(/\D/g, "");
   return /^\d{8,15}$/.test(number) ? number : "";
@@ -53,9 +59,11 @@ function vehicleEnquiryUrl(vehicle) {
   const details = vehicle.headlineSpecifications?.length
     ? `\nKey specifications: ${vehicle.headlineSpecifications.join("; ")}`
     : "";
+  const price = formatAutomobileVehiclePrice(vehicle.price);
   const productUrl = new URL(window.location.href);
   productUrl.hash = `vehicle/${vehicle.id}`;
-  const message = `Hello Electrony, I would like to enquire about ${vehicle.brand} — ${vehicle.name}. Please confirm current price and availability.${details}\nProduct page: ${productUrl.href}`;
+  const priceDetails = price ? `\nCatalogue price: ${price}` : "";
+  const message = `Hello Electrony, I would like to enquire about ${vehicle.brand} — ${vehicle.name}. Please confirm current price and availability.${priceDetails}${details}\nProduct page: ${productUrl.href}`;
   return `https://wa.me/${number}?text=${encodeURIComponent(message)}`;
 }
 
@@ -85,6 +93,7 @@ function createFeaturedVehicleMarkup(vehicle) {
       <div class="automobile-featured-card__body">
         <div><p class="automobile-card-label">${escapeHtml(vehicle.brand)}</p><h3>${escapeHtml(vehicle.name)}</h3></div>
         <div><p class="automobile-featured-card__power">${escapeHtml(vehicle.powertrain)}</p><p>${vehicle.headlineSpecifications.slice(0, 3).map(escapeHtml).join(" · ")}</p></div>
+        ${getVehiclePriceLabel(vehicle) ? `<p class="automobile-card-price">${escapeHtml(getVehiclePriceLabel(vehicle))}</p>` : ""}
         <div class="automobile-featured-card__footer">${createStatusMarkup(vehicle)}${galleryButton}<a href="#vehicle/${escapeHtml(vehicle.id)}">View details <span aria-hidden="true">→</span></a></div>
       </div>
     </article>`;
@@ -107,7 +116,7 @@ function createVehicleMarkup(vehicle) {
         <div><p class="automobile-card-label">${escapeHtml(vehicle.brand)} · ${escapeHtml(vehicle.category)}</p><h3>${escapeHtml(vehicle.name)}</h3><p class="automobile-vehicle-card__description">${escapeHtml(vehicle.vehicleType)}</p></div>
         <p class="automobile-vehicle-card__power">${escapeHtml(vehicle.powertrain)}</p>
         <p class="automobile-vehicle-card__specs">${vehicle.headlineSpecifications.map(escapeHtml).join(" · ")}</p>
-        <div class="automobile-vehicle-card__details"><span>${escapeHtml(vehicle.priceLabel)}</span>${createStatusMarkup(vehicle)}</div>
+        <div class="automobile-vehicle-card__details"><span class="automobile-card-price">${escapeHtml(getVehiclePriceLabel(vehicle))}</span>${createStatusMarkup(vehicle)}</div>
         ${galleryButton}
         <a href="#vehicle/${escapeHtml(vehicle.id)}" class="automobile-vehicle-card__cta" aria-label="${escapeHtml(actionDescription)}">${escapeHtml(actionLabel)} <span aria-hidden="true">↗</span></a>
       </div>
@@ -131,6 +140,7 @@ function renderRoxCollection() {
         <p class="automobile-rox-card__eyebrow">ROX Motor · ${escapeHtml(vehicle.category)}</p>
         <h3>${escapeHtml(vehicle.name)}</h3>
         <p class="automobile-rox-card__description">${escapeHtml(vehicle.description)}</p>
+        <p class="automobile-card-price">${escapeHtml(getVehiclePriceLabel(vehicle))}</p>
         <ul class="automobile-rox-card__specs">${vehicle.headlineSpecifications.map((item) => `<li>${escapeHtml(item)}</li>`).join("")}</ul>
         <div class="automobile-rox-card__actions">
           <a class="automobile-button automobile-button--red" href="#vehicle/${escapeHtml(vehicle.id)}">View details <span aria-hidden="true">→</span></a>
@@ -577,12 +587,12 @@ function renderVehicleDetail(vehicle) {
   const sourceUrl = new URL(window.location.href);
   sourceUrl.hash = `vehicle/${vehicle.id}`;
   const canonicalUrl = "https://auto.electrony.xyz/";
-  const sourceModel = vehicle.brand === "Dongfeng" ? `${vehicle.brand} ${vehicle.name}` : vehicle.name;
+  const sourceModel = vehicle.brand === "Dongfeng" ? `${vehicle.brand} ${vehicle.name}` : `${vehicle.brand} — ${vehicle.name}`;
   const detailType = [vehicle.vehicleType, vehicle.powertrain].filter(Boolean).join(" · ");
   const sourceMarkup = vehicle.source
     ? `<p>Source: <cite>${escapeHtml(vehicle.source.brochure)}</cite>, identified in the brochure as supplied by ${escapeHtml(vehicle.source.publisher)} (PDF page ${vehicle.source.pdfPage}; model page ${vehicle.source.modelPage} of ${vehicle.source.modelPageCount || 13}).</p>`
     : `<p>${escapeHtml(vehicle.specificationNote || "Specifications are provided for reference and should be confirmed for the exact vehicle before purchase.")}</p>`;
-  const detailStatus = [vehicle.priceLabel, vehicle.statusLabel].filter(Boolean);
+  const detailStatus = [getVehiclePriceLabel(vehicle), vehicle.statusLabel].filter(Boolean);
 
   content.innerHTML = `
     <a class="automobile-detail-back" href="${escapeHtml(vehicle.detailBackHref || "#vehicle-inventory")}">← ${vehicle.detailBackHref ? "Back to the ROX collection" : "Back to the catalogue"}</a>
@@ -590,7 +600,7 @@ function renderVehicleDetail(vehicle) {
       <p class="automobile-kicker automobile-kicker--dark"><span></span>${escapeHtml(vehicle.brand)} · ${escapeHtml(vehicle.category)}</p>
       <h1 id="automobile-detail-title" tabindex="-1">${escapeHtml(vehicle.name)}</h1>
       ${detailType ? `<p class="automobile-detail-heading__type">${escapeHtml(detailType)}</p>` : ""}
-      <div class="automobile-detail-heading__status">${detailStatus.map((item) => `<span>${escapeHtml(item)}</span>`).join("")}${vehicle.statusLabel ? createStatusMarkup(vehicle) : ""}${vehicle.priceLabel === "Price on Request" ? '<a class="automobile-button automobile-button--red" href="#automobile-vehicle-enquiry">Enquire for Price</a>' : ""}${!vehicle.source ? `<a class="automobile-button automobile-button--red" href="#automobile-vehicle-enquiry">Enquire about ${escapeHtml(vehicle.name)}</a>` : ""}</div>
+      <div class="automobile-detail-heading__status">${detailStatus.map((item) => `<span>${escapeHtml(item)}</span>`).join("")}${vehicle.statusLabel ? createStatusMarkup(vehicle) : ""}${vehicle.priceLabel === "Price on Request" || (vehicle.price > 0 && vehicle.category === "Pickup") ? '<a class="automobile-button automobile-button--red" href="#automobile-vehicle-enquiry">Enquire for Price</a>' : ""}${!vehicle.source ? `<a class="automobile-button automobile-button--red" href="#automobile-vehicle-enquiry">Enquire about ${escapeHtml(vehicle.name)}</a>` : ""}</div>
     </header>
     ${vehicle.description ? `<section class="automobile-detail-overview" aria-labelledby="automobile-detail-overview-title"><h2 id="automobile-detail-overview-title">Model overview</h2><p>${escapeHtml(vehicle.description)}</p></section>` : ""}
     <div class="automobile-detail-gallery" aria-label="${escapeHtml(vehicle.name)} image gallery">${galleryContent}</div>
@@ -626,6 +636,7 @@ function renderVehicleDetail(vehicle) {
     form.querySelector("#automobile-enquiry-product").value = sourceModel;
     form.querySelector("#automobile-enquiry-url").value = sourceUrl.href;
     form.querySelector("#automobile-enquiry-specifications").value = vehicle.headlineSpecifications.join("; ");
+    form.querySelector("#automobile-enquiry-price").value = formatAutomobileVehiclePrice(vehicle.price);
   }
   renderVehicleDetailGalleryErrors(vehicle);
 
