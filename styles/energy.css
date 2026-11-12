@@ -2972,6 +2972,218 @@
   margin-top: 0.6rem;
 }
 
+.energy-package-guide {
+  border-top: 1px solid var(--energy-line);
+  padding-top: 0.5rem;
+}
+
+.energy-package-guide__trigger {
+  display: flex;
+  min-height: 3rem;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.8rem;
+  color: var(--energy-forest);
+  font-size: 0.9rem;
+  font-weight: 700;
+  line-height: 1.45;
+  cursor: pointer;
+  list-style: none;
+}
+
+.energy-package-guide__trigger::-webkit-details-marker {
+  display: none;
+}
+
+.energy-package-guide__trigger::after {
+  width: 0.55rem;
+  height: 0.55rem;
+  flex: 0 0 auto;
+  border-right: 2px solid currentColor;
+  border-bottom: 2px solid currentColor;
+  content: "";
+  transform: rotate(45deg) translateY(-0.15rem);
+}
+
+.energy-package-guide[open] > .energy-package-guide__trigger::after {
+  transform: rotate(225deg) translateY(-0.15rem);
+}
+
+.energy-package-guide__content {
+  display: grid;
+  gap: 1rem;
+  padding: 0.25rem 0 0.5rem;
+  color: var(--energy-muted);
+  font-size: 0.82rem;
+  line-height: 1.6;
+}
+
+.energy-package-guide__section {
+  display: grid;
+  gap: 0.65rem;
+  min-width: 0;
+  padding-top: 0.9rem;
+  border-top: 1px solid var(--energy-line);
+}
+
+.energy-package-guide__section h4,
+.energy-package-guide__section h5,
+.energy-package-guide__section p {
+  margin: 0;
+}
+
+.energy-package-guide__section h4 {
+  color: var(--energy-ink);
+  font-size: 1rem;
+  line-height: 1.4;
+}
+
+.energy-package-guide__section h5 {
+  margin-top: 0.2rem;
+  color: var(--energy-forest);
+  font-size: 0.86rem;
+}
+
+.energy-package-guide__lead {
+  color: var(--energy-ink);
+  font-weight: 600;
+}
+
+.energy-package-guide__note {
+  color: var(--energy-muted);
+  font-size: 0.76rem;
+}
+
+.energy-package-guide__specifications {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.5rem;
+  margin: 0;
+}
+
+.energy-package-guide__specification {
+  min-width: 0;
+  padding: 0.65rem;
+  border: 1px solid var(--energy-line);
+  border-radius: 0.35rem;
+  background: #f7faf5;
+}
+
+.energy-package-guide__specification dt,
+.energy-package-guide__estimates dt {
+  color: var(--energy-muted);
+  font-size: 0.7rem;
+  line-height: 1.45;
+}
+
+.energy-package-guide__specification dd,
+.energy-package-guide__estimates dd {
+  margin: 0.2rem 0 0;
+  color: var(--energy-forest);
+  font-size: 0.95rem;
+  font-weight: 700;
+  overflow-wrap: anywhere;
+}
+
+.energy-package-guide__estimates {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.5rem;
+  margin: 0;
+}
+
+.energy-package-guide__estimates > div {
+  min-width: 0;
+  padding: 0.65rem;
+  border-left: 3px solid var(--energy-green);
+  background: #f3f8f1;
+}
+
+.energy-package-guide__table-wrap {
+  max-width: 100%;
+  overflow-x: auto;
+  border: 1px solid var(--energy-line);
+  border-radius: 0.35rem;
+  overscroll-behavior-x: contain;
+}
+
+.energy-package-guide__table {
+  width: 100%;
+  border-collapse: collapse;
+  color: var(--energy-ink);
+  font-size: 0.74rem;
+  line-height: 1.45;
+  text-align: left;
+}
+
+.energy-package-guide__table caption {
+  padding: 0.6rem;
+  color: var(--energy-muted);
+  font-size: 0.72rem;
+  text-align: left;
+}
+
+.energy-package-guide__table th,
+.energy-package-guide__table td {
+  padding: 0.55rem 0.45rem;
+  border-top: 1px solid var(--energy-line);
+  vertical-align: top;
+}
+
+.energy-package-guide__table thead th {
+  background: #f3f8f1;
+  color: var(--energy-forest);
+  font-size: 0.69rem;
+}
+
+.energy-package-guide__table tbody th {
+  font-weight: 600;
+}
+
+.energy-package-guide__table-total {
+  background: #f3f8f1;
+  font-weight: 700;
+}
+
+.energy-package-guide__heavy-list,
+.energy-package-guide__heavy-list ul,
+.energy-package-guide__warning ul {
+  display: grid;
+  gap: 0.6rem;
+  padding-left: 1.25rem;
+  margin: 0;
+}
+
+.energy-package-guide__heavy-list > li::marker {
+  color: var(--energy-forest);
+  font-weight: 700;
+}
+
+.energy-package-guide__heavy-list h5 {
+  margin: 0;
+}
+
+.energy-package-guide__warning {
+  padding: 0.85rem;
+  border: 1px solid #a34a24;
+  border-left: 4px solid #a34a24;
+  border-radius: 0.35rem;
+  background: #fff7f1;
+}
+
+.energy-package-guide__warning h4,
+.energy-package-guide__warning-label {
+  color: #752f18;
+}
+
+.energy-package-guide__warning-label {
+  font-weight: 700;
+}
+
+.energy-package-guide__warning ul {
+  color: #3c302c;
+}
+
 .energy-package-pricing__lines {
   display: grid;
   gap: 0.65rem;
@@ -3179,6 +3391,7 @@
 .energy-filter-reset:focus-visible,
 .energy-pagination-button:focus-visible,
 .energy-package-card__details summary:focus-visible,
+.energy-package-guide__trigger:focus-visible,
 .energy-package-guidelines summary:focus-visible,
 .energy-package-card__footer .button:focus-visible {
   outline: var(--focus-ring);
@@ -3205,6 +3418,67 @@
 @media (max-width: 48rem) {
   .energy-package-grid {
     grid-template-columns: minmax(0, 1fr);
+  }
+
+  .energy-package-guide__table,
+  .energy-package-guide__table tbody {
+    display: block;
+  }
+
+  .energy-package-guide__table thead {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    clip-path: inset(50%);
+  }
+
+  .energy-package-guide__table tbody {
+    display: grid;
+    gap: 0.55rem;
+    padding: 0.55rem;
+  }
+
+  .energy-package-guide__table tbody tr {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    border: 1px solid var(--energy-line);
+    border-radius: 0.3rem;
+  }
+
+  .energy-package-guide__table tbody th,
+  .energy-package-guide__table tbody td {
+    display: grid;
+    gap: 0.12rem;
+    min-width: 0;
+    padding: 0.45rem;
+    border: 0;
+    overflow-wrap: anywhere;
+  }
+
+  .energy-package-guide__table tbody th {
+    grid-column: 1 / -1;
+  }
+
+  .energy-package-guide__table tbody td::before {
+    color: var(--energy-muted);
+    content: attr(data-label);
+    font-size: 0.65rem;
+    font-weight: 500;
+  }
+
+  .energy-package-guide__table-total {
+    border: 2px solid #8eaa7a !important;
+  }
+
+  .energy-package-guide__table-total td:empty {
+    display: none;
+  }
+
+  .energy-package-guide__table-total td:last-child {
+    grid-column: 1 / -1;
   }
 
   .energy-package-scene__label {

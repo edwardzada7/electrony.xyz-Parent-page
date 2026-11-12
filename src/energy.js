@@ -2,10 +2,11 @@ const energyProducts = window.ElectronyEnergyProducts;
 const energyCategories = window.ElectronyEnergyCategories;
 const solarPackages = window.ElectronySolarPackages;
 const energyCatalogue = window.ElectronyEnergyCatalogue;
+const smallHomeSolarGuide = window.ElectronySmallHomeSolarGuide;
 if (!Array.isArray(energyProducts) || !energyProducts.length || !energyCategories) {
   throw new Error("Energy catalogue data did not load.");
 }
-if (!Array.isArray(solarPackages) || !energyCatalogue) {
+if (!Array.isArray(solarPackages) || !energyCatalogue || !smallHomeSolarGuide) {
   throw new Error("Solar package catalogue data did not load.");
 }
 
@@ -162,6 +163,124 @@ function cataloguePriceLabel(product) {
   return product.priceNgn === null ? "Request current price" : `₦${product.priceDisplay}`;
 }
 
+function createPackageGuide() {
+  const disclosure = document.createElement("details");
+  disclosure.className = "energy-package-guide";
+  const trigger = createElement("summary", "energy-package-guide__trigger", smallHomeSolarGuide.trigger);
+  disclosure.appendChild(trigger);
+  const content = createElement("div", "energy-package-guide__content");
+
+  const powerSection = createElement("section", "energy-package-guide__section");
+  powerSection.appendChild(createElement("h4", "", "Power and energy limits"));
+  const specifications = createElement("dl", "energy-package-guide__specifications");
+  smallHomeSolarGuide.specifications.forEach((specification) => {
+    const item = createElement("div", "energy-package-guide__specification");
+    item.append(createElement("dt", "", specification.label), createElement("dd", "", specification.value));
+    specifications.appendChild(item);
+  });
+  powerSection.append(
+    specifications,
+    createElement("p", "energy-package-guide__lead", smallHomeSolarGuide.maximumLoad.maximum),
+    createElement("p", "", smallHomeSolarGuide.maximumLoad.recommended),
+    createElement("h5", "", "Overnight / no-sun battery backup"),
+    createElement("p", "", smallHomeSolarGuide.backup.energy)
+  );
+  const backupEstimates = createElement("dl", "energy-package-guide__estimates");
+  smallHomeSolarGuide.backup.estimates.forEach((estimate) => {
+    const item = createElement("div", "");
+    item.append(createElement("dt", "", estimate.load), createElement("dd", "", estimate.backup));
+    backupEstimates.appendChild(item);
+  });
+  powerSection.append(backupEstimates, createElement("p", "energy-package-guide__note", smallHomeSolarGuide.backup.note));
+  powerSection.append(
+    createElement("h5", "", "Daytime solar generation"),
+    createElement("p", "energy-package-guide__lead", smallHomeSolarGuide.daytimeSolar.peak),
+    createElement("p", "", smallHomeSolarGuide.daytimeSolar.period),
+    createElement("p", "", smallHomeSolarGuide.daytimeSolar.charging),
+    createElement("p", "energy-package-guide__note", smallHomeSolarGuide.daytimeSolar.note)
+  );
+
+  const everydaySection = createElement("section", "energy-package-guide__section");
+  everydaySection.append(
+    createElement("h4", "", smallHomeSolarGuide.everyday.title),
+    createElement("p", "energy-package-guide__lead", smallHomeSolarGuide.everyday.description),
+    createElement("p", "energy-package-guide__note", smallHomeSolarGuide.everyday.wattageNote)
+  );
+  const tableWrap = createElement("div", "energy-package-guide__table-wrap");
+  const table = createElement("table", "energy-package-guide__table");
+  table.appendChild(createElement("caption", "", "Estimated appliance load breakdown"));
+  const header = document.createElement("thead");
+  const headerRow = document.createElement("tr");
+  ["Appliance", "Quantity", "Estimated wattage each", "Total load"].forEach((label) => {
+    const cell = createElement("th", "", label);
+    cell.scope = "col";
+    headerRow.appendChild(cell);
+  });
+  header.appendChild(headerRow);
+  table.appendChild(header);
+  const body = document.createElement("tbody");
+  smallHomeSolarGuide.everyday.items.forEach((item) => {
+    const row = document.createElement("tr");
+    [
+      ["Appliance", item.appliance],
+      ["Quantity", item.quantity],
+      ["Estimated wattage each", item.wattage],
+      ["Total load", item.total]
+    ].forEach(([label, value], index) => {
+      const cell = index === 0 ? createElement("th", "", value) : createElement("td", "", value);
+      if (index === 0) cell.scope = "row";
+      cell.dataset.label = label;
+      row.appendChild(cell);
+    });
+    body.appendChild(row);
+  });
+  const totalRow = document.createElement("tr");
+  totalRow.className = "energy-package-guide__table-total";
+  [
+    ["Appliance", "Total simultaneous load"],
+    ["Quantity", ""],
+    ["Estimated wattage each", ""],
+    ["Total load", smallHomeSolarGuide.everyday.total]
+  ].forEach(([label, value], index) => {
+    const cell = index === 0 ? createElement("th", "", value) : createElement("td", "", value);
+    if (index === 0) cell.scope = "row";
+    cell.dataset.label = label;
+    totalRow.appendChild(cell);
+  });
+  body.appendChild(totalRow);
+  table.appendChild(body);
+  tableWrap.appendChild(table);
+  everydaySection.append(tableWrap, createElement("p", "energy-package-guide__note", smallHomeSolarGuide.everyday.note));
+
+  const heavySection = createElement("section", "energy-package-guide__section");
+  heavySection.append(
+    createElement("h4", "", smallHomeSolarGuide.heavyAppliances.title),
+    createElement("p", "energy-package-guide__lead", smallHomeSolarGuide.heavyAppliances.description)
+  );
+  const heavyList = createElement("ol", "energy-package-guide__heavy-list");
+  smallHomeSolarGuide.heavyAppliances.items.forEach((appliance) => {
+    const item = document.createElement("li");
+    item.appendChild(createElement("h5", "", appliance.name));
+    const details = createElement("ul", "");
+    appliance.details.forEach((detail) => details.appendChild(createElement("li", "", detail)));
+    item.appendChild(details);
+    heavyList.appendChild(item);
+  });
+  heavySection.append(heavyList, createElement("p", "energy-package-guide__note", smallHomeSolarGuide.heavyAppliances.note));
+
+  const avoidSection = createElement("section", "energy-package-guide__section energy-package-guide__warning");
+  avoidSection.append(createElement("h4", "", smallHomeSolarGuide.avoid.title));
+  const warningLabel = createElement("p", "energy-package-guide__warning-label", "Caution — avoid these loads:");
+  avoidSection.appendChild(warningLabel);
+  const avoidList = createElement("ul", "");
+  smallHomeSolarGuide.avoid.items.forEach((item) => avoidList.appendChild(createElement("li", "", item)));
+  avoidSection.append(avoidList, createElement("p", "energy-package-guide__note", smallHomeSolarGuide.avoid.note));
+
+  content.append(powerSection, everydaySection, heavySection, avoidSection);
+  disclosure.appendChild(content);
+  return disclosure;
+}
+
 function createEnergyProductCard(product) {
   const card = createElement("article", "energy-product-card");
   const visual = createElement("div", "energy-product-card__image");
@@ -303,6 +422,9 @@ function createPackageCard(solarPackage, comparison = null) {
   if (badge) card.appendChild(badge);
   card.appendChild(createPackageScene(solarPackage.sceneId || solarPackage.id));
   card.appendChild(summary);
+  if (solarPackage.id === smallHomeSolarGuide.packageId) {
+    card.appendChild(createPackageGuide());
+  }
   if (comparison) {
     const comparisonList = createElement("ul", "energy-package-card__comparison");
     comparisonList.append(
