@@ -45,7 +45,8 @@
 .automobile-header.is-scrolled { background: rgba(8, 8, 8, 0.94); border-color: rgba(255, 255, 255, 0.12); box-shadow: 0 1rem 2.5rem rgba(0, 0, 0, 0.25); }
 .automobile-header__inner { display: grid; grid-template-columns: minmax(12rem, 0.8fr) auto minmax(0, 1.6fr); align-items: center; min-height: 5rem; gap: var(--automobile-gutter); }
 .automobile-wordmark { display: inline-flex; align-items: center; gap: 0.4rem; width: fit-content; color: currentColor; font-family: var(--font-display); font-size: 1rem; font-weight: 700; letter-spacing: -0.05em; text-decoration: none; }
-.automobile-wordmark__slash { color: var(--automobile-red); font-weight: 500; }
+.automobile-wordmark__slash, .automobile-wordmark__product { color: var(--automobile-red); }
+.automobile-wordmark__slash { font-weight: 500; }
 .automobile-wordmark > span:not(.automobile-wordmark__slash) { white-space: nowrap; }
 .automobile-header .automobile-wordmark { justify-self: start; }
 .automobile-navigation { display: flex; grid-column: 3; grid-row: 1; align-items: center; justify-content: flex-end; gap: clamp(1.2rem, 2.7vw, 2.8rem); }
@@ -373,6 +374,8 @@
 
 @media (max-width: 24rem) {
   .automobile-wordmark { font-size: 0.88rem; }
+  .automobile-wordmark { gap: 0.3rem; }
+  .automobile-wordmark-with-logo .brand-logo-header { width: min(5.5rem, 25vw); }
   .automobile-header__inner { gap: 0.5rem; }
   .automobile-menu-toggle { padding-inline: 0.55rem; }
   .automobile-hero h1 { font-size: 2.8rem; }

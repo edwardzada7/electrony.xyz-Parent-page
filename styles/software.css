@@ -1559,9 +1559,22 @@ body.software-page {
 }
 
 @media (max-width: 22rem) {
-  .software-wordmark-label,
+  .software-wordmark {
+    gap: 0.35rem;
+  }
+
+  .software-brand-wordmark {
+    width: min(5.5rem, 25vw);
+    height: 1.55rem;
+  }
+
   .software-wordmark-divider {
-    display: none;
+    height: 1.25rem;
+  }
+
+  .software-wordmark-label {
+    font-size: 0.68rem;
+    white-space: nowrap;
   }
 
   .software-hero h1 {
@@ -5304,4 +5317,12 @@ body.software-page {
     animation: none;
     background-position: 50% 50%, 0 0;
   }
+}
+
+.software-wordmark-divider {
+  background: var(--software-green);
+}
+
+.software-wordmark-label {
+  color: var(--software-green);
 }

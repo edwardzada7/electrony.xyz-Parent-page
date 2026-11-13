@@ -7,6 +7,7 @@
   --energy-ink: #24452b;
   --energy-muted: #516352;
   --energy-line: rgb(77 139 87 / 22%);
+  --product-accent: var(--energy-button);
   --color-focus: var(--energy-green);
   --focus-ring: 0 0 0 3px var(--energy-paper), 0 0 0 6px var(--energy-green);
   background: var(--energy-paper);

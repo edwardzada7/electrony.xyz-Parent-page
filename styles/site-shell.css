@@ -28,6 +28,28 @@
   align-items: center;
 }
 
+.wordmark-with-product {
+  min-width: 0;
+  flex: 0 1 auto;
+  gap: 0.45rem;
+}
+
+.product-wordmark-separator,
+.product-wordmark-label {
+  color: var(--product-accent, currentColor);
+}
+
+.product-wordmark-separator {
+  font-weight: 500;
+}
+
+.product-wordmark-label {
+  font-size: 0.8rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+}
+
 .whatsapp-float-button {
   position: fixed;
   z-index: 35;
@@ -104,6 +126,24 @@
 
   .brand-logo-header {
     width: min(8.5rem, 32vw);
+  }
+
+  .wordmark-with-product .brand-logo-header {
+    width: min(7.5rem, 26vw);
+  }
+}
+
+@media (max-width: 22rem) {
+  .wordmark-with-product {
+    gap: 0.25rem;
+  }
+
+  .wordmark-with-product .brand-logo-header {
+    width: min(5.5rem, 25vw);
+  }
+
+  .product-wordmark-label {
+    font-size: 0.66rem;
   }
 }
 

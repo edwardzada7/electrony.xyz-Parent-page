@@ -17,6 +17,10 @@
   --bills-shadow: 0 1.25rem 2.5rem rgba(2, 13, 11, 0.38);
 }
 
+.bills-app-page {
+  --product-accent: var(--bills-green-300);
+}
+
 * {
   box-sizing: border-box;
 }

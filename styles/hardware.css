@@ -2,6 +2,7 @@
   --hardware-blue: #38bdf8;
   --hardware-blue-text: #0369a1;
   --hardware-blue-pale: #e0f2fe;
+  --product-accent: var(--hardware-blue-text);
   --color-focus: var(--hardware-blue);
   --focus-ring: 0 0 0 3px #111214, 0 0 0 6px var(--hardware-blue);
   background: var(--color-white);
