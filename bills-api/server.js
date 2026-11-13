@@ -5,7 +5,7 @@ const { promisify } = require("util");
 const os = require("os");
 const http = require("http");
 const { URL } = require("url");
-const { buildProviderAdapter, readEnv } = require("./provider-adapter");
+const { buildProviderAdapter, readEnv, isValidCustomerIdentifier } = require("./provider-adapter");
 const { createPostgresPersistence } = require("./postgres-persistence");
 const { createPlatformFeeQuote, parseMoneyToMinor } = require("./platform-fees");
 const { createMarpleradAdapter } = require("./adapters/marplerad-adapter");
@@ -765,7 +765,10 @@ function getUnavailableVendingCatalogue(message, status, diagnostics) {
   };
 }
 
-async function getVendingCatalogueStatus({ includeDiagnostics = false } = {}) {
+async function getVendingCatalogueStatus({
+  includeDiagnostics = false,
+  refreshCatalogue = false
+} = {}) {
   const missingVasConfiguration = monnifyBillsAdapter.getMissingConfiguration()
     .filter((name) => name !== "MONNIFY_CONTRACT_CODE");
   if (missingVasConfiguration.length) {
@@ -773,12 +776,26 @@ async function getVendingCatalogueStatus({ includeDiagnostics = false } = {}) {
       "The service catalogue is temporarily unavailable. Please try again later.",
       "configuration_missing",
       includeDiagnostics
-        ? { stage: "configuration", missingConfiguration: missingVasConfiguration }
+        ? {
+          stage: "configuration",
+          failureClassification: "configuration_failure",
+          environment: monnifyBillsAdapter.getEnvironment(),
+          upstreamStatus: null,
+          upstreamSuccess: false,
+          responseShape: "not_requested",
+          providerCategoryCount: null,
+          providerCategories: [],
+          providerErrorCode: null,
+          providerErrorMessage: null,
+          catalogueFetchedAt: null,
+          catalogueCacheHit: false,
+          missingConfiguration: missingVasConfiguration
+        }
         : undefined
     );
   }
   try {
-    const catalogue = await monnifyBillsAdapter.getCatalogue();
+    const catalogue = await monnifyBillsAdapter.getCatalogue({ refresh: refreshCatalogue });
     if (includeDiagnostics) return catalogue;
     const { diagnostics, ...customerCatalogue } = catalogue;
     return customerCatalogue;
@@ -791,11 +808,34 @@ async function getVendingCatalogueStatus({ includeDiagnostics = false } = {}) {
       includeDiagnostics
         ? {
           stage: error?.stage || "unknown",
-          ...(Number.isInteger(error?.statusCode) ? { httpStatus: error.statusCode } : {})
+          failureClassification: error?.failureClassification || status,
+          environment: error?.environment ?? monnifyBillsAdapter.getEnvironment(),
+          upstreamStatus: error?.upstreamStatus ?? null,
+          ...(Number.isInteger(error?.statusCode) ? { httpStatus: error.statusCode } : {}),
+          upstreamSuccess: error?.upstreamSuccess ?? false,
+          responseShape: error?.responseShape || "unavailable",
+          providerCategoryCount: error?.providerCategoryCount ?? null,
+          providerCategories: error?.providerCategories || [],
+          providerErrorCode: error?.providerErrorCode ?? null,
+          providerErrorMessage: error?.providerErrorMessage ?? null,
+          catalogueFetchedAt: error?.catalogueFetchedAt ?? null,
+          catalogueCacheHit: error?.catalogueCacheHit ?? false
         }
         : undefined
     );
   }
+}
+
+function isAuthorizedCatalogueDiagnosticRequest(request) {
+  const expected = readEnv("BILLS_CATALOGUE_DIAGNOSTIC_TOKEN");
+  const supplied = typeof request.headers["x-bills-catalogue-diagnostic-token"] === "string"
+    ? request.headers["x-bills-catalogue-diagnostic-token"]
+    : "";
+  if (!expected || !supplied) return false;
+  const expectedBuffer = Buffer.from(expected);
+  const suppliedBuffer = Buffer.from(supplied);
+  return expectedBuffer.length === suppliedBuffer.length
+    && crypto.timingSafeEqual(expectedBuffer, suppliedBuffer);
 }
 
 function getHealthCatalogueStatus() {
@@ -2056,8 +2096,19 @@ async function handleRequest(request, response) {
   }
 
   if (request.method === "GET" && url.pathname === "/api/services/catalog") {
+    const includeDiagnostics = url.searchParams.get("diagnostic") === "true";
+    const refreshCatalogue = includeDiagnostics && url.searchParams.get("refresh") === "true";
+    if (refreshCatalogue && !isAuthorizedCatalogueDiagnosticRequest(request)) {
+      sendJson(response, 403, {
+        ok: false,
+        status: "diagnostic_refresh_forbidden",
+        error: "An authorized server-side diagnostic request is required to refresh the catalogue."
+      });
+      return;
+    }
     const catalogue = await getVendingCatalogueStatus({
-      includeDiagnostics: url.searchParams.get("diagnostic") === "true"
+      includeDiagnostics,
+      refreshCatalogue
     });
     sendJson(response, catalogue.ok ? 200 : 503, catalogue);
     return;
@@ -2114,8 +2165,8 @@ async function handleRequest(request, response) {
       const service = normalizeService(payload.service);
       const provider = String(payload.provider || "").trim();
       const productCode = String(payload.productCode || "").trim();
-      const customerId = String(payload.customerId || "").trim();
-      if (!service || !provider || !productCode || !customerId) {
+      const customerId = payload.customerId;
+      if (!service || !provider || !productCode || !isValidCustomerIdentifier(customerId)) {
         sendJson(response, 400, {
           ok: false,
           error: "A supported service, provider, product, and customer identifier are required."
@@ -2142,7 +2193,9 @@ async function handleRequest(request, response) {
         ok: true,
         status: "validated",
         verification: {
-          customer_name: validation.customerName,
+          ...(typeof validation.customerName === "string"
+            ? { customer_name: validation.customerName }
+            : {}),
           product_code: validation.productCode,
           price_type: validation.priceType,
           price: validation.price,

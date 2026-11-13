@@ -2,7 +2,7 @@
 
 const assert = require("node:assert/strict");
 const test = require("node:test");
-const { buildProviderAdapter } = require("./provider-adapter");
+const { buildProviderAdapter, isValidCustomerIdentifier } = require("./provider-adapter");
 
 const configuredEnvironment = {
   MONNIFY_API_KEY: "sandbox-api-key",
@@ -138,14 +138,24 @@ test("catalogue reads authenticated Monnify categories and billers and caches th
   assert.deepEqual(first.categories.bills.billers, []);
   assert.deepEqual(first.diagnostics, {
     stage: "catalogue",
+    environment: "sandbox",
+    upstreamStatus: 200,
+    upstreamSuccess: true,
+    responseShape: "object; responseBody=object; content=array<category>",
     providerCategoryCount: 3,
     providerCategories: [
       { code: "ELECTRICITY", name: "Electricity" },
       { code: "CABLE_TV", name: "Cable TV" },
       { code: "UNSUPPORTED", name: "Unsupported category" }
     ],
+    providerErrorCode: null,
+    providerErrorMessage: null,
+    catalogueFetchedAt: first.diagnostics.catalogueFetchedAt,
+    catalogueCacheHit: false,
     supportedCategoryCount: 2
   });
+  assert.equal(Number.isNaN(Date.parse(first.diagnostics.catalogueFetchedAt)), false);
+  assert.equal((await adapter.getCatalogue()).diagnostics.catalogueCacheHit, true);
   assert.equal(requests.filter(({ url }) => url.pathname === "/api/v1/auth/login").length, 1);
   assert.equal(requests.filter(({ url }) => url.pathname.endsWith("/biller-categories")).length, 1);
 });
@@ -170,6 +180,158 @@ test("catalogue diagnostics distinguish empty categories from unmapped provider 
     assert.equal(result.status, expectedStatus);
     assert.equal(result.diagnostics.providerCategoryCount, expectedCount);
   }
+});
+
+test("catalogue diagnostics distinguish unexpected JSON shape from malformed JSON", async () => {
+  const unexpectedFetch = createFetch(({ url }) => {
+    if (url.pathname === "/api/v1/auth/login") return successful({ accessToken: "token", expiresIn: 3600 });
+    if (url.pathname.endsWith("/biller-categories")) return successful({ categories: [] });
+    assert.fail(`Unexpected Monnify request: ${url.pathname}`);
+  });
+  await assert.rejects(
+    buildProviderAdapter(configuredEnvironment, { fetch: unexpectedFetch.fetch }).getCatalogue(),
+    (error) => {
+      assert.equal(error.diagnosticStatus, "unexpected_response_shape");
+      assert.equal(error.failureClassification, "unexpected_response_shape");
+      assert.equal(error.upstreamStatus, 200);
+      assert.equal(error.upstreamSuccess, true);
+      assert.equal(error.responseShape, "object; responseBody=object; content=missing");
+      return true;
+    }
+  );
+
+  const unexpectedEnvelopeFetch = createFetch(({ url }) => {
+    if (url.pathname === "/api/v1/auth/login") return successful({ accessToken: "token", expiresIn: 3600 });
+    if (url.pathname.endsWith("/biller-categories")) return jsonResponse({ content: [] }, 200);
+    assert.fail(`Unexpected Monnify request: ${url.pathname}`);
+  });
+  await assert.rejects(
+    buildProviderAdapter(configuredEnvironment, { fetch: unexpectedEnvelopeFetch.fetch }).getCatalogue(),
+    (error) => {
+      assert.equal(error.diagnosticStatus, "unexpected_response_shape");
+      assert.equal(error.failureClassification, "unexpected_response_shape");
+      assert.equal(error.upstreamStatus, 200);
+      assert.equal(error.upstreamSuccess, false);
+      assert.equal(error.responseShape, "object; responseBody=missing");
+      return true;
+    }
+  );
+
+  const malformedCategoryFetch = createFetch(({ url }) => {
+    if (url.pathname === "/api/v1/auth/login") return successful({ accessToken: "token", expiresIn: 3600 });
+    if (url.pathname.endsWith("/biller-categories")) {
+      return successful({ content: [{ providerCategory: "MISC" }], nextPage: null });
+    }
+    assert.fail(`Unexpected Monnify request: ${url.pathname}`);
+  });
+  await assert.rejects(
+    buildProviderAdapter(configuredEnvironment, { fetch: malformedCategoryFetch.fetch }).getCatalogue(),
+    (error) => {
+      assert.equal(error.diagnosticStatus, "unexpected_response_shape");
+      assert.equal(error.responseShape, "object; responseBody=object; content=array<object>");
+      assert.equal(error.providerCategoryCount, 1);
+      assert.deepEqual(error.providerCategories, []);
+      return true;
+    }
+  );
+
+  const malformedFetch = createFetch(({ url }) => {
+    if (url.pathname === "/api/v1/auth/login") return successful({ accessToken: "token", expiresIn: 3600 });
+    if (url.pathname.endsWith("/biller-categories")) {
+      return {
+        ok: true,
+        status: 200,
+        async json() {
+          throw new SyntaxError("invalid JSON");
+        }
+      };
+    }
+    assert.fail(`Unexpected Monnify request: ${url.pathname}`);
+  });
+  await assert.rejects(
+    buildProviderAdapter(configuredEnvironment, { fetch: malformedFetch.fetch }).getCatalogue(),
+    (error) => {
+      assert.equal(error.diagnosticStatus, "application_parsing_failure");
+      assert.equal(error.failureClassification, "application_parsing_failure");
+      assert.equal(error.upstreamStatus, 200);
+      assert.equal(error.upstreamSuccess, false);
+      assert.equal(error.responseShape, "invalid_json");
+      return true;
+    }
+  );
+});
+
+test("catalogue diagnostics classify network timeouts and connection failures", async () => {
+  for (const [failure, expected] of [
+    [Object.assign(new Error("timed out"), { name: "TimeoutError" }), "network_timeout"],
+    [new Error("connection refused"), "network_connection_failure"]
+  ]) {
+    const adapter = buildProviderAdapter(configuredEnvironment, {
+      fetch: async () => {
+        throw failure;
+      }
+    });
+    await assert.rejects(adapter.getCatalogue(), (error) => {
+      assert.equal(error.diagnosticStatus, expected);
+      assert.equal(error.failureClassification, expected);
+      assert.equal(error.upstreamStatus, null);
+      assert.equal(error.upstreamSuccess, false);
+      return true;
+    });
+  }
+});
+
+test("catalogue cache hits are reported and an explicit adapter refresh fetches new categories", async () => {
+  let categoryResponseCount = 0;
+  const { fetch, requests } = createFetch(({ url }) => {
+    if (url.pathname === "/api/v1/auth/login") return successful({ accessToken: "token", expiresIn: 3600 });
+    if (url.pathname.endsWith("/biller-categories")) {
+      categoryResponseCount += 1;
+      return successful({
+        content: [{ code: `CATEGORY_${categoryResponseCount}`, name: `Category ${categoryResponseCount}` }],
+        nextPage: null
+      });
+    }
+    assert.fail(`Unexpected Monnify request: ${url.pathname}`);
+  });
+  const adapter = buildProviderAdapter(configuredEnvironment, { fetch });
+
+  const first = await adapter.getCatalogue();
+  const cached = await adapter.getCatalogue();
+  const refreshed = await adapter.getCatalogue({ refresh: true });
+
+  assert.equal(first.diagnostics.catalogueCacheHit, false);
+  assert.equal(cached.diagnostics.catalogueCacheHit, true);
+  assert.equal(refreshed.diagnostics.catalogueCacheHit, false);
+  assert.deepEqual(refreshed.diagnostics.providerCategories, [
+    { code: "CATEGORY_2", name: "Category 2" }
+  ]);
+  assert.equal(requests.filter(({ url }) => url.pathname.endsWith("/biller-categories")).length, 2);
+});
+
+test("catalogue provider error diagnostics sanitize credentials and customer data", async () => {
+  const { fetch } = createFetch(({ url }) => {
+    if (url.pathname === "/api/v1/auth/login") return successful({ accessToken: "sensitive-access-token", expiresIn: 3600 });
+    if (url.pathname.endsWith("/biller-categories")) {
+      return jsonResponse({
+        requestSuccessful: false,
+        responseCode: "PROVIDER_ERROR",
+        responseMessage: "API key=sandbox-api-key; Secret key=sandbox-secret-key; Authorization: Bearer sensitive-access-token; customer jane@example.com 1234567890"
+      }, 503);
+    }
+    assert.fail(`Unexpected Monnify request: ${url.pathname}`);
+  });
+  const adapter = buildProviderAdapter(configuredEnvironment, { fetch });
+
+  await assert.rejects(adapter.getCatalogue(), (error) => {
+    assert.equal(error.providerErrorCode, "PROVIDER_ERROR");
+    assert.equal(error.providerErrorMessage.includes("sandbox-api-key"), false);
+    assert.equal(error.providerErrorMessage.includes("sandbox-secret-key"), false);
+    assert.equal(error.providerErrorMessage.includes("sensitive-access-token"), false);
+    assert.equal(error.providerErrorMessage.includes("jane@example.com"), false);
+    assert.equal(error.providerErrorMessage.includes("1234567890"), false);
+    return true;
+  });
 });
 
 test("catalogue pagination follows the returned next-page code", async () => {
@@ -230,6 +392,13 @@ test("catalogue failures identify authentication, activation, access, and endpoi
     },
     {
       url: "/api/v1/vas/bills-payment/biller-categories",
+      status: 503,
+      responseMessage: "Provider unavailable",
+      expected: "catalogue_retrieval_failed",
+      stage: "catalogue"
+    },
+    {
+      url: "/api/v1/vas/bills-payment/biller-categories",
       status: 404,
       responseMessage: "Not found",
       expected: "endpoint_or_request_error",
@@ -255,6 +424,11 @@ test("catalogue failures identify authentication, activation, access, and endpoi
 
     await assert.rejects(adapter.getCatalogue(), (error) => {
       assert.equal(error.diagnosticStatus, item.expected);
+      assert.equal(error.failureClassification, item.status === 401
+        ? "authentication_failure"
+        : item.status === 403
+          ? "permission_or_activation_failure"
+          : "provider_service_error");
       assert.equal(error.stage, item.stage);
       assert.equal(error.message.includes(item.responseMessage), false);
       return true;
@@ -355,6 +529,105 @@ test("products and customer validation use catalogue codes and preserve requireV
   assert.equal(validation.requireValidationRef, true);
   assert.equal(validation.validationReference, "validated-reference");
   assert.equal(requests.filter(({ url }) => url.pathname === "/api/v1/auth/login").length, 1);
+});
+
+test("customer identifiers are bounded strings and are not silently normalized", async () => {
+  assert.equal(isValidCustomerIdentifier("080123456789"), true);
+  assert.equal(isValidCustomerIdentifier("00000000100"), true);
+  assert.equal(isValidCustomerIdentifier(" 080123456789"), false);
+  assert.equal(isValidCustomerIdentifier("080123456789 "), false);
+  assert.equal(isValidCustomerIdentifier("080123456789\n"), false);
+  assert.equal(isValidCustomerIdentifier("x".repeat(129)), false);
+  assert.equal(isValidCustomerIdentifier(80123456789), false);
+
+  const { fetch, requests } = createFetch(({ url }) => {
+    if (url.pathname === "/api/v1/auth/login") return successful({ accessToken: "token", expiresIn: 3600 });
+    assert.fail(`Invalid customer identifiers must not call Monnify: ${url.pathname}`);
+  });
+  const adapter = buildProviderAdapter(configuredEnvironment, { fetch });
+
+  for (const customerId of ["", " 080123456789", "080123456789\n", "x".repeat(129), 80123456789]) {
+    await assert.rejects(adapter.validateCustomer({
+      productCode: "11",
+      customerId
+    }), { code: "invalid_input", statusCode: 400 });
+  }
+  assert.equal(requests.length, 0);
+});
+
+test("adapter preserves supplied fixture identifiers and mocked provider vending statuses", async () => {
+  const validations = [
+    { productCode: "11", customerId: "080123456789" },
+    { productCode: "product-ikedc-pre", customerId: "55555666666" },
+    { productCode: "product-aedc-pre", customerId: "00000000100" },
+    { productCode: "product-gotv-max", customerId: "8059999999" }
+  ];
+  const vending = [
+    { productCode: "11", customerId: "080123456789", vendStatus: "SUCCESS" },
+    { productCode: "13", customerId: "080123456789", vendStatus: "FAILED" },
+    { productCode: "product-aedc-pre", customerId: "00000000100", vendStatus: "IN-PROGRESS" },
+    { productCode: "product-ikedc-post", customerId: "00000000100", vendStatus: "SUCCESS" },
+    { productCode: "product-gotv-max", customerId: "8059999999", vendStatus: "PROVIDER-RETURNED" }
+  ];
+  const vendingResponses = [...vending];
+  const { fetch, requests } = createFetch(({ url, options }) => {
+    if (url.pathname === "/api/v1/auth/login") {
+      return successful({ accessToken: "sandbox-token", expiresIn: 3600 });
+    }
+    if (url.pathname.endsWith("/validate-customer")) {
+      const request = JSON.parse(options.body);
+      assert.deepEqual(request, validations.shift());
+      return successful({
+        vendInstruction: { requireValidationRef: false }
+      });
+    }
+    if (url.pathname.endsWith("/vend")) {
+      const request = JSON.parse(options.body);
+      const fixture = vendingResponses.shift();
+      assert.equal(request.productCode, fixture.productCode);
+      assert.equal(request.customerId, fixture.customerId);
+      return successful({
+        vendReference: request.vendReference,
+        transactionReference: `provider-${request.vendReference}`,
+        vendStatus: fixture.vendStatus
+      });
+    }
+    assert.fail(`Unexpected Monnify request: ${url.pathname}`);
+  });
+  const adapter = buildProviderAdapter(configuredEnvironment, { fetch });
+
+  for (const fixture of [
+    { productCode: "11", customerId: "080123456789" },
+    { productCode: "product-ikedc-pre", customerId: "55555666666" },
+    { productCode: "product-aedc-pre", customerId: "00000000100" },
+    { productCode: "product-gotv-max", customerId: "8059999999" }
+  ]) {
+    const result = await adapter.validateCustomer(fixture);
+    assert.equal(result.productCode, fixture.productCode);
+    assert.equal(result.customerId, fixture.customerId);
+    assert.equal(Object.hasOwn(result, "customerName"), false);
+  }
+  assert.equal(validations.length, 0);
+
+  for (const fixture of vending) {
+    const reference = `ELECBILLS-${fixture.productCode.replace(/[^A-Z0-9]/gi, "").toUpperCase()}`;
+    const result = await adapter.vend({
+      productCode: fixture.productCode,
+      customerId: fixture.customerId,
+      amount: 100,
+      reference,
+      validation: {
+        productCode: fixture.productCode,
+        customerId: fixture.customerId,
+        requireValidationRef: false
+      }
+    });
+    assert.equal(result.vendStatus, fixture.vendStatus);
+    assert.equal(result.vendReference, reference);
+    assert.equal(result.transactionReference, `provider-${reference}`);
+  }
+  assert.equal(vendingResponses.length, 0);
+  assert.equal(requests.filter(({ url }) => url.pathname.endsWith("/vend")).length, 5);
 });
 
 test("vending uses the documented request fields and only includes required validation references", async () => {
