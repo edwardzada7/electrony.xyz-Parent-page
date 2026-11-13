@@ -524,6 +524,16 @@ function loadEnvFromFiles() {
 
 loadEnvFromFiles();
 
+const missingMonnifyConfiguration = monnifyBillsAdapter.getMissingConfiguration();
+if (missingMonnifyConfiguration.length) {
+  console.error(
+    "Monnify Bills configuration is missing or invalid.",
+    missingMonnifyConfiguration.join(", ")
+  );
+} else {
+  console.info(`Monnify Bills configuration validated for ${monnifyBillsAdapter.getEnvironment()}.`);
+}
+
 const postgresPersistence = createPostgresPersistence(readEnv("BILLS_RUNTIME_DATABASE_URL"));
 const configuredStorePath = readEnv("BILLS_DATABASE_URL") || path.join(os.homedir(), ".electrony-bills", "transactions.json");
 if (/^[a-z][a-z\d+.-]*:\/\//i.test(configuredStorePath)) {
@@ -734,7 +744,7 @@ function getMonnifyPaymentMode() {
   return environment ? `monnify-${environment}` : "monnify-unconfigured";
 }
 
-function getUnavailableVendingCatalogue(message, status) {
+function getUnavailableVendingCatalogue(message, status, diagnostics) {
   const categories = ["electricity", "airtime", "data", "bills"].reduce((result, service) => {
     result[service] = {
       available: false,
@@ -745,25 +755,45 @@ function getUnavailableVendingCatalogue(message, status) {
     };
     return result;
   }, {});
-  return { ok: false, available: false, status, categories, message };
+  return {
+    ok: false,
+    available: false,
+    status,
+    categories,
+    message,
+    ...(diagnostics ? { diagnostics } : {})
+  };
 }
 
-async function getVendingCatalogueStatus() {
+async function getVendingCatalogueStatus({ includeDiagnostics = false } = {}) {
   const missingVasConfiguration = monnifyBillsAdapter.getMissingConfiguration()
     .filter((name) => name !== "MONNIFY_CONTRACT_CODE");
   if (missingVasConfiguration.length) {
     return getUnavailableVendingCatalogue(
-      `Monnify Bills catalogue is unavailable. Configure ${missingVasConfiguration.join(", ")}.`,
-      "provider_unconfigured"
+      "The service catalogue is temporarily unavailable. Please try again later.",
+      "configuration_missing",
+      includeDiagnostics
+        ? { stage: "configuration", missingConfiguration: missingVasConfiguration }
+        : undefined
     );
   }
   try {
-    return await monnifyBillsAdapter.getCatalogue();
+    const catalogue = await monnifyBillsAdapter.getCatalogue();
+    if (includeDiagnostics) return catalogue;
+    const { diagnostics, ...customerCatalogue } = catalogue;
+    return customerCatalogue;
   } catch (error) {
-    console.error("Monnify Bills catalogue request failed.", error?.code || "provider_unavailable");
+    const status = error?.diagnosticStatus || "provider_unavailable";
+    console.error("Monnify Bills catalogue request failed.", status);
     return getUnavailableVendingCatalogue(
       "The Monnify service catalogue is temporarily unavailable. Please try again later.",
-      "provider_unavailable"
+      status,
+      includeDiagnostics
+        ? {
+          stage: error?.stage || "unknown",
+          ...(Number.isInteger(error?.statusCode) ? { httpStatus: error.statusCode } : {})
+        }
+        : undefined
     );
   }
 }
@@ -2026,7 +2056,9 @@ async function handleRequest(request, response) {
   }
 
   if (request.method === "GET" && url.pathname === "/api/services/catalog") {
-    const catalogue = await getVendingCatalogueStatus();
+    const catalogue = await getVendingCatalogueStatus({
+      includeDiagnostics: url.searchParams.get("diagnostic") === "true"
+    });
     sendJson(response, catalogue.ok ? 200 : 503, catalogue);
     return;
   }
@@ -2058,12 +2090,18 @@ async function handleRequest(request, response) {
         return;
       }
       const products = await monnifyBillsAdapter.getProducts(provider);
-      sendJson(response, 200, { ok: true, available: products.length > 0, plans: products });
+      sendJson(response, 200, {
+        ok: true,
+        available: products.length > 0,
+        status: products.length ? "available" : "empty_products",
+        plans: products
+      });
     } catch (error) {
-      console.error("Monnify Bills product catalogue request failed.", error?.code || "provider_unavailable");
+      const status = error?.diagnosticStatus || "product_retrieval_failed";
+      console.error("Monnify Bills product catalogue request failed.", status);
       sendJson(response, error?.statusCode === 400 ? 400 : 503, {
         ok: false,
-        status: "provider_unavailable",
+        status,
         error: "The Monnify product catalogue is temporarily unavailable. Please try again later."
       });
     }

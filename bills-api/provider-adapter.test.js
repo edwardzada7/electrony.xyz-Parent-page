@@ -58,6 +58,21 @@ test("Monnify adapter requires explicit, environment-matched sandbox configurati
   });
 });
 
+test("Monnify configuration accepts only documented environment names and base URLs", () => {
+  const adapter = buildProviderAdapter({
+    ...configuredEnvironment,
+    MONNIFY_ENVIRONMENT: "test",
+    MONNIFY_BASE_URL: "https://sandbox.monnify.com/v1"
+  });
+
+  assert.equal(adapter.isConfigured(), false);
+  assert.equal(adapter.getEnvironment(), null);
+  assert.deepEqual(adapter.getMissingConfiguration(), [
+    "MONNIFY_ENVIRONMENT",
+    "MONNIFY_BASE_URL"
+  ]);
+});
+
 test("Monnify mode follows the selected API environment, not NODE_ENV", () => {
   const productionAdapter = buildProviderAdapter({
     ...configuredEnvironment,
@@ -78,7 +93,10 @@ test("catalogue reads authenticated Monnify categories and billers and caches th
   const { fetch, requests } = createFetch(({ url, options }) => {
     if (url.pathname === "/api/v1/auth/login") {
       assert.equal(options.method, "POST");
-      assert.match(options.headers.Authorization, /^Basic /);
+      assert.equal(
+        options.headers.Authorization,
+        `Basic ${Buffer.from("sandbox-api-key:sandbox-secret-key").toString("base64")}`
+      );
       return successful({ accessToken: "sandbox-access-token", expiresIn: 3600 });
     }
     assert.equal(options.headers.Authorization, "Bearer sandbox-access-token");
@@ -112,13 +130,170 @@ test("catalogue reads authenticated Monnify categories and billers and caches th
 
   assert.equal(first, second);
   assert.equal(first.available, true);
+  assert.equal(first.status, "available");
   assert.deepEqual(first.categories.electricity.billers, [
     { code: "LIVE-DISCO", name: "Catalogue Disco" }
   ]);
   assert.equal(first.categories.bills.available, true);
   assert.deepEqual(first.categories.bills.billers, []);
+  assert.deepEqual(first.diagnostics, {
+    stage: "catalogue",
+    providerCategoryCount: 3,
+    providerCategories: [
+      { code: "ELECTRICITY", name: "Electricity" },
+      { code: "CABLE_TV", name: "Cable TV" },
+      { code: "UNSUPPORTED", name: "Unsupported category" }
+    ],
+    supportedCategoryCount: 2
+  });
   assert.equal(requests.filter(({ url }) => url.pathname === "/api/v1/auth/login").length, 1);
   assert.equal(requests.filter(({ url }) => url.pathname.endsWith("/biller-categories")).length, 1);
+});
+
+test("catalogue diagnostics distinguish empty categories from unmapped provider categories", async () => {
+  for (const [responseBody, expectedStatus, expectedCount] of [
+    [{ content: [], nextPage: null }, "empty_categories", 0],
+    [{
+      content: [{ code: "MISC", name: "A provider category" }],
+      nextPage: null
+    }, "no_supported_categories", 1]
+  ]) {
+    const { fetch } = createFetch(({ url }) => {
+      if (url.pathname === "/api/v1/auth/login") return successful({ accessToken: "token", expiresIn: 3600 });
+      if (url.pathname.endsWith("/biller-categories")) return successful(responseBody);
+      assert.fail(`Unexpected Monnify request: ${url.pathname}`);
+    });
+    const result = await buildProviderAdapter(configuredEnvironment, { fetch }).getCatalogue();
+
+    assert.equal(result.ok, true);
+    assert.equal(result.available, false);
+    assert.equal(result.status, expectedStatus);
+    assert.equal(result.diagnostics.providerCategoryCount, expectedCount);
+  }
+});
+
+test("catalogue pagination follows the returned next-page code", async () => {
+  const { fetch, requests } = createFetch(({ url }) => {
+    if (url.pathname === "/api/v1/auth/login") return successful({ accessToken: "token", expiresIn: 3600 });
+    if (url.pathname.endsWith("/biller-categories")) {
+      return url.searchParams.get("page") === "1"
+        ? successful({
+          content: [{ code: "ELECTRICITY", name: "Electricity" }],
+          nextPage: 2
+        })
+        : successful({
+          content: [{ code: "AIRTIME", name: "Airtime" }],
+          nextPage: null
+        });
+    }
+    if (url.pathname.endsWith("/billers")) {
+      return successful({ content: [], nextPage: null });
+    }
+    assert.fail(`Unexpected Monnify request: ${url.pathname}`);
+  });
+  const result = await buildProviderAdapter(configuredEnvironment, { fetch }).getCatalogue();
+
+  assert.deepEqual(result.diagnostics.providerCategories.map(({ code }) => code), [
+    "ELECTRICITY",
+    "AIRTIME"
+  ]);
+  assert.deepEqual(
+    requests
+      .filter(({ url }) => url.pathname.endsWith("/biller-categories"))
+      .map(({ url }) => url.searchParams.get("page")),
+    ["1", "2"]
+  );
+});
+
+test("catalogue failures identify authentication, activation, access, and endpoint errors without provider bodies", async () => {
+  const cases = [
+    {
+      url: "/api/v1/auth/login",
+      status: 401,
+      responseMessage: "Invalid credentials",
+      expected: "authentication_failed",
+      stage: "authentication"
+    },
+    {
+      url: "/api/v1/vas/bills-payment/biller-categories",
+      status: 403,
+      responseMessage: "Bills Payment feature is not enabled for this merchant",
+      expected: "feature_not_activated",
+      stage: "catalogue"
+    },
+    {
+      url: "/api/v1/vas/bills-payment/biller-categories",
+      status: 403,
+      responseMessage: "Access denied",
+      expected: "access_denied",
+      stage: "catalogue"
+    },
+    {
+      url: "/api/v1/vas/bills-payment/biller-categories",
+      status: 404,
+      responseMessage: "Not found",
+      expected: "endpoint_or_request_error",
+      stage: "catalogue"
+    }
+  ];
+
+  for (const item of cases) {
+    const { fetch } = createFetch(({ url }) => {
+      if (url.pathname === "/api/v1/auth/login" && item.url !== url.pathname) {
+        return successful({ accessToken: "token", expiresIn: 3600 });
+      }
+      if (url.pathname === item.url) {
+        return jsonResponse({
+          requestSuccessful: false,
+          responseCode: "ERROR",
+          responseMessage: item.responseMessage
+        }, item.status);
+      }
+      assert.fail(`Unexpected Monnify request: ${url.pathname}`);
+    });
+    const adapter = buildProviderAdapter(configuredEnvironment, { fetch });
+
+    await assert.rejects(adapter.getCatalogue(), (error) => {
+      assert.equal(error.diagnosticStatus, item.expected);
+      assert.equal(error.stage, item.stage);
+      assert.equal(error.message.includes(item.responseMessage), false);
+      return true;
+    });
+  }
+});
+
+test("catalogue diagnostics distinguish biller and product retrieval failures", async () => {
+  for (const [failedPath, expectedStage, expectedStatus] of [
+    ["/api/v1/vas/bills-payment/billers", "biller", "biller_retrieval_failed"],
+    ["/api/v1/vas/bills-payment/biller-products", "product", "product_retrieval_failed"]
+  ]) {
+    const { fetch } = createFetch(({ url }) => {
+      if (url.pathname === "/api/v1/auth/login") return successful({ accessToken: "token", expiresIn: 3600 });
+      if (url.pathname.endsWith("/biller-categories")) {
+        return successful({ content: [{ code: "ELECTRICITY", name: "Electricity" }], nextPage: null });
+      }
+      if (url.pathname === failedPath) {
+        return jsonResponse({
+          requestSuccessful: false,
+          responseCode: "TEMPORARY_FAILURE"
+        }, 503);
+      }
+      if (url.pathname.endsWith("/billers")) {
+        return successful({ content: [{ code: "LIVE-DISCO", name: "Catalogue Disco" }], nextPage: null });
+      }
+      assert.fail(`Unexpected Monnify request: ${url.pathname}`);
+    });
+    const adapter = buildProviderAdapter(configuredEnvironment, { fetch });
+
+    await assert.rejects(
+      expectedStage === "biller" ? adapter.getCatalogue() : adapter.getProducts("LIVE-DISCO"),
+      (error) => {
+        assert.equal(error.diagnosticStatus, expectedStatus);
+        assert.equal(error.stage, expectedStage);
+        return true;
+      }
+    );
+  }
 });
 
 test("products and customer validation use catalogue codes and preserve requireValidationRef", async () => {

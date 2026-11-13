@@ -25,6 +25,28 @@ function createProviderError(message, code = "provider_unavailable", statusCode 
   return error;
 }
 
+function getProviderDiagnosticStatus(response, payload, stage) {
+  const providerMessage = [
+    payload?.responseMessage,
+    payload?.message,
+    payload?.errorMessage
+  ].filter((value) => typeof value === "string").join(" ");
+
+  if (/not\s+(?:been\s+)?(?:enabled|activated|subscribed)|activation\s+required/i.test(providerMessage)) {
+    return "feature_not_activated";
+  }
+  if (response.status === 401) return "authentication_failed";
+  if (response.status === 403) return "access_denied";
+  if (response.status === 404) return "endpoint_or_request_error";
+  if (response.status === 400) return "invalid_provider_request";
+  if (response.status >= 500) {
+    if (stage === "authentication") return "provider_unavailable";
+    return `${stage}_retrieval_failed`;
+  }
+  if (stage === "authentication") return "authentication_failed";
+  return `${stage}_retrieval_failed`;
+}
+
 function buildProviderAdapter(environment = process.env, options = {}) {
   const fetchImpl = options.fetch || globalThis.fetch;
   let tokenCache = null;
@@ -71,12 +93,25 @@ function buildProviderAdapter(environment = process.env, options = {}) {
     return missing;
   }
 
-  async function readJsonResponse(response) {
+  async function readJsonResponse(response, stage) {
     let payload;
     try {
       payload = await response.json();
     } catch {
-      throw createProviderError("Monnify returned an invalid response.", "provider_invalid_response");
+      if (!response.ok) {
+        const error = createProviderError(
+          "Monnify could not complete the request.",
+          "provider_request_failed",
+          response.status >= 400 && response.status < 600 ? response.status : 502
+        );
+        error.diagnosticStatus = getProviderDiagnosticStatus(response, null, stage);
+        error.stage = stage;
+        throw error;
+      }
+      const error = createProviderError("Monnify returned an invalid response.", "provider_invalid_response");
+      error.diagnosticStatus = `${stage}_retrieval_failed`;
+      error.stage = stage;
+      throw error;
     }
     if (!response.ok
       || payload?.requestSuccessful !== true
@@ -86,7 +121,8 @@ function buildProviderAdapter(environment = process.env, options = {}) {
         "provider_request_failed",
         response.status >= 400 && response.status < 600 ? response.status : 502
       );
-      error.responseCode = String(payload?.responseCode ?? "");
+      error.diagnosticStatus = getProviderDiagnosticStatus(response, payload, stage);
+      error.stage = stage;
       throw error;
     }
     return payload;
@@ -102,6 +138,8 @@ function buildProviderAdapter(environment = process.env, options = {}) {
         503
       );
       error.missingConfiguration = missing;
+      error.diagnosticStatus = "configuration_missing";
+      error.stage = "configuration";
       throw error;
     }
     if (tokenCache && tokenCache.expiresAt - TOKEN_REFRESH_MARGIN_MS > Date.now()) {
@@ -127,14 +165,20 @@ function buildProviderAdapter(environment = process.env, options = {}) {
           signal: AbortSignal.timeout(10_000)
         });
       } catch {
-        throw createProviderError("Monnify authentication is temporarily unavailable.", "provider_unavailable");
+        const error = createProviderError("Monnify authentication is temporarily unavailable.", "provider_unavailable");
+        error.diagnosticStatus = "provider_unavailable";
+        error.stage = "authentication";
+        throw error;
       }
 
-      const payload = await readJsonResponse(response);
+      const payload = await readJsonResponse(response, "authentication");
       const body = payload.responseBody;
       const token = typeof body?.accessToken === "string" ? body.accessToken : "";
       if (!token) {
-        throw createProviderError("Monnify did not return an access token.", "provider_invalid_response");
+        const error = createProviderError("Monnify did not return an access token.", "provider_invalid_response");
+        error.diagnosticStatus = "authentication_failed";
+        error.stage = "authentication";
+        throw error;
       }
       const expiresInSeconds = Number(body.expiresIn);
       const lifetimeMs = Number.isFinite(expiresInSeconds) && expiresInSeconds > 0
@@ -158,7 +202,7 @@ function buildProviderAdapter(environment = process.env, options = {}) {
     }
   }
 
-  async function request(pathname, { method = "GET", query, body } = {}) {
+  async function request(pathname, { method = "GET", query, body, stage = "catalogue" } = {}) {
     const { token, config } = await authenticate();
     const endpoint = new URL(pathname, `${config.baseUrl}/`);
     if (query) {
@@ -181,11 +225,13 @@ function buildProviderAdapter(environment = process.env, options = {}) {
       });
     } catch {
       const error = createProviderError("Monnify is temporarily unavailable.", "provider_unavailable");
+      error.diagnosticStatus = "provider_unavailable";
+      error.stage = stage;
       if (method === "POST" && pathname.endsWith("/vend")) error.outcomeUncertain = true;
       throw error;
     }
     try {
-      return await readJsonResponse(response);
+      return await readJsonResponse(response, stage);
     } catch (error) {
       if (response.status === 401) tokenCache = null;
       if (method === "POST" && pathname.endsWith("/vend")
@@ -196,27 +242,37 @@ function buildProviderAdapter(environment = process.env, options = {}) {
     }
   }
 
-  async function getPages(pathname, query = {}) {
+  async function getPages(pathname, query = {}, stage = "catalogue") {
     const records = [];
     let page = 1;
     for (let count = 0; count < MAX_PAGES; count += 1) {
       const payload = await request(pathname, {
-        query: { ...query, page }
+        query: { ...query, page },
+        stage
       });
       const pageBody = payload.responseBody;
       if (!Array.isArray(pageBody?.content)) {
-        throw createProviderError("Monnify returned an invalid catalogue page.", "provider_invalid_response");
+        const error = createProviderError("Monnify returned an invalid catalogue page.", "provider_invalid_response");
+        error.diagnosticStatus = `${stage}_retrieval_failed`;
+        error.stage = stage;
+        throw error;
       }
       records.push(...pageBody.content);
       const nextPage = pageBody.nextPage;
       if (nextPage === null || nextPage === undefined || nextPage === "") return records;
       const nextPageNumber = Number(nextPage);
       if (!Number.isInteger(nextPageNumber) || nextPageNumber < 0 || nextPageNumber === page) {
-        throw createProviderError("Monnify returned invalid catalogue pagination.", "provider_invalid_response");
+        const error = createProviderError("Monnify returned invalid catalogue pagination.", "provider_invalid_response");
+        error.diagnosticStatus = `${stage}_retrieval_failed`;
+        error.stage = stage;
+        throw error;
       }
       page = nextPageNumber;
     }
-    throw createProviderError("Monnify catalogue pagination exceeded the supported limit.", "provider_invalid_response");
+    const error = createProviderError("Monnify catalogue pagination exceeded the supported limit.", "provider_invalid_response");
+    error.diagnosticStatus = `${stage}_retrieval_failed`;
+    error.stage = stage;
+    throw error;
   }
 
   function getServiceForCategory(categoryCode) {
@@ -230,7 +286,7 @@ function buildProviderAdapter(environment = process.env, options = {}) {
     }
     if (cataloguePromise) return cataloguePromise;
     cataloguePromise = (async () => {
-      const categoryRows = await getPages("/api/v1/vas/bills-payment/biller-categories");
+      const categoryRows = await getPages("/api/v1/vas/bills-payment/biller-categories", {}, "catalogue");
       const categories = Object.fromEntries(Object.keys(BILLING_SERVICES).map((service) => [
         service,
         {
@@ -246,7 +302,7 @@ function buildProviderAdapter(environment = process.env, options = {}) {
         const service = getServiceForCategory(category.code);
         const billers = await getPages("/api/v1/vas/bills-payment/billers", {
           categoryCode: category.code
-        });
+        }, "biller");
         const current = categories[service];
         current.available = true;
         current.status = "available";
@@ -261,11 +317,25 @@ function buildProviderAdapter(environment = process.env, options = {}) {
       const value = {
         ok: true,
         available: supportedCategories.length > 0,
-        status: supportedCategories.length ? "available" : "no_supported_categories",
+        status: supportedCategories.length
+          ? "available"
+          : categoryRows.length
+            ? "no_supported_categories"
+            : "empty_categories",
         categories,
         message: supportedCategories.length
           ? ""
-          : "Monnify currently lists no supported bill categories."
+          : categoryRows.length
+            ? "Monnify returned categories, but none match the supported bill services."
+            : "Monnify returned no bill categories. Confirm Bills Payment activation and catalogue access.",
+        diagnostics: {
+          stage: "catalogue",
+          providerCategoryCount: categoryRows.length,
+          providerCategories: categoryRows
+            .filter((category) => typeof category?.code === "string" && typeof category?.name === "string")
+            .map((category) => ({ code: category.code, name: category.name })),
+          supportedCategoryCount: supportedCategories.length
+        }
       };
       catalogueCache.value = value;
       catalogueCache.expiresAt = Date.now() + CATALOGUE_CACHE_MS;
@@ -294,7 +364,7 @@ function buildProviderAdapter(environment = process.env, options = {}) {
     const request = (async () => {
       const products = await getPages("/api/v1/vas/bills-payment/biller-products", {
         billerCode
-      });
+      }, "product");
       const normalized = products
         .filter((product) => typeof product?.code === "string" && typeof product?.name === "string")
         .map((product) => ({
@@ -329,7 +399,8 @@ function buildProviderAdapter(environment = process.env, options = {}) {
     }
     const payload = await request("/api/v1/vas/bills-payment/validate-customer", {
       method: "POST",
-      body: { productCode, customerId }
+      body: { productCode, customerId },
+      stage: "customer_validation"
     });
     const result = payload.responseBody;
     const instruction = result?.vendInstruction;
@@ -388,7 +459,8 @@ function buildProviderAdapter(environment = process.env, options = {}) {
     };
     const payload = await request("/api/v1/vas/bills-payment/vend", {
       method: "POST",
-      body
+      body,
+      stage: "vending"
     });
     const result = payload.responseBody;
     if (!result || typeof result.vendStatus !== "string" || !result.vendReference) {
@@ -404,7 +476,8 @@ function buildProviderAdapter(environment = process.env, options = {}) {
       throw createProviderError("A vending reference is required for requery.", "invalid_input", 400);
     }
     const payload = await request("/api/v1/vas/bills-payment/requery", {
-      query: { reference }
+      query: { reference },
+      stage: "requery"
     });
     const result = payload.responseBody;
     if (!result || typeof result.vendStatus !== "string") {
