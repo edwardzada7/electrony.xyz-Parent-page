@@ -11,6 +11,7 @@ body.software-page {
   --software-muted: #a4b1a6;
   --software-dim: #75867a;
   --software-green: #78e28e;
+  --software-wordmark-accent: #155b2d;
   --software-line: rgb(151 199 160 / 19%);
   --software-label: "DM Mono", "SFMono-Regular", monospace;
   --software-display: "Space Grotesk", "Avenir Next", sans-serif;
@@ -109,13 +110,14 @@ body.software-page {
 }
 
 .software-wordmark-divider {
-  width: 1px;
-  height: 1.7rem;
-  background: rgb(255 255 255 / 20%);
+  color: var(--software-green);
+  font-size: 1.1rem;
+  font-weight: 500;
+  line-height: 1;
 }
 
 .software-wordmark-label {
-  color: #c3cdc4;
+  color: #ffffff;
   font-size: 0.83rem;
   letter-spacing: 0.02em;
 }
@@ -1569,11 +1571,11 @@ body.software-page {
   }
 
   .software-wordmark-divider {
-    height: 1.25rem;
+    line-height: 1.25rem;
   }
 
   .software-wordmark-label {
-    font-size: 0.68rem;
+    font-size: 0.72rem;
     white-space: nowrap;
   }
 
@@ -3888,6 +3890,10 @@ body.software-page {
   color: #33434c;
 }
 
+.software-wordmark-label {
+  color: var(--software-wordmark-accent);
+}
+
 .software-navigation a:hover,
 .footer-navigation a:hover,
 .footer-product-links a:hover,
@@ -3896,7 +3902,7 @@ body.software-page {
 }
 
 .software-wordmark-divider {
-  background: #89979f;
+  color: var(--software-wordmark-accent);
 }
 
 .software-navigation .software-header-cta,

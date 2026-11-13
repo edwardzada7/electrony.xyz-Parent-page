@@ -6,6 +6,10 @@
   --bills-accent: #bfd395;
 }
 
+.bills-page {
+  --product-accent: #1a563f;
+}
+
 html {
   scroll-behavior: smooth;
   scroll-padding-top: 5rem;

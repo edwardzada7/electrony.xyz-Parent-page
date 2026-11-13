@@ -19,6 +19,7 @@
 
 .bills-app-page {
   --product-accent: var(--bills-green-300);
+  --product-wordmark-label-color: #ffffff;
 }
 
 * {
