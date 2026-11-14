@@ -92,6 +92,7 @@ CREATE TABLE IF NOT EXISTS public.bill_payment_attempts (
 );
 
 CREATE TABLE IF NOT EXISTS public.bill_payment_webhook_events (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   provider text NOT NULL,
   provider_event_id text NOT NULL,
   event_type text NOT NULL,
@@ -101,12 +102,14 @@ CREATE TABLE IF NOT EXISTS public.bill_payment_webhook_events (
   payload jsonb NOT NULL DEFAULT '{}'::jsonb,
   error_message text,
   processed_at timestamptz,
-  CONSTRAINT bill_payment_webhook_events_pkey PRIMARY KEY (provider, provider_event_id)
+  received_at timestamptz NOT NULL DEFAULT now(),
+  CONSTRAINT bill_payment_webhook_events_provider_provider_event_id_key
+    UNIQUE (provider, provider_event_id)
 );
 
 CREATE TABLE IF NOT EXISTS public.bill_platform_settings (
   setting_key text PRIMARY KEY,
-  setting_value text NOT NULL,
+  setting_value jsonb NOT NULL DEFAULT '{}'::jsonb,
   description text,
   updated_at timestamptz NOT NULL DEFAULT now()
 );

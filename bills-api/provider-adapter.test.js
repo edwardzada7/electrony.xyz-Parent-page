@@ -58,7 +58,7 @@ test("Monnify adapter requires explicit, environment-matched sandbox configurati
   });
 });
 
-test("Monnify configuration accepts only documented environment names and base URLs", () => {
+test("Monnify configuration accepts sandbox only", () => {
   const adapter = buildProviderAdapter({
     ...configuredEnvironment,
     MONNIFY_ENVIRONMENT: "test",
@@ -71,9 +71,6 @@ test("Monnify configuration accepts only documented environment names and base U
     "MONNIFY_ENVIRONMENT",
     "MONNIFY_BASE_URL"
   ]);
-});
-
-test("Monnify mode follows the selected API environment, not NODE_ENV", () => {
   const productionAdapter = buildProviderAdapter({
     ...configuredEnvironment,
     NODE_ENV: "development",
@@ -85,7 +82,11 @@ test("Monnify mode follows the selected API environment, not NODE_ENV", () => {
     NODE_ENV: "production"
   });
 
-  assert.equal(productionAdapter.getEnvironment(), "production");
+  assert.equal(productionAdapter.getEnvironment(), null);
+  assert.deepEqual(productionAdapter.getMissingConfiguration(), [
+    "MONNIFY_ENVIRONMENT",
+    "MONNIFY_BASE_URL"
+  ]);
   assert.equal(sandboxAdapter.getEnvironment(), "sandbox");
 });
 
@@ -132,7 +133,7 @@ test("catalogue reads authenticated Monnify categories and billers and caches th
   assert.equal(first.available, true);
   assert.equal(first.status, "available");
   assert.deepEqual(first.categories.electricity.billers, [
-    { code: "LIVE-DISCO", name: "Catalogue Disco" }
+    { categoryCode: "ELECTRICITY", billerCode: "LIVE-DISCO", name: "Catalogue Disco" }
   ]);
   assert.equal(first.categories.bills.available, true);
   assert.deepEqual(first.categories.bills.billers, []);
@@ -161,6 +162,62 @@ test("catalogue reads authenticated Monnify categories and billers and caches th
   assert.equal(categoryRequests.length, 1);
   assert.equal(categoryRequests[0].url.search, "");
   assert.equal(categoryRequests[0].options.headers.Authorization, "Bearer sandbox-access-token");
+});
+
+test("catalogue categories are mapped by returned category codes and unknown categories stay unclassified", async () => {
+  const providerCategories = [
+    { code: "ELECTRICITY", name: "Electricity" },
+    { code: "AIRTIME", name: "Airtime" },
+    { code: "DATA", name: "Data" },
+    { code: "DATA_BUNDLE", name: "Data bundles" },
+    { code: "CABLE_TV", name: "Cable TV" },
+    { code: "OTHER", name: "Provider category not mapped by Electrony" }
+  ];
+  const { fetch, requests } = createFetch(({ url }) => {
+    if (url.pathname === "/api/v1/auth/login") return successful({ accessToken: "token", expiresIn: 3600 });
+    if (url.pathname.endsWith("/biller-categories")) {
+      return successful({ content: providerCategories, nextPage: "ignored" });
+    }
+    if (url.pathname.endsWith("/billers")) {
+      const categoryCode = url.searchParams.get("categoryCode");
+      return successful({
+        content: [{ code: `BILLER-${categoryCode}`, name: `Biller for ${categoryCode}` }],
+        nextPage: null
+      });
+    }
+    assert.fail(`Unexpected Monnify request: ${url.pathname}`);
+  });
+  const result = await buildProviderAdapter(configuredEnvironment, { fetch }).getCatalogue();
+
+  assert.deepEqual(Object.keys(result.categories), ["electricity", "airtime", "data", "bills"]);
+  for (const [service, categoryCode] of [
+    ["electricity", "ELECTRICITY"],
+    ["airtime", "AIRTIME"],
+    ["data", "DATA"],
+    ["bills", "CABLE_TV"]
+  ]) {
+    assert.equal(result.categories[service].providerCategories[0].categoryCode, categoryCode);
+    assert.equal(result.categories[service].billers[0].categoryCode, categoryCode);
+    assert.equal(result.categories[service].billers[0].billerCode, `BILLER-${categoryCode}`);
+  }
+  assert.deepEqual(result.categories.data.providerCategories.map(({ categoryCode }) => categoryCode), [
+    "DATA",
+    "DATA_BUNDLE"
+  ]);
+  assert.deepEqual(result.unclassifiedCategories, [{
+    categoryCode: "OTHER",
+    categoryName: "Provider category not mapped by Electrony",
+    available: false,
+    status: "unclassified",
+    billers: [],
+    products: [],
+    message: "This provider category has no verified Electrony service mapping."
+  }]);
+
+  const categoryRequests = requests.filter(({ url }) => url.pathname.endsWith("/biller-categories"));
+  assert.equal(categoryRequests.length, 1);
+  assert.equal(categoryRequests[0].url.search, "");
+  assert.equal(requests.filter(({ url }) => url.pathname.endsWith("/billers")).length, 5);
 });
 
 test("catalogue diagnostics distinguish empty categories from unmapped provider categories", async () => {
@@ -517,8 +574,19 @@ test("products and customer validation use catalogue codes and preserve requireV
     adapter.getProducts("LIVE-DISCO")
   ]);
   assert.deepEqual(duplicateProducts, products);
+  assert.deepEqual(products[0], {
+    productCode: "LIVE-PREPAID",
+    productName: "Prepaid product returned by Monnify",
+    minAmount: 100,
+    maxAmount: 200000,
+    price: null,
+    priceType: "OPEN"
+  });
+  assert.equal(Object.hasOwn(products[0], "categories"), false);
+  assert.equal(Object.hasOwn(products[0], "biller"), false);
+  assert.equal(Object.hasOwn(products[0], "metadata"), false);
   const validation = await adapter.validateCustomer({
-    productCode: products[0].code,
+    productCode: products[0].productCode,
     customerId: "1234567890"
   });
 
@@ -552,6 +620,31 @@ test("customer identifiers are bounded strings and are not silently normalized",
     }), { code: "invalid_input", statusCode: 400 });
   }
   assert.equal(requests.length, 0);
+});
+
+test("customer validation exposes only sanitized provider feedback", async () => {
+  const { fetch } = createFetch(({ url }) => {
+    if (url.pathname === "/api/v1/auth/login") return successful({ accessToken: "token", expiresIn: 3600 });
+    if (url.pathname.endsWith("/validate-customer")) {
+      return jsonResponse({
+        requestSuccessful: false,
+        responseCode: "CUSTOMER_INVALID",
+        responseMessage: "Meter account 123456789012 was not found."
+      }, 400);
+    }
+    assert.fail(`Unexpected Monnify request: ${url.pathname}`);
+  });
+  const adapter = buildProviderAdapter(configuredEnvironment, { fetch });
+
+  await assert.rejects(adapter.validateCustomer({
+    productCode: "EXACT-PRODUCT-CODE",
+    customerId: "1234567890"
+  }), (error) => {
+    assert.equal(error.stage, "customer_validation");
+    assert.equal(error.providerErrorCode, "CUSTOMER_INVALID");
+    assert.equal(error.providerErrorMessage, "Meter account [redacted] was not found.");
+    return true;
+  });
 });
 
 test("adapter preserves supplied fixture identifiers and mocked provider vending statuses", async () => {

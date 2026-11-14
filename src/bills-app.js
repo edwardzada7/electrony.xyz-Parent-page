@@ -27,11 +27,11 @@ const serviceCatalog = {
   },
   bills: {
     id: "bills",
-    label: "Pay Bills",
+    label: "Television / Cable TV",
     icon: "▤",
-    title: "TV and utility bills",
+    title: "Television / cable TV purchase",
     guestCheckout: true,
-    helper: "Choose a cable provider and package returned by the configured provider; verify the smartcard first."
+    helper: "Choose a television provider and package returned by the configured provider; verify the smartcard first."
   },
   "virtual-cards": {
     id: "virtual-cards",
@@ -255,22 +255,27 @@ function renderServicePanel() {
 
   const category = state.catalogue?.categories?.[service.id];
   const billers = Array.isArray(category?.billers) ? category.billers : [];
-  const available = category?.available === true && billers.length > 0;
+  const catalogueListed = category?.available === true && billers.length > 0;
+  const available = catalogueListed
+    && category?.purchaseReady === true
+    && BILL_PAYMENT_OPERATIONS_ENABLED;
   const statusMessage = state.catalogueLoading
     ? "Loading the configured provider catalogue…"
     : state.catalogueError
       ? `Catalogue unavailable: ${state.catalogueError}`
+      : catalogueListed && !available
+        ? "The catalogue lists this service, but provider mapping, payment verification, and vending readiness are not enabled. Purchases remain unavailable."
       : category?.available === true && billers.length === 0
-        ? "The configured provider currently lists no products for this service."
+        ? "The configured provider currently lists no billers for this service."
         : category?.message || "No verified provider is configured for this service.";
-  const selectedProvider = state.selectedBillers[service.id] || billers[0]?.code || "";
+  const selectedProvider = state.selectedBillers[service.id] || "";
   const providerSelect = available ? `
     <label class="field">
       <span>${service.id === "electricity" ? "Electricity DisCo" : service.id === "bills" ? "Cable TV provider" : "Network"}</span>
       <select id="biller-code" name="provider" required>
         <option value="">Select a provider</option>
         ${billers.map((biller) => `
-          <option value="${escapeHtml(biller.code)}">${escapeHtml(biller.name)}</option>
+          <option value="${escapeHtml(biller.billerCode)}">${escapeHtml(biller.name)}</option>
         `).join("")}
       </select>
     </label>
@@ -294,9 +299,9 @@ function renderServicePanel() {
         <button type="button" class="secondary-button" id="verify-customer-button">Verify customer details</button>
         <div id="verified-customer" class="catalog-state" role="status" aria-live="polite">${renderVerifiedCustomer()}</div>
         <div id="fee-preview" class="catalog-state">Checkout remains unavailable until a verified vending provider and payment configuration are in place.</div>
-        <button type="submit" class="primary-button" disabled>Continue to payment</button>
+        <button type="submit" class="primary-button" disabled aria-disabled="true">Continue to payment</button>
       </form>
-    ` : ""}
+    ` : '<button type="button" class="primary-button checkout-disabled" disabled aria-disabled="true">Continue to payment</button>'}
     <button class="secondary-button" type="button" id="catalogue-retry" ${state.catalogueLoading ? "disabled" : ""}>${state.catalogueLoading ? "Loading…" : "Retry catalogue"}</button>
   `;
 
@@ -352,7 +357,8 @@ function renderServicePanel() {
   panel.querySelector("#catalogue-retry")?.addEventListener("click", () => {
     void loadServiceCatalogue(true);
   });
-  if (service.id
+  if (available
+    && service.id
     && selectedProvider
     && state.plansFor !== `${service.id}:${selectedProvider}`
     && !state.plansLoading) {
@@ -375,13 +381,19 @@ async function loadServiceCatalogue(forceRefresh = false) {
     if (!result || typeof result.categories !== "object" || result.categories === null) {
       throw new Error("Billing API returned an invalid catalogue.");
     }
+    if (typeof result.purchaseReady !== "boolean" || !Array.isArray(result.unclassifiedCategories)) {
+      throw new Error("Billing API returned an invalid catalogue readiness state.");
+    }
     Object.values(serviceCatalog).filter((service) => service.guestCheckout).forEach((service) => {
       const category = result.categories[service.id];
       if (!category
+        || typeof category.purchaseReady !== "boolean"
         || !Array.isArray(category.billers)
         || !Array.isArray(category.products)
-        || category.billers.some((biller) => typeof biller?.code !== "string"
-          || !biller.code
+        || category.billers.some((biller) => typeof biller?.categoryCode !== "string"
+          || !biller.categoryCode
+          || typeof biller.billerCode !== "string"
+          || !biller.billerCode
           || typeof biller.name !== "string"
           || !biller.name)) {
         throw new Error("Billing API returned an invalid biller catalogue.");
@@ -408,9 +420,8 @@ function getPlanRows(payload) {
   return [];
 }
 
-function getPlanVariationCode(plan) {
-  if (typeof plan?.code === "string") return plan.code;
-  return typeof plan?.variation_code === "string" ? plan.variation_code : "";
+function getProductCode(product) {
+  return typeof product?.productCode === "string" ? product.productCode : "";
 }
 
 function getPlanPrice(plan) {
@@ -435,14 +446,11 @@ function getProductBound(product, key) {
 }
 
 function getPlanLabel(plan) {
-  const metadata = plan?.metadata && typeof plan.metadata === "object" ? plan.metadata : {};
   const parts = [
-    plan?.name,
-    metadata.volume ? `${metadata.volume}${metadata.volumeUnit || ""}` : "",
-    metadata.duration ? `${metadata.duration}${metadata.durationUnit ? ` ${metadata.durationUnit}` : ""}` : "",
+    plan?.productName,
     getPlanPrice(plan) ? formatCurrency(getPlanPrice(plan)) : ""
   ].filter((value) => typeof value === "string" || typeof value === "number");
-  return parts.length ? parts.join(" · ") : getPlanVariationCode(plan);
+  return parts.length ? parts.join(" · ") : getProductCode(plan);
 }
 
 function renderGuestServiceFields(serviceId, provider) {
@@ -457,12 +465,12 @@ function renderGuestServiceFields(serviceId, provider) {
   const planField = `
     <label class="field"><span>${planLabel}</span><select name="plan" required>
       <option value="">${state.plansLoading ? "Loading Monnify products…" : state.plansError || "Select a product returned by Monnify"}</option>
-      ${products.filter((product) => getPlanVariationCode(product)).map((product) => {
+      ${products.filter((product) => getProductCode(product)).map((product) => {
         const fixedPrice = isFixedPriceProduct(product) && getPlanPrice(product) > 0;
         const minAmount = getProductBound(product, "minAmount");
         const maxAmount = getProductBound(product, "maxAmount");
         return `
-          <option value="${escapeHtml(getPlanVariationCode(product))}"
+          <option value="${escapeHtml(getProductCode(product))}"
             ${fixedPrice ? `data-amount="${getPlanPrice(product)}"` : ""}
             ${minAmount ? `data-min-amount="${minAmount}"` : ""}
             ${maxAmount ? `data-max-amount="${maxAmount}"` : ""}
@@ -527,7 +535,7 @@ function readPurchaseFormValues(form) {
 function getSelectedProduct(serviceId, provider, productCode) {
   if (!productCode || state.plansFor !== `${serviceId}:${provider}`) return null;
   return getPlanRows(state.servicePlans)
-    .find((product) => getPlanVariationCode(product) === productCode) || null;
+  .find((product) => getProductCode(product) === productCode) || null;
 }
 
 function validateSelectedProductAmount(product, amount) {
@@ -566,7 +574,7 @@ async function loadServicePlans(serviceId, provider) {
     });
     const result = await fetchBillingApi(`/api/services/plans?${query}`);
     state.servicePlans = result.plans;
-    if (!getPlanRows(result.plans).some((product) => getPlanVariationCode(product))) {
+    if (!getPlanRows(result.plans).some((product) => getProductCode(product))) {
       state.plansError = "Monnify currently lists no products for this provider.";
     }
   } catch (error) {
@@ -859,6 +867,11 @@ function createSummaryFromForm(serviceId, values) {
 async function handlePurchaseSubmission() {
   const service = serviceCatalog[state.activeService];
   if (!service?.guestCheckout) {
+    renderServicePanel();
+    return;
+  }
+  if (!BILL_PAYMENT_OPERATIONS_ENABLED
+    || state.catalogue?.categories?.[service.id]?.purchaseReady !== true) {
     renderServicePanel();
     return;
   }

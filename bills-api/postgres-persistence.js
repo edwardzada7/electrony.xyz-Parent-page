@@ -400,7 +400,7 @@ const READINESS_QUERY = `
       ('bill_payment_webhook_events', 'error_message', 'text'),
       ('bill_payment_webhook_events', 'processed_at', 'timestamp with time zone'),
       ('bill_platform_settings', 'setting_key', 'text'),
-      ('bill_platform_settings', 'setting_value', 'text'),
+      ('bill_platform_settings', 'setting_value', 'jsonb'),
       ('bill_platform_settings', 'description', 'text'),
       ('bill_platform_settings', 'updated_at', 'timestamp with time zone')
   ),
@@ -429,7 +429,7 @@ const READINESS_QUERY = `
       ('bill_fee_quotes', ARRAY['id']::text[]),
       ('bill_orders', ARRAY['id']::text[]),
       ('bill_payment_attempts', ARRAY['id']::text[]),
-      ('bill_payment_webhook_events', ARRAY['provider', 'provider_event_id']::text[]),
+      ('bill_payment_webhook_events', ARRAY['id']::text[]),
       ('bill_platform_settings', ARRAY['setting_key']::text[])
   ),
   required_foreign_keys(source_table, source_column, target_table, target_column) AS (

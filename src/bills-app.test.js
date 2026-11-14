@@ -127,7 +127,7 @@ test("the six Bills services are split between guest checkout and account-requir
   );
 
   context.renderServiceList();
-  for (const label of ["Electricity", "Airtime", "Data", "Pay Bills", "Virtual Cards", "Gift Cards"]) {
+  for (const label of ["Electricity", "Airtime", "Data", "Television / Cable TV", "Virtual Cards", "Gift Cards"]) {
     assert.match(serviceGrid.innerHTML, new RegExp(label));
   }
   assert.equal(serviceList.items.length, 6);
@@ -184,11 +184,13 @@ test("guest service catalogue renders unavailable without provider-supplied prod
     ok: true,
     json: async () => ({
       ok: true,
+      purchaseReady: false,
+      unclassifiedCategories: [],
       categories: {
-        electricity: { available: false, billers: [], products: [], message: "No verified provider is configured." },
-        airtime: { available: false, billers: [], products: [], message: "No verified provider is configured." },
-        data: { available: false, billers: [], products: [], message: "No verified provider is configured." },
-        bills: { available: false, billers: [], products: [], message: "No verified provider is configured." }
+        electricity: { available: false, purchaseReady: false, billers: [], products: [], message: "No verified provider is configured." },
+        airtime: { available: false, purchaseReady: false, billers: [], products: [], message: "No verified provider is configured." },
+        data: { available: false, purchaseReady: false, billers: [], products: [], message: "No verified provider is configured." },
+        bills: { available: false, purchaseReady: false, billers: [], products: [], message: "No verified provider is configured." }
       }
     })
   }));
@@ -198,8 +200,113 @@ test("guest service catalogue renders unavailable without provider-supplied prod
 
   assert.equal(requests.length, 1);
   assert.match(servicePanel.innerHTML, /No verified provider is configured/);
-  assert.doesNotMatch(servicePanel.innerHTML, /purchase-form|biller-code|Continue to payment/);
+  assert.doesNotMatch(servicePanel.innerHTML, /purchase-form|biller-code/);
+  assert.match(servicePanel.innerHTML, /Continue to payment/);
+  assert.match(servicePanel.innerHTML, /disabled aria-disabled="true"/);
   assert.doesNotMatch(appSource, /Sogo|SOGO_/i);
+});
+
+test("catalogue-listed providers stay unavailable until backend purchase readiness is true", async () => {
+  const { context, requests, servicePanel } = createAppContext("?service=electricity", async () => ({
+    ok: true,
+    json: async () => ({
+      ok: true,
+      purchaseReady: false,
+      unclassifiedCategories: [{
+        categoryCode: "UNKNOWN",
+        categoryName: "Unmapped",
+        status: "unclassified",
+        billers: [],
+        products: []
+      }],
+      categories: {
+        electricity: {
+          available: true,
+          purchaseReady: false,
+          billers: [{ categoryCode: "ELECTRICITY", billerCode: "LIVE-DISCO", name: "Listed DisCo" }],
+          products: [],
+          message: ""
+        },
+        airtime: { available: false, purchaseReady: false, billers: [], products: [], message: "" },
+        data: { available: false, purchaseReady: false, billers: [], products: [], message: "" },
+        bills: { available: false, purchaseReady: false, billers: [], products: [], message: "" }
+      }
+    })
+  }));
+
+  await context.loadServiceCatalogue();
+  context.renderServicePanel();
+
+  assert.match(servicePanel.innerHTML, /provider mapping, payment verification, and vending readiness are not enabled/);
+  assert.doesNotMatch(servicePanel.innerHTML, /purchase-form|biller-code|Listed DisCo/);
+  assert.match(servicePanel.innerHTML, /Continue to payment/);
+  assert.match(servicePanel.innerHTML, /disabled aria-disabled="true"/);
+  assert.equal(requests.length, 1);
+});
+
+test("Retry catalogue requests the backend refresh operation", async () => {
+  const { context, requests } = createAppContext("?service=airtime", async () => ({
+    ok: true,
+    json: async () => ({
+      ok: true,
+      purchaseReady: false,
+      unclassifiedCategories: [],
+      categories: {
+        electricity: { available: false, purchaseReady: false, billers: [], products: [], message: "" },
+        airtime: { available: false, purchaseReady: false, billers: [], products: [], message: "" },
+        data: { available: false, purchaseReady: false, billers: [], products: [], message: "" },
+        bills: { available: false, purchaseReady: false, billers: [], products: [], message: "" }
+      }
+    })
+  }));
+
+  await context.loadServiceCatalogue(true);
+
+  assert.equal(requests.length, 1);
+  assert.match(requests[0][0], /\/api\/services\/catalog\?refresh=true$/);
+});
+
+test("guest service fields stay category-specific and preserve the returned product code", () => {
+  const { context } = createAppContext("?service=electricity");
+  vm.runInContext(`
+    state.plansFor = "electricity:LIVE-DISCO";
+    state.servicePlans = [{
+      productCode: "EXACT-MONNIFY-PRODUCT-CODE",
+      productName: "Provider returned product",
+      priceType: "OPEN",
+      minAmount: 100,
+      maxAmount: 50000
+    }];
+  `, context);
+
+  const electricity = context.renderGuestServiceFields("electricity", "LIVE-DISCO");
+  const airtime = context.renderGuestServiceFields("airtime", "");
+  const data = context.renderGuestServiceFields("data", "");
+  const television = context.renderGuestServiceFields("bills", "");
+
+  assert.match(electricity, /name="meterNumber"/);
+  assert.match(electricity, /value="EXACT-MONNIFY-PRODUCT-CODE"/);
+  assert.doesNotMatch(electricity, /meterType/);
+  assert.match(airtime, /name="recipient"/);
+  assert.doesNotMatch(airtime, /meterNumber|customerId/);
+  assert.match(data, /name="recipient"/);
+  assert.doesNotMatch(data, /meterNumber|customerId/);
+  assert.match(television, /name="customerId"/);
+  assert.doesNotMatch(television, /meterNumber|recipient/);
+});
+
+test("sanitized provider validation feedback is rendered without inventing customer details", () => {
+  const { context } = createAppContext("?service=electricity");
+  vm.runInContext(`
+    state.verificationError = "Monnify validation: Meter account [redacted] was not found.";
+    state.verifiedCustomer = null;
+  `, context);
+
+  assert.equal(
+    context.renderVerifiedCustomer(),
+    "Monnify validation: Meter account [redacted] was not found."
+  );
+  assert.doesNotMatch(context.renderVerifiedCustomer(), /customer name|successfully validated/i);
 });
 
 test("paid transaction history distinguishes vending that has not started for unverified funds", () => {

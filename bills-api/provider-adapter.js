@@ -85,6 +85,12 @@ function isValidCustomerIdentifier(value) {
     && !/[\u0000-\u001f\u007f]/.test(value);
 }
 
+function normalizeCatalogueAmount(value) {
+  if (value === null || value === undefined || value === "") return null;
+  const amount = typeof value === "number" ? value : Number(value);
+  return Number.isFinite(amount) && amount >= 0 ? amount : null;
+}
+
 function getProviderDiagnosticStatus(response, payload, stage) {
   const providerMessage = [
     payload?.responseMessage,
@@ -119,9 +125,7 @@ function buildProviderAdapter(environment = process.env, options = {}) {
     const baseUrl = normalizeConfigValue(environment.MONNIFY_BASE_URL).replace(/\/+$/, "");
     const expectedBaseUrl = monnifyEnvironment === "sandbox"
       ? "https://sandbox.monnify.com"
-      : monnifyEnvironment === "production"
-        ? "https://api.monnify.com"
-        : "";
+      : "";
     return {
       apiKey: normalizeConfigValue(environment.MONNIFY_API_KEY),
       secretKey: normalizeConfigValue(environment.MONNIFY_SECRET_KEY),
@@ -135,7 +139,6 @@ function buildProviderAdapter(environment = process.env, options = {}) {
   function getEnvironment() {
     const config = getConfiguration();
     if (config.baseUrl === "https://sandbox.monnify.com" && config.environment === "sandbox") return "sandbox";
-    if (config.baseUrl === "https://api.monnify.com" && config.environment === "production") return "production";
     return null;
   }
 
@@ -149,7 +152,7 @@ function buildProviderAdapter(environment = process.env, options = {}) {
     ]) {
       if (!value || /replace_with|change_me|example/i.test(value)) missing.push(name);
     }
-    if (!["sandbox", "production"].includes(config.environment)) {
+    if (config.environment !== "sandbox") {
       missing.push("MONNIFY_ENVIRONMENT");
     }
     if (!config.baseUrl || config.baseUrl !== config.expectedBaseUrl) {
@@ -559,10 +562,22 @@ function buildProviderAdapter(environment = process.env, options = {}) {
           status: "unsupported",
           billers: [],
           products: [],
+          providerCategories: [],
           message: "This service is not currently listed in the Monnify catalogue."
         }
       ]));
       const supportedCategories = categoryRows.filter((category) => getServiceForCategory(category?.code));
+      const unclassifiedCategories = categoryRows
+        .filter((category) => !getServiceForCategory(category.code))
+        .map((category) => ({
+          categoryCode: category.code,
+          categoryName: category.name,
+          available: false,
+          status: "unclassified",
+          billers: [],
+          products: [],
+          message: "This provider category has no verified Electrony service mapping."
+        }));
       try {
         for (const category of supportedCategories) {
           const service = getServiceForCategory(category.code);
@@ -572,10 +587,17 @@ function buildProviderAdapter(environment = process.env, options = {}) {
           const current = categories[service];
           current.available = true;
           current.status = "available";
-          current.category = { code: category.code, name: category.name };
+          current.providerCategories.push({
+            categoryCode: category.code,
+            categoryName: category.name
+          });
           current.billers.push(...billers
             .filter((biller) => typeof biller?.code === "string" && typeof biller?.name === "string")
-            .map((biller) => ({ code: biller.code, name: biller.name })));
+            .map((biller) => ({
+              categoryCode: category.code,
+              billerCode: biller.code,
+              name: biller.name
+            })));
           current.message = current.billers.length
             ? ""
             : "Monnify currently lists no billers for this service.";
@@ -601,6 +623,7 @@ function buildProviderAdapter(environment = process.env, options = {}) {
             ? "no_supported_categories"
             : "empty_categories",
         categories,
+        unclassifiedCategories,
         message: supportedCategories.length
           ? ""
           : categoryRows.length
@@ -636,7 +659,7 @@ function buildProviderAdapter(environment = process.env, options = {}) {
     }
     const catalogue = await getCatalogue();
     const knownBiller = Object.values(catalogue.categories)
-      .some((category) => category.billers.some((biller) => biller.code === billerCode));
+      .some((category) => category.billers.some((biller) => biller.billerCode === billerCode));
     if (!knownBiller) {
       throw createProviderError("The selected provider is not in the current Monnify catalogue.", "unknown_biller", 404);
     }
@@ -650,15 +673,12 @@ function buildProviderAdapter(environment = process.env, options = {}) {
       const normalized = products
         .filter((product) => typeof product?.code === "string" && typeof product?.name === "string")
         .map((product) => ({
-          code: product.code,
-          name: product.name,
-          minAmount: product.minAmount ?? null,
-          maxAmount: product.maxAmount ?? null,
-          price: product.price ?? null,
-          priceType: product.priceType || "",
-          categories: Array.isArray(product.categories) ? product.categories : [],
-          biller: Array.isArray(product.biller) ? product.biller : [],
-          metadata: product.metadata && typeof product.metadata === "object" ? product.metadata : {}
+          productCode: product.code,
+          productName: product.name,
+          minAmount: normalizeCatalogueAmount(product.minAmount),
+          maxAmount: normalizeCatalogueAmount(product.maxAmount),
+          price: normalizeCatalogueAmount(product.price),
+          priceType: typeof product.priceType === "string" ? product.priceType : ""
         }));
       productCache.set(billerCode, {
         products: normalized,

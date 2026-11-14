@@ -748,6 +748,7 @@ function getUnavailableVendingCatalogue(message, status, diagnostics) {
   const categories = ["electricity", "airtime", "data", "bills"].reduce((result, service) => {
     result[service] = {
       available: false,
+      purchaseReady: false,
       status,
       billers: [],
       products: [],
@@ -758,8 +759,10 @@ function getUnavailableVendingCatalogue(message, status, diagnostics) {
   return {
     ok: false,
     available: false,
+    purchaseReady: false,
     status,
     categories,
+    unclassifiedCategories: [],
     message,
     ...(diagnostics ? { diagnostics } : {})
   };
@@ -796,8 +799,20 @@ async function getVendingCatalogueStatus({
   }
   try {
     const catalogue = await monnifyBillsAdapter.getCatalogue({ refresh: refreshCatalogue });
-    if (includeDiagnostics) return catalogue;
-    const { diagnostics, ...customerCatalogue } = catalogue;
+    const purchaseReady = !paymentsBlocked() && isVendingProviderAvailable();
+    const readyCatalogue = {
+      ...catalogue,
+      purchaseReady,
+      categories: Object.fromEntries(Object.entries(catalogue.categories).map(([service, category]) => [
+        service,
+        {
+          ...category,
+          purchaseReady: purchaseReady && category.available === true && category.billers.length > 0
+        }
+      ]))
+    };
+    if (includeDiagnostics) return readyCatalogue;
+    const { diagnostics, ...customerCatalogue } = readyCatalogue;
     return customerCatalogue;
   } catch (error) {
     const status = error?.diagnosticStatus || "provider_unavailable";
@@ -2111,8 +2126,11 @@ async function handleRequest(request, response) {
 
   if (request.method === "GET" && url.pathname === "/api/services/catalog") {
     const includeDiagnostics = url.searchParams.get("diagnostic") === "true";
-    const refreshCatalogue = includeDiagnostics && url.searchParams.get("refresh") === "true";
-    if (refreshCatalogue && !isAuthorizedCatalogueDiagnosticRequest(request)) {
+    const refreshRequested = url.searchParams.get("refresh") === "true";
+    const authorizedDiagnosticRefresh = includeDiagnostics
+      && refreshRequested
+      && isAuthorizedCatalogueDiagnosticRequest(request);
+    if (includeDiagnostics && refreshRequested && !authorizedDiagnosticRefresh) {
       sendJson(response, 403, {
         ok: false,
         status: "diagnostic_refresh_forbidden",
@@ -2122,7 +2140,7 @@ async function handleRequest(request, response) {
     }
     const catalogue = await getVendingCatalogueStatus({
       includeDiagnostics,
-      refreshCatalogue
+      refreshCatalogue: refreshRequested && (!includeDiagnostics || authorizedDiagnosticRefresh)
     });
     sendJson(response, catalogue.ok ? 200 : 503, catalogue);
     return;
@@ -2146,7 +2164,7 @@ async function handleRequest(request, response) {
         });
         return;
       }
-      if (!category?.billers?.some((biller) => biller.code === provider)) {
+      if (!category?.billers?.some((biller) => biller.billerCode === provider)) {
         sendJson(response, 404, {
           ok: false,
           status: "unknown_biller",
@@ -2159,7 +2177,14 @@ async function handleRequest(request, response) {
         ok: true,
         available: products.length > 0,
         status: products.length ? "available" : "empty_products",
-        plans: products
+        plans: products.map((product) => ({
+          productCode: product.productCode,
+          productName: product.productName,
+          minAmount: product.minAmount,
+          maxAmount: product.maxAmount,
+          price: product.price,
+          priceType: product.priceType
+        }))
       });
     } catch (error) {
       const status = error?.diagnosticStatus || "product_retrieval_failed";
@@ -2178,9 +2203,9 @@ async function handleRequest(request, response) {
       const payload = await readPayload(request);
       const service = normalizeService(payload.service);
       const provider = String(payload.provider || "").trim();
-      const productCode = String(payload.productCode || "").trim();
+      const productCode = typeof payload.productCode === "string" ? payload.productCode : "";
       const customerId = payload.customerId;
-      if (!service || !provider || !productCode || !isValidCustomerIdentifier(customerId)) {
+      if (!service || !provider || !productCode.trim() || !isValidCustomerIdentifier(customerId)) {
         sendJson(response, 400, {
           ok: false,
           error: "A supported service, provider, product, and customer identifier are required."
@@ -2193,12 +2218,12 @@ async function handleRequest(request, response) {
         sendJson(response, 503, { ok: false, status: catalogue.status, error: catalogue.message });
         return;
       }
-      if (!category?.billers?.some((biller) => biller.code === provider)) {
+      if (!category?.billers?.some((biller) => biller.billerCode === provider)) {
         sendJson(response, 400, { ok: false, error: "The selected provider is not in the current Monnify catalogue." });
         return;
       }
       const products = await monnifyBillsAdapter.getProducts(provider);
-      if (!products.some((product) => product.code === productCode)) {
+      if (!products.some((product) => product.productCode === productCode)) {
         sendJson(response, 400, { ok: false, error: "The selected product is not in the current Monnify catalogue." });
         return;
       }
@@ -2236,7 +2261,11 @@ async function handleRequest(request, response) {
             ? "provider_unconfigured"
             : "validation_unavailable",
         error: status === 422
-          ? "Monnify could not validate these customer details. Check them and try again."
+          ? error?.stage === "customer_validation"
+            && typeof error.providerErrorMessage === "string"
+            && error.providerErrorMessage
+            ? `Monnify validation: ${error.providerErrorMessage}`
+            : "Monnify could not validate these customer details. Check them and try again."
           : error?.code === "provider_unconfigured"
             ? error.message
             : "Customer validation is temporarily unavailable. Please try again later."

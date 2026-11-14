@@ -423,13 +423,27 @@ test("exact additional-column metadata is allowlisted and all other metadata rem
   }
 });
 
-test("JSONB platform setting remains a type-only schema blocker without reading values", async () => {
+test("webhook readiness requires the id primary key and provider-event uniqueness separately", async () => {
+  const captured = {};
+  const persistence = makePersistence([
+    { rows: [{ ready: 1 }] },
+    { rows: securityRows() }
+  ], captured);
+
+  const readiness = await persistence.getReadiness();
+  const query = captured.queries[1].text;
+
+  assert.equal(readiness.status, "connection_verified");
+  assert.match(query, /\('bill_payment_webhook_events', ARRAY\['id'\]::text\[\]\)/);
+  assert.match(query, /\('bill_payment_webhook_events', ARRAY\['provider', 'provider_event_id'\]::text\[\]\)/);
+  assert.match(query, /constraint_info\.contype = 'p'/);
+  assert.match(query, /index_info\.indisunique/);
+});
+
+test("JSONB platform settings satisfy the opaque pass-through schema contract", async () => {
   const captured = {};
   const rows = securityRows().map((row) => row.table_name === "bill_platform_settings"
-    ? {
-      ...row,
-      mismatched_required_column_types: ["setting_value: expected text, found jsonb"]
-    }
+    ? { ...row }
     : row);
   const persistence = makePersistence([
     { rows: [{ ready: 1 }] },
@@ -438,32 +452,56 @@ test("JSONB platform setting remains a type-only schema blocker without reading 
 
   const readiness = await persistence.getReadiness();
 
-  assert.equal(readiness.status, "schema_failed");
+  assert.equal(readiness.status, "connection_verified");
   assert.equal(readiness.securityStatus, "controls_verified");
   assert.equal(readiness.securityFailure, null);
-  assert.deepEqual(readiness.schemaFailure, { code: "required_column_types_mismatch" });
-  assert.equal(readiness.checks.schema.status, "mismatch");
-  assert.deepEqual(readiness.checks.schema.columnTypeMismatches, [{
-    table: "bill_platform_settings",
-    mismatch: "setting_value: expected text, found jsonb"
-  }]);
-  assert.deepEqual(readiness.checks.schema.unexpectedColumns, []);
-  assert.match(readiness.checks.schema.columnTypeMismatches[0].mismatch, /setting_value: expected text, found jsonb/);
+  assert.equal(readiness.checks.schema.status, "required_columns_and_constraints_verified");
+  assert.equal(readiness.checks.schema.physicalTypesVerified, true);
+  assert.match(captured.queries[1].text, /\('bill_platform_settings', 'setting_value', 'jsonb'\)/);
   assert.doesNotMatch(captured.queries[1].text, /SELECT\s+setting_value\s+FROM/i);
 
-  const withRlsFailure = securityRows({ policy: false }).map((row) => row.table_name === "bill_platform_settings"
-    ? {
-      ...row,
-      mismatched_required_column_types: ["setting_value: expected text, found jsonb"]
-    }
-    : row);
+  const withRlsFailure = securityRows({ policy: false });
   const combined = await makePersistence([
     { rows: [{ ready: 1 }] },
     { rows: withRlsFailure }
   ]).getReadiness();
   assert.equal(combined.status, "security_failed");
   assert.equal(combined.securityFailure, "server_role_policy_missing");
-  assert.deepEqual(combined.schemaFailure, { code: "required_column_types_mismatch" });
+  assert.equal(combined.schemaFailure, null);
+});
+
+test("platform settings return opaque JSONB values without string conversion", async () => {
+  const opaqueValue = { fixtureOnly: ["opaque", 17] };
+  const captured = {};
+  const persistence = configuredPersistence([
+    { rows: [{ setting_key: "opaque", setting_value: opaqueValue }] }
+  ], captured);
+
+  const settings = await persistence.getPlatformSettings(["opaque"]);
+
+  assert.deepEqual(settings[0].setting_value, opaqueValue);
+  assert.match(captured.queries[0].text, /SELECT setting_key, setting_value, description, updated_at/);
+  assert.doesNotMatch(captured.queries[0].text, /setting_value::text|to_json|jsonb_each/);
+});
+
+test("platform settings do not accept the previous text-column contract", async () => {
+  const rows = securityRows().map((row) => row.table_name === "bill_platform_settings"
+    ? {
+      ...row,
+      mismatched_required_column_types: ["setting_value: expected jsonb, found text"]
+    }
+    : row);
+  const readiness = await makePersistence([
+    { rows: [{ ready: 1 }] },
+    { rows }
+  ]).getReadiness();
+
+  assert.equal(readiness.status, "schema_failed");
+  assert.deepEqual(readiness.schemaFailure, { code: "required_column_types_mismatch" });
+  assert.deepEqual(readiness.checks.schema.columnTypeMismatches, [{
+    table: "bill_platform_settings",
+    mismatch: "setting_value: expected jsonb, found text"
+  }]);
 });
 
 test("connection failures expose safe categories in readiness and logs", async () => {
@@ -927,7 +965,7 @@ test("missing or ambiguous required table names block readiness as unverified", 
     ))],
     ["a missing required primary key", securityRows().map((row) => (
       row.table_name === "bill_payment_webhook_events"
-        ? { ...row, missing_required_primary_keys: ["provider,provider_event_id"] }
+        ? { ...row, missing_required_primary_keys: ["id"] }
         : row
     ))],
     ["a missing required webhook uniqueness key", securityRows().map((row) => (
@@ -1001,7 +1039,7 @@ test("missing or ambiguous required table names block readiness as unverified", 
         assert.deepEqual(readiness.schemaFailure, { code: "required_constraints_missing" });
         assert.deepEqual(readiness.checks.schema.missingPrimaryKeys, [{
           table: "bill_payment_webhook_events",
-          key: "provider,provider_event_id"
+          key: "id"
         }]);
       } else if (name === "a missing required foreign key") {
         assert.equal(readiness.status, "schema_failed");
@@ -1661,6 +1699,7 @@ test("webhook events are inserted idempotently and can only be claimed once", as
   assert.equal(recorded.event.provider_event_id, "EVENT-1");
   assert.match(captured.transactionQueries[1].text, /pg_advisory_xact_lock/);
   assert.match(captured.transactionQueries[2].text, /ON CONFLICT \(provider, provider_event_id\) DO NOTHING/);
+  assert.match(captured.transactionQueries[2].text, /RETURNING \*/);
   assert.equal(await persistence.claimWebhookEvent("monnify", "EVENT-1"), null);
   assert.equal(captured.transactionQueries.at(-1).text, "COMMIT");
   assert.match(captured.transactionQueries.at(-2).text, /processing_status IN \('received', 'failed'\)/);
