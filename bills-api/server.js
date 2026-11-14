@@ -1504,13 +1504,16 @@ async function handleRequest(request, response) {
     const electronyAccountsOAuth = getElectronyAccountsOAuthConfiguration();
     const catalogueReady = catalogueStatus.available === true;
     const databaseSecurityChecks = databaseReadiness.checks || {};
-    const databaseSchema = databaseSecurityChecks.schema || {
-      status: databaseReadiness.connected ? "not_verified" : "not_checked",
-      missingTables: null,
-      missingColumns: null,
-      columnTypeMismatches: null,
-      unexpectedColumns: null,
-      physicalTypesVerified: false
+    const databaseSchema = {
+      ...(databaseSecurityChecks.schema || {
+        status: databaseReadiness.connected ? "not_verified" : "not_checked",
+        missingTables: null,
+        missingColumns: null,
+        columnTypeMismatches: null,
+        unexpectedColumns: null,
+        physicalTypesVerified: false
+      }),
+      schemaFailure: databaseReadiness.schemaFailure || null
     };
     const databaseReadinessStatus = !databaseReadiness.configured
       ? "not_configured"
@@ -1518,28 +1521,29 @@ async function handleRequest(request, response) {
         ? databaseReadiness.connectionFailure === "invalid_configuration"
           ? "configuration_invalid"
           : "connection_failure"
+      : databaseReadiness.securityStatus === "failed"
+        ? databaseSecurityChecks.tablePermissions?.status === "failed"
+          || databaseSecurityChecks.rlsPolicies?.status === "failed"
+          || databaseSecurityChecks.runtimeRole?.status === "failed"
+          || databaseSecurityChecks.otherRoleGrants?.status === "remediation_required"
+          ? "permission_or_rls_failure"
+          : "security_mismatch"
       : databaseSchema.status === "missing_tables"
         ? "missing_tables"
-        : databaseSchema.status === "mismatch"
+        : databaseSchema.status === "mismatch" || databaseReadiness.status === "schema_failed"
           ? "schema_mismatch"
-          : databaseSecurityChecks.tablePermissions?.status === "failed"
-            || databaseSecurityChecks.rlsPolicies?.status === "failed"
-              || databaseSecurityChecks.runtimeRole?.status === "failed"
-              || databaseSecurityChecks.otherRoleGrants?.status === "remediation_required"
-              ? "permission_or_rls_failure"
-            : databaseReadiness.securityStatus === "failed"
-              ? "security_mismatch"
-              : databaseSchema.physicalTypesVerified !== true
-                ? "schema_mismatch"
-                : databaseReadiness.securityStatus === "controls_verified"
-                  ? "ready"
-                  : "security_not_verified";
+          : databaseSchema.physicalTypesVerified !== true
+            ? "schema_mismatch"
+            : databaseReadiness.securityStatus === "controls_verified"
+              ? "ready"
+              : "security_not_verified";
     const paymentBlockers = [
       "monnify_payment_contract_not_verified",
       "payment_operations_disabled_pending_contract_review",
       "no_authorized_bill_vending_provider_configured"
     ];
     if (!databaseSecurityReady) paymentBlockers.push("database_security_controls_not_verified");
+    if (databaseReadiness.schemaFailure) paymentBlockers.push("database_schema_contract_not_verified");
     if (missingHealthConfiguration.length) paymentBlockers.push(...missingHealthConfiguration);
     if (databaseReadiness.securityFailure) {
       paymentBlockers.push(databaseReadiness.securityFailure);
@@ -1575,8 +1579,14 @@ async function handleRequest(request, response) {
       },
       databaseBackedOrderPersistence: {
         ready: false,
-        status: databaseReadiness.status === "connection_verified" ? "not_end_to_end_verified" : "unavailable",
-        blocker: "database_backed_order_persistence_unverified"
+        status: databaseReadiness.status === "connection_verified"
+          ? "not_end_to_end_verified"
+          : databaseReadiness.schemaFailure
+            ? "schema_contract_blocked"
+            : "unavailable",
+        blocker: databaseReadiness.schemaFailure
+          ? "database_schema_contract_not_verified"
+          : "database_backed_order_persistence_unverified"
       },
       vendingAndReconciliation: {
         ready: false,
@@ -1610,6 +1620,7 @@ async function handleRequest(request, response) {
           missingColumns: databaseSchema.missingColumns,
           columnTypeMismatches: databaseSchema.columnTypeMismatches,
           unexpectedColumns: databaseSchema.unexpectedColumns,
+          schemaFailure: databaseReadiness.schemaFailure || null,
           physicalTypesVerified: databaseSchema.physicalTypesVerified,
           securityFailure: databaseReadiness.securityFailure
         },
@@ -1681,9 +1692,11 @@ async function handleRequest(request, response) {
         businessPersistence: {
           ready: readinessChecks.databaseBackedOrderPersistence.ready,
           status: readinessChecks.databaseBackedOrderPersistence.status,
-          reason: databaseReadiness.status === "connection_verified"
-            ? "PostgreSQL connectivity is verified, but Bills order persistence has not been verified end to end; payment routes remain blocked."
-            : "Bills order persistence is unavailable until PostgreSQL connectivity and end-to-end route persistence are verified."
+          reason: databaseReadiness.schemaFailure
+            ? "A database schema-contract mismatch blocks Bills order persistence and payment routes."
+            : databaseReadiness.status === "connection_verified"
+              ? "PostgreSQL connectivity is verified, but Bills order persistence has not been verified end to end; payment routes remain blocked."
+              : "Bills order persistence is unavailable until PostgreSQL connectivity and end-to-end route persistence are verified."
         },
         databaseSecurity: {
           ready: databaseSecurityReady,
@@ -1711,7 +1724,8 @@ async function handleRequest(request, response) {
           fulfillmentContractVerified: false,
           blockers: [
             "no_authorized_bill_vending_provider_configured",
-            "provider_fee_and_reconciliation_contract_unverified"
+            "provider_fee_and_reconciliation_contract_unverified",
+            ...(databaseReadiness.schemaFailure ? ["database_schema_contract_not_verified"] : [])
           ]
         }
       },

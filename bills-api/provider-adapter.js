@@ -484,14 +484,44 @@ function buildProviderAdapter(environment = process.env, options = {}) {
       };
       let categoryRows;
       try {
-        categoryRows = await getPages(
+        const payload = await request(
           "/api/v1/vas/bills-payment/biller-categories",
-          {},
-          "catalogue",
-          (responseDiagnostics) => {
-            upstream = responseDiagnostics;
+          {
+            stage: "catalogue",
+            onResponse: (responseDiagnostics) => {
+              upstream = responseDiagnostics;
+            }
           }
         );
+        const responseBody = payload.responseBody;
+        if (!Array.isArray(responseBody?.content)) {
+          const error = createProviderError("Monnify returned an invalid category list.", "provider_invalid_response");
+          error.diagnosticStatus = "unexpected_response_shape";
+          error.failureClassification = "unexpected_response_shape";
+          error.stage = "catalogue";
+          error.upstreamSuccess = true;
+          error.responseShape = getResponseShape(payload, "catalogue");
+          error.providerCategoryCount = null;
+          error.providerCategories = [];
+          throw error;
+        }
+        if (responseBody.content.some((category) => (
+          !category || typeof category !== "object" || Array.isArray(category)
+          || typeof category.code !== "string" || typeof category.name !== "string"
+        ))) {
+          const error = createProviderError("Monnify returned an invalid category record.", "provider_invalid_response");
+          error.diagnosticStatus = "unexpected_response_shape";
+          error.failureClassification = "unexpected_response_shape";
+          error.stage = "catalogue";
+          error.upstreamSuccess = true;
+          error.responseShape = getResponseShape(payload, "catalogue");
+          error.providerCategoryCount = responseBody.content.length;
+          error.providerCategories = responseBody.content
+            .filter((category) => typeof category?.code === "string" && typeof category?.name === "string")
+            .map((category) => ({ code: category.code, name: category.name }));
+          throw error;
+        }
+        categoryRows = responseBody.content;
       } catch (error) {
         Object.assign(error, {
           catalogueFetchedAt,

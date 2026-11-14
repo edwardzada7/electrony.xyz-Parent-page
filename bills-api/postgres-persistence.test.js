@@ -59,6 +59,7 @@ function securityRows({
     missing_required_columns: [],
     mismatched_required_column_types: [],
     unexpected_columns: [],
+    missing_required_primary_keys: [],
     missing_required_unique_keys: [],
     missing_required_foreign_keys: [],
     rls_enabled: true,
@@ -268,8 +269,12 @@ test("readiness verifies enabled RLS and role-scoped policy coverage", async () 
   assert.match(captured.queries[1].text, /has_schema_privilege/);
   assert.match(captured.queries[1].text, /has_sequence_privilege/);
   assert.match(captured.queries[1].text, /missing_required_unique_keys/);
+  assert.match(captured.queries[1].text, /missing_required_primary_keys/);
   assert.match(captured.queries[1].text, /missing_required_foreign_keys/);
+  assert.match(captured.queries[1].text, /constraint_info\.contype = 'p'/);
   assert.match(captured.queries[1].text, /mismatched_required_column_types/);
+  assert.match(captured.queries[1].text, /\('bill_fee_quotes', 'currency'\),\s*\('bill_orders', 'currency'\),\s*\('bill_payment_attempts', 'currency'\)/);
+  assert.match(captured.queries[1].text, /format_type\(column_info\.atttypid, column_info\.atttypmod\) = 'character\(3\)'/);
   assert.match(captured.queries[1].text, /unexpected_columns/);
   assert.match(captured.queries[1].text, /format_type\(column_info\.atttypid/);
   assert.match(captured.queries[1].text, /pg_index/);
@@ -308,6 +313,157 @@ test("readiness verifies enabled RLS and role-scoped policy coverage", async () 
   assert.match(captured.queries[1].text, /current_setting\('server_version_num'\)::integer >= 170000/);
   await persistence.close();
   assert.equal(captured.closed, true);
+});
+
+test("currency readiness allows text or character(3) only for the three currency columns", async () => {
+  const captured = {};
+  const persistence = makePersistence([
+    { rows: [{ ready: 1 }] },
+    { rows: securityRows() }
+  ], captured);
+
+  await persistence.getReadiness();
+  const query = captured.queries[1].text;
+
+  for (const tableName of ["bill_fee_quotes", "bill_orders", "bill_payment_attempts"]) {
+    assert.match(query, new RegExp(`\\('${tableName}', 'currency', 'text'\\)`));
+  }
+  assert.match(query, /\(required_type\.table_name, required_type\.column_name\) IN \([\s\S]*\('bill_payment_attempts', 'currency'\)/);
+  assert.match(query, /format_type\(column_info\.atttypid, column_info\.atttypmod\) <> required_type\.type_name\s+AND NOT \([\s\S]*= 'character\(3\)'/);
+  assert.doesNotMatch(query, /character\(2\)|character\(4\)|character varying|varchar/);
+  const additionalColumnCte = query.match(
+    /additional_column_exceptions\(table_name,[\s\S]*?\)\s*,\s*required_unique_keys/
+  )?.[0];
+  assert.ok(additionalColumnCte);
+  assert.doesNotMatch(additionalColumnCte, /currency/);
+});
+
+test("currency metadata accepts only text and character(3) on the three currency columns", async () => {
+  for (const tableName of ["bill_fee_quotes", "bill_orders", "bill_payment_attempts"]) {
+    for (const typeName of ["text", "character(3)"]) {
+      const rows = securityRows().map((row) => row.table_name === tableName
+        ? { ...row, mismatched_required_column_types: [] }
+        : row);
+      const readiness = await makePersistence([
+        { rows: [{ ready: 1 }] },
+        { rows }
+      ]).getReadiness();
+      assert.equal(readiness.status, "connection_verified", `${tableName} ${typeName}`);
+    }
+
+    for (const typeName of ["character(2)", "character varying", "integer"]) {
+      const rows = securityRows().map((row) => row.table_name === tableName
+        ? {
+          ...row,
+          mismatched_required_column_types: [`currency: expected text, found ${typeName}`]
+        }
+        : row);
+      const readiness = await makePersistence([
+        { rows: [{ ready: 1 }] },
+        { rows }
+      ]).getReadiness();
+      assert.equal(readiness.schemaFailure.code, "required_column_types_mismatch", `${tableName} ${typeName}`);
+    }
+  }
+
+  const otherColumnRows = securityRows().map((row) => row.table_name === "bill_orders"
+    ? { ...row, mismatched_required_column_types: ["provider_code: expected text, found character(3)"] }
+    : row);
+  const otherColumnReadiness = await makePersistence([
+    { rows: [{ ready: 1 }] },
+    { rows: otherColumnRows }
+  ]).getReadiness();
+  assert.equal(otherColumnReadiness.schemaFailure.code, "required_column_types_mismatch");
+});
+
+test("exact additional-column metadata is allowlisted and all other metadata remains strict", async () => {
+  const captured = {};
+  const persistence = makePersistence([
+    { rows: [{ ready: 1 }] },
+    { rows: securityRows() }
+  ], captured);
+  const accepted = await persistence.getReadiness();
+  const query = captured.queries[1].text;
+
+  assert.equal(accepted.status, "connection_verified");
+  assert.match(query, /additional_column_exceptions\(table_name, column_name, type_name, is_not_null, default_expression\)/);
+  for (const metadataRow of [
+    "('bill_fee_quotes', 'created_at', 'timestamp with time zone', TRUE, 'now()')",
+    "('bill_payment_attempts', 'created_at', 'timestamp with time zone', TRUE, 'now()')",
+    "('bill_payment_attempts', 'failure_reason', 'text', FALSE, NULL::text)",
+    "('bill_payment_webhook_events', 'id', 'uuid', TRUE, 'gen_random_uuid()')",
+    "('bill_payment_webhook_events', 'received_at', 'timestamp with time zone', TRUE, 'now()')"
+  ]) {
+    assert.ok(query.includes(metadataRow), metadataRow);
+  }
+  assert.match(query, /expected\.type_name = format_type\(column_info\.atttypid, column_info\.atttypmod\)/);
+  assert.match(query, /expected\.is_not_null = column_info\.attnotnull/);
+  assert.match(query, /expected\.default_expression IS NOT DISTINCT FROM\s+pg_get_expr\(default_info\.adbin, default_info\.adrelid\)/);
+
+  for (const [table, column] of [
+    ["bill_fee_quotes", "created_at"],
+    ["bill_payment_attempts", "created_at"],
+    ["bill_payment_attempts", "failure_reason"],
+    ["bill_payment_webhook_events", "id"],
+    ["bill_payment_webhook_events", "received_at"],
+    ["bill_orders", "created_at"]
+  ]) {
+    const rows = securityRows().map((row) => row.table_name === table
+      ? { ...row, unexpected_columns: [column] }
+      : row);
+    const readiness = await makePersistence([
+      { rows: [{ ready: 1 }] },
+      { rows }
+    ]).getReadiness();
+
+    assert.equal(readiness.status, "schema_failed");
+    assert.equal(readiness.schemaFailure.code, "unexpected_columns_found");
+    assert.equal(readiness.securityFailure, null);
+    assert.deepEqual(readiness.checks.schema.unexpectedColumns, [{ table, column }]);
+  }
+});
+
+test("JSONB platform setting remains a type-only schema blocker without reading values", async () => {
+  const captured = {};
+  const rows = securityRows().map((row) => row.table_name === "bill_platform_settings"
+    ? {
+      ...row,
+      mismatched_required_column_types: ["setting_value: expected text, found jsonb"]
+    }
+    : row);
+  const persistence = makePersistence([
+    { rows: [{ ready: 1 }] },
+    { rows }
+  ], captured);
+
+  const readiness = await persistence.getReadiness();
+
+  assert.equal(readiness.status, "schema_failed");
+  assert.equal(readiness.securityStatus, "controls_verified");
+  assert.equal(readiness.securityFailure, null);
+  assert.deepEqual(readiness.schemaFailure, { code: "required_column_types_mismatch" });
+  assert.equal(readiness.checks.schema.status, "mismatch");
+  assert.deepEqual(readiness.checks.schema.columnTypeMismatches, [{
+    table: "bill_platform_settings",
+    mismatch: "setting_value: expected text, found jsonb"
+  }]);
+  assert.deepEqual(readiness.checks.schema.unexpectedColumns, []);
+  assert.match(readiness.checks.schema.columnTypeMismatches[0].mismatch, /setting_value: expected text, found jsonb/);
+  assert.doesNotMatch(captured.queries[1].text, /SELECT\s+setting_value\s+FROM/i);
+
+  const withRlsFailure = securityRows({ policy: false }).map((row) => row.table_name === "bill_platform_settings"
+    ? {
+      ...row,
+      mismatched_required_column_types: ["setting_value: expected text, found jsonb"]
+    }
+    : row);
+  const combined = await makePersistence([
+    { rows: [{ ready: 1 }] },
+    { rows: withRlsFailure }
+  ]).getReadiness();
+  assert.equal(combined.status, "security_failed");
+  assert.equal(combined.securityFailure, "server_role_policy_missing");
+  assert.deepEqual(combined.schemaFailure, { code: "required_column_types_mismatch" });
 });
 
 test("connection failures expose safe categories in readiness and logs", async () => {
@@ -769,9 +925,19 @@ test("missing or ambiguous required table names block readiness as unverified", 
         ? { ...row, unexpected_columns: ["legacy_status"] }
         : row
     ))],
+    ["a missing required primary key", securityRows().map((row) => (
+      row.table_name === "bill_payment_webhook_events"
+        ? { ...row, missing_required_primary_keys: ["provider,provider_event_id"] }
+        : row
+    ))],
     ["a missing required webhook uniqueness key", securityRows().map((row) => (
       row.table_name === "bill_payment_webhook_events"
         ? { ...row, missing_required_unique_keys: ["provider,provider_event_id"] }
+        : row
+    ))],
+    ["a missing required foreign key", securityRows().map((row) => (
+      row.table_name === "bill_payment_attempts"
+        ? { ...row, missing_required_foreign_keys: ["bill_payment_attempts.order_id->bill_orders.id"] }
         : row
     ))],
     ["duplicate required table rows", [...securityRows(), securityRows()[0]]]
@@ -787,20 +953,25 @@ test("missing or ambiguous required table names block readiness as unverified", 
 
       const readiness = await persistence.getReadiness();
       if (name === "a missing required persistence column") {
-        assert.equal(readiness.securityFailure, "required_columns_missing");
+        assert.equal(readiness.status, "schema_failed");
+        assert.equal(readiness.securityFailure, null);
+        assert.deepEqual(readiness.schemaFailure, { code: "required_columns_missing" });
         assert.deepEqual(readiness.checks.schema, {
           status: "mismatch",
           missingTables: [],
           missingColumns: [{ table: "bill_orders", column: "payment_reference" }],
           columnTypeMismatches: [],
           unexpectedColumns: [],
+          missingPrimaryKeys: [],
           missingUniqueKeys: [],
           missingForeignKeys: [],
           constraintsVerified: true,
           physicalTypesVerified: false
         });
       } else if (name === "a mismatched required column type") {
-        assert.equal(readiness.securityFailure, "required_column_types_mismatch");
+        assert.equal(readiness.status, "schema_failed");
+        assert.equal(readiness.securityFailure, null);
+        assert.deepEqual(readiness.schemaFailure, { code: "required_column_types_mismatch" });
         assert.deepEqual(readiness.checks.schema.columnTypeMismatches, [{
           table: "bill_orders",
           mismatch: "amount_minor: expected bigint, found integer"
@@ -808,20 +979,42 @@ test("missing or ambiguous required table names block readiness as unverified", 
         assert.equal(readiness.checks.schema.status, "mismatch");
         assert.equal(readiness.checks.schema.physicalTypesVerified, false);
       } else if (name === "an unexpected persistence column") {
-        assert.equal(readiness.securityFailure, "unexpected_columns_found");
+        assert.equal(readiness.status, "schema_failed");
+        assert.equal(readiness.securityFailure, null);
+        assert.deepEqual(readiness.schemaFailure, { code: "unexpected_columns_found" });
         assert.deepEqual(readiness.checks.schema.unexpectedColumns, [{
           table: "bill_orders",
           column: "legacy_status"
         }]);
         assert.equal(readiness.checks.schema.status, "mismatch");
       } else if (name === "a missing required webhook uniqueness key") {
-        assert.equal(readiness.securityFailure, "required_constraints_missing");
+        assert.equal(readiness.status, "schema_failed");
+        assert.equal(readiness.securityFailure, null);
+        assert.deepEqual(readiness.schemaFailure, { code: "required_constraints_missing" });
         assert.deepEqual(readiness.checks.schema.missingUniqueKeys, [{
           table: "bill_payment_webhook_events",
           key: "provider,provider_event_id"
         }]);
+      } else if (name === "a missing required primary key") {
+        assert.equal(readiness.status, "schema_failed");
+        assert.equal(readiness.securityFailure, null);
+        assert.deepEqual(readiness.schemaFailure, { code: "required_constraints_missing" });
+        assert.deepEqual(readiness.checks.schema.missingPrimaryKeys, [{
+          table: "bill_payment_webhook_events",
+          key: "provider,provider_event_id"
+        }]);
+      } else if (name === "a missing required foreign key") {
+        assert.equal(readiness.status, "schema_failed");
+        assert.equal(readiness.securityFailure, null);
+        assert.deepEqual(readiness.schemaFailure, { code: "required_constraints_missing" });
+        assert.deepEqual(readiness.checks.schema.missingForeignKeys, [{
+          table: "bill_payment_attempts",
+          relationship: "bill_payment_attempts.order_id->bill_orders.id"
+        }]);
       } else {
-        assert.equal(readiness.securityFailure, "required_tables_unavailable");
+        assert.equal(readiness.status, "schema_failed");
+        assert.equal(readiness.securityFailure, null);
+        assert.deepEqual(readiness.schemaFailure, { code: "required_tables_unavailable" });
       }
       assert.equal(
         readiness.checks.privilegeDiagnostics.diagnosticsUnverified,
@@ -829,7 +1022,9 @@ test("missing or ambiguous required table names block readiness as unverified", 
           "a missing required persistence column",
           "a mismatched required column type",
           "an unexpected persistence column",
-          "a missing required webhook uniqueness key"
+          "a missing required primary key",
+          "a missing required webhook uniqueness key",
+          "a missing required foreign key"
         ].includes(name)
       );
       assert.equal(
@@ -838,7 +1033,9 @@ test("missing or ambiguous required table names block readiness as unverified", 
           "a missing required persistence column",
           "a mismatched required column type",
           "an unexpected persistence column",
-          "a missing required webhook uniqueness key"
+          "a missing required primary key",
+          "a missing required webhook uniqueness key",
+          "a missing required foreign key"
         ].includes(name) ? true : null
       );
       assert.equal(captured.queries.length, 3);
@@ -1078,6 +1275,23 @@ test("fee quotes use parameterized SQL and validate service, currency, money, ex
     { code: "invalid_input" }
   );
   assert.equal(captured.transactionQueries.filter(({ text }) => text.includes("INSERT INTO public.bill_fee_quotes")).length, 1);
+});
+
+test("fee quote validation remains NGN-only", async () => {
+  const captured = {};
+  const persistence = configuredPersistence([], captured);
+  await assert.rejects(
+    persistence.createFeeQuote({
+      quoteReference: "USD-QUOTE",
+      serviceType: "airtime",
+      amountMinor: 10000,
+      platformFeeMinor: 10000,
+      currency: "USD",
+      expiresAt: new Date(Date.now() + 60000).toISOString()
+    }),
+    { code: "invalid_input" }
+  );
+  assert.equal(captured.transactionQueries, undefined);
 });
 
 test("quote retrieval derives usability from both status and database expiry", async () => {
@@ -1556,4 +1770,27 @@ test("registered transaction history is scoped to the verified customer and orde
   assert.match(captured.queries[0].text, /ORDER BY created_at DESC, id DESC/);
   assert.match(captured.queries[0].text, /LIMIT 50/);
   assert.deepEqual(captured.queries[0].values, ["verified-user-id"]);
+});
+
+test("internal order failure_reason is omitted from sanitized order results", async () => {
+  const captured = {};
+  const persistence = configuredPersistence([
+    { rows: [{
+      order_reference: "ORDER-1",
+      customer_id: "verified-user-id",
+      failure_reason: "private operational detail",
+      created_at: "2026-11-14T00:00:00.000Z",
+      metadata: {}
+    }] }
+  ], captured);
+
+  const order = await persistence.getOrderByReference("ORDER-1", {
+    customerId: "verified-user-id"
+  });
+
+  assert.equal(order.order_reference, "ORDER-1");
+  assert.equal(order.created_at, "2026-11-14T00:00:00.000Z");
+  assert.equal(Object.hasOwn(order, "failure_reason"), false);
+  assert.equal(JSON.stringify(order).includes("private operational detail"), false);
+  assert.match(captured.queries[0].text, /SELECT \* FROM public\.bill_orders/);
 });

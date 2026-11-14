@@ -157,12 +157,15 @@ test("catalogue reads authenticated Monnify categories and billers and caches th
   assert.equal(Number.isNaN(Date.parse(first.diagnostics.catalogueFetchedAt)), false);
   assert.equal((await adapter.getCatalogue()).diagnostics.catalogueCacheHit, true);
   assert.equal(requests.filter(({ url }) => url.pathname === "/api/v1/auth/login").length, 1);
-  assert.equal(requests.filter(({ url }) => url.pathname.endsWith("/biller-categories")).length, 1);
+  const categoryRequests = requests.filter(({ url }) => url.pathname === "/api/v1/vas/bills-payment/biller-categories");
+  assert.equal(categoryRequests.length, 1);
+  assert.equal(categoryRequests[0].url.search, "");
+  assert.equal(categoryRequests[0].options.headers.Authorization, "Bearer sandbox-access-token");
 });
 
 test("catalogue diagnostics distinguish empty categories from unmapped provider categories", async () => {
   for (const [responseBody, expectedStatus, expectedCount] of [
-    [{ content: [], nextPage: null }, "empty_categories", 0],
+    [{ content: [] }, "empty_categories", 0],
     [{
       content: [{ code: "MISC", name: "A provider category" }],
       nextPage: null
@@ -334,37 +337,26 @@ test("catalogue provider error diagnostics sanitize credentials and customer dat
   });
 });
 
-test("catalogue pagination follows the returned next-page code", async () => {
+test("category retrieval makes one authenticated request without pagination parameters", async () => {
   const { fetch, requests } = createFetch(({ url }) => {
     if (url.pathname === "/api/v1/auth/login") return successful({ accessToken: "token", expiresIn: 3600 });
     if (url.pathname.endsWith("/biller-categories")) {
-      return url.searchParams.get("page") === "1"
-        ? successful({
-          content: [{ code: "ELECTRICITY", name: "Electricity" }],
-          nextPage: 2
-        })
-        : successful({
-          content: [{ code: "AIRTIME", name: "Airtime" }],
-          nextPage: null
-        });
+      assert.equal(url.pathname, "/api/v1/vas/bills-payment/biller-categories");
+      assert.equal(url.search, "");
+      return successful({ content: [{ code: "ELECTRICITY", name: "Electricity" }] });
     }
-    if (url.pathname.endsWith("/billers")) {
-      return successful({ content: [], nextPage: null });
-    }
+    if (url.pathname.endsWith("/billers")) return successful({ content: [], nextPage: null });
     assert.fail(`Unexpected Monnify request: ${url.pathname}`);
   });
   const result = await buildProviderAdapter(configuredEnvironment, { fetch }).getCatalogue();
 
-  assert.deepEqual(result.diagnostics.providerCategories.map(({ code }) => code), [
-    "ELECTRICITY",
-    "AIRTIME"
+  assert.deepEqual(result.diagnostics.providerCategories, [
+    { code: "ELECTRICITY", name: "Electricity" }
   ]);
-  assert.deepEqual(
-    requests
-      .filter(({ url }) => url.pathname.endsWith("/biller-categories"))
-      .map(({ url }) => url.searchParams.get("page")),
-    ["1", "2"]
-  );
+  assert.equal(requests.filter(({ url }) => url.pathname === "/api/v1/vas/bills-payment/biller-categories").length, 1);
+  assert.equal(requests[0].options.headers.Authorization, "Basic "
+    + Buffer.from("sandbox-api-key:sandbox-secret-key").toString("base64"));
+  assert.equal(requests[1].options.headers.Authorization, "Bearer token");
 });
 
 test("catalogue failures identify authentication, activation, access, and endpoint errors without provider bodies", async () => {
@@ -375,6 +367,13 @@ test("catalogue failures identify authentication, activation, access, and endpoi
       responseMessage: "Invalid credentials",
       expected: "authentication_failed",
       stage: "authentication"
+    },
+    {
+      url: "/api/v1/vas/bills-payment/biller-categories",
+      status: 401,
+      responseMessage: "Invalid bearer token",
+      expected: "authentication_failed",
+      stage: "catalogue"
     },
     {
       url: "/api/v1/vas/bills-payment/biller-categories",
