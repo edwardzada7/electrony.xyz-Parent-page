@@ -187,10 +187,10 @@ test("guest service catalogue renders unavailable without provider-supplied prod
       purchaseReady: false,
       unclassifiedCategories: [],
       categories: {
-        electricity: { available: false, purchaseReady: false, billers: [], products: [], message: "No verified provider is configured." },
-        airtime: { available: false, purchaseReady: false, billers: [], products: [], message: "No verified provider is configured." },
-        data: { available: false, purchaseReady: false, billers: [], products: [], message: "No verified provider is configured." },
-        bills: { available: false, purchaseReady: false, billers: [], products: [], message: "No verified provider is configured." }
+        electricity: { available: false, validationReady: false, purchaseReady: false, billers: [], products: [], message: "No verified provider is configured." },
+        airtime: { available: false, validationReady: false, purchaseReady: false, billers: [], products: [], message: "No verified provider is configured." },
+        data: { available: false, validationReady: false, purchaseReady: false, billers: [], products: [], message: "No verified provider is configured." },
+        bills: { available: false, validationReady: false, purchaseReady: false, billers: [], products: [], message: "No verified provider is configured." }
       }
     })
   }));
@@ -206,7 +206,7 @@ test("guest service catalogue renders unavailable without provider-supplied prod
   assert.doesNotMatch(appSource, /Sogo|SOGO_/i);
 });
 
-test("catalogue-listed providers stay unavailable until backend purchase readiness is true", async () => {
+test("catalogue-listed services remain browsable and validatable while checkout is disabled", async () => {
   const { context, requests, servicePanel } = createAppContext("?service=electricity", async () => ({
     ok: true,
     json: async () => ({
@@ -222,14 +222,15 @@ test("catalogue-listed providers stay unavailable until backend purchase readine
       categories: {
         electricity: {
           available: true,
+          validationReady: true,
           purchaseReady: false,
           billers: [{ categoryCode: "ELECTRICITY", billerCode: "LIVE-DISCO", name: "Listed DisCo" }],
           products: [],
           message: ""
         },
-        airtime: { available: false, purchaseReady: false, billers: [], products: [], message: "" },
-        data: { available: false, purchaseReady: false, billers: [], products: [], message: "" },
-        bills: { available: false, purchaseReady: false, billers: [], products: [], message: "" }
+        airtime: { available: false, validationReady: false, purchaseReady: false, billers: [], products: [], message: "" },
+        data: { available: false, validationReady: false, purchaseReady: false, billers: [], products: [], message: "" },
+        bills: { available: false, validationReady: false, purchaseReady: false, billers: [], products: [], message: "" }
       }
     })
   }));
@@ -237,10 +238,13 @@ test("catalogue-listed providers stay unavailable until backend purchase readine
   await context.loadServiceCatalogue();
   context.renderServicePanel();
 
-  assert.match(servicePanel.innerHTML, /provider mapping, payment verification, and vending readiness are not enabled/);
-  assert.doesNotMatch(servicePanel.innerHTML, /purchase-form|biller-code|Listed DisCo/);
+  assert.match(servicePanel.innerHTML, /sandbox checkout is not enabled for this service/);
+  assert.match(servicePanel.innerHTML, /purchase-form/);
+  assert.match(servicePanel.innerHTML, /biller-code/);
+  assert.match(servicePanel.innerHTML, /Listed DisCo/);
   assert.match(servicePanel.innerHTML, /Continue to payment/);
   assert.match(servicePanel.innerHTML, /disabled aria-disabled="true"/);
+  assert.doesNotMatch(servicePanel.innerHTML, /provider mapping, payment verification, and vending readiness/);
   assert.equal(requests.length, 1);
 });
 
@@ -252,10 +256,10 @@ test("Retry catalogue requests the backend refresh operation", async () => {
       purchaseReady: false,
       unclassifiedCategories: [],
       categories: {
-        electricity: { available: false, purchaseReady: false, billers: [], products: [], message: "" },
-        airtime: { available: false, purchaseReady: false, billers: [], products: [], message: "" },
-        data: { available: false, purchaseReady: false, billers: [], products: [], message: "" },
-        bills: { available: false, purchaseReady: false, billers: [], products: [], message: "" }
+        electricity: { available: false, validationReady: false, purchaseReady: false, billers: [], products: [], message: "" },
+        airtime: { available: false, validationReady: false, purchaseReady: false, billers: [], products: [], message: "" },
+        data: { available: false, validationReady: false, purchaseReady: false, billers: [], products: [], message: "" },
+        bills: { available: false, validationReady: false, purchaseReady: false, billers: [], products: [], message: "" }
       }
     })
   }));

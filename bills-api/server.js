@@ -32,6 +32,9 @@ const {
 const APP_ROOT = path.resolve(__dirname, "..");
 const ALLOWED_SERVICES = ["electricity", "airtime", "data", "bills"];
 const AUTH_RATE_LIMITS = new Map();
+const CATALOGUE_REFRESH_RATE_LIMITS = new Map();
+const CATALOGUE_REFRESH_WINDOW_MS = 60_000;
+const CATALOGUE_REFRESH_LIMIT = 4;
 const FEE_QUOTES = new Map();
 const TOKEN_LIFETIME_SECONDS = 60 * 60;
 const GUEST_ORDER_SECRET_BYTES = 32;
@@ -64,6 +67,37 @@ function paymentsBlocked() {
 
 function isVendingProviderAvailable() {
   return false;
+}
+
+function getSandboxModeStatus() {
+  if (readEnv("BILLS_SANDBOX_MODE").toLowerCase() !== "true") {
+    return {
+      enabled: false,
+      status: "disabled",
+      missingConfiguration: ["BILLS_SANDBOX_MODE"]
+    };
+  }
+  const missingConfiguration = monnifyBillsAdapter.getMissingConfiguration()
+    .filter((name) => name !== "MONNIFY_CONTRACT_CODE");
+  if (missingConfiguration.length) {
+    return {
+      enabled: false,
+      status: "configuration_missing",
+      missingConfiguration
+    };
+  }
+  if (monnifyBillsAdapter.getEnvironment() !== "sandbox") {
+    return {
+      enabled: false,
+      status: "invalid_environment",
+      missingConfiguration: ["MONNIFY_ENVIRONMENT", "MONNIFY_BASE_URL"]
+    };
+  }
+  return {
+    enabled: true,
+    status: "sandbox",
+    missingConfiguration: []
+  };
 }
 
 function readUsers() {
@@ -748,6 +782,7 @@ function getUnavailableVendingCatalogue(message, status, diagnostics) {
   const categories = ["electricity", "airtime", "data", "bills"].reduce((result, service) => {
     result[service] = {
       available: false,
+      validationReady: false,
       purchaseReady: false,
       status,
       billers: [],
@@ -772,6 +807,34 @@ async function getVendingCatalogueStatus({
   includeDiagnostics = false,
   refreshCatalogue = false
 } = {}) {
+  const sandboxMode = getSandboxModeStatus();
+  if (!sandboxMode.enabled) {
+    const configurationError = sandboxMode.status === "configuration_missing"
+      ? `Monnify sandbox configuration is incomplete. Set ${sandboxMode.missingConfiguration.join(", ")}.`
+      : sandboxMode.status === "disabled"
+        ? "Sandbox catalogue access is disabled. Set BILLS_SANDBOX_MODE=true to enable the Monnify sandbox."
+        : "Monnify Bills accepts sandbox requests only. Set MONNIFY_ENVIRONMENT=sandbox and MONNIFY_BASE_URL=https://sandbox.monnify.com.";
+    return getUnavailableVendingCatalogue(
+      configurationError,
+      sandboxMode.status,
+      includeDiagnostics
+        ? {
+          stage: "configuration",
+          environment: monnifyBillsAdapter.getEnvironment(),
+          sandboxMode,
+          upstreamStatus: null,
+          upstreamSuccess: false,
+          responseShape: "not_requested",
+          providerCategoryCount: null,
+          providerCategories: [],
+          providerErrorCode: null,
+          providerErrorMessage: null,
+          catalogueFetchedAt: null,
+          catalogueCacheHit: false
+        }
+        : undefined
+    );
+  }
   const missingVasConfiguration = monnifyBillsAdapter.getMissingConfiguration()
     .filter((name) => name !== "MONNIFY_CONTRACT_CODE");
   if (missingVasConfiguration.length) {
@@ -783,6 +846,7 @@ async function getVendingCatalogueStatus({
           stage: "configuration",
           failureClassification: "configuration_failure",
           environment: monnifyBillsAdapter.getEnvironment(),
+          sandboxMode,
           upstreamStatus: null,
           upstreamSuccess: false,
           responseShape: "not_requested",
@@ -803,10 +867,13 @@ async function getVendingCatalogueStatus({
     const readyCatalogue = {
       ...catalogue,
       purchaseReady,
+      sandboxMode,
+      checkoutMessage: "Sandbox checkout remains disabled until collection, webhook, persistence, and vending contracts are verified.",
       categories: Object.fromEntries(Object.entries(catalogue.categories).map(([service, category]) => [
         service,
         {
           ...category,
+          validationReady: category.available === true && category.billers.length > 0,
           purchaseReady: purchaseReady && category.available === true && category.billers.length > 0
         }
       ]))
@@ -841,6 +908,29 @@ async function getVendingCatalogueStatus({
   }
 }
 
+function enforceCatalogueRefreshRateLimit(request) {
+  const clientKey = request.socket?.remoteAddress || "unknown";
+  const now = Date.now();
+  if (!CATALOGUE_REFRESH_RATE_LIMITS.has(clientKey)
+    && CATALOGUE_REFRESH_RATE_LIMITS.size >= 512) {
+    for (const [key, timestamps] of CATALOGUE_REFRESH_RATE_LIMITS) {
+      if (!timestamps.some((timestamp) => now - timestamp < CATALOGUE_REFRESH_WINDOW_MS)) {
+        CATALOGUE_REFRESH_RATE_LIMITS.delete(key);
+      }
+    }
+    if (CATALOGUE_REFRESH_RATE_LIMITS.size >= 512) return false;
+  }
+  const recent = (CATALOGUE_REFRESH_RATE_LIMITS.get(clientKey) || [])
+    .filter((timestamp) => now - timestamp < CATALOGUE_REFRESH_WINDOW_MS);
+  if (recent.length >= CATALOGUE_REFRESH_LIMIT) {
+    CATALOGUE_REFRESH_RATE_LIMITS.set(clientKey, recent);
+    return false;
+  }
+  recent.push(now);
+  CATALOGUE_REFRESH_RATE_LIMITS.set(clientKey, recent);
+  return true;
+}
+
 function isAuthorizedCatalogueDiagnosticRequest(request) {
   const expected = readEnv("BILLS_CATALOGUE_DIAGNOSTIC_TOKEN");
   const supplied = typeof request.headers["x-bills-catalogue-diagnostic-token"] === "string"
@@ -854,6 +944,13 @@ function isAuthorizedCatalogueDiagnosticRequest(request) {
 }
 
 function getHealthCatalogueStatus() {
+  const sandboxMode = getSandboxModeStatus();
+  if (!sandboxMode.enabled) {
+    return getUnavailableVendingCatalogue(
+      `Monnify sandbox catalogue is ${sandboxMode.status}.`,
+      sandboxMode.status
+    );
+  }
   const missingVasConfiguration = monnifyBillsAdapter.getMissingConfiguration()
     .filter((name) => name !== "MONNIFY_CONTRACT_CODE");
   if (missingVasConfiguration.length) {
@@ -873,6 +970,9 @@ function getMissingHealthConfiguration() {
     !name.startsWith("BILLS_PAYMENT_REDIRECT_URL")
     && !name.startsWith("BILLS_WEBHOOK_BASE_URL")
   ));
+  if (readEnv("BILLS_SANDBOX_MODE").toLowerCase() !== "true") {
+    missing.push("BILLS_SANDBOX_MODE");
+  }
   const runtimeDatabaseUrl = readEnv("BILLS_RUNTIME_DATABASE_URL").trim();
   const inlinePostgresCa = readEnv("BILLS_POSTGRES_CA").trim();
   const filePostgresCa = readEnv("BILLS_POSTGRES_CA_FILE").trim();
@@ -1516,6 +1616,7 @@ async function handleRequest(request, response) {
     const missingHealthConfiguration = getMissingHealthConfiguration();
     const databaseSecurityReady = databaseReadiness.securityStatus === "controls_verified";
     const catalogueStatus = getHealthCatalogueStatus();
+    const sandboxMode = getSandboxModeStatus();
     const electronyAccountsOAuth = getElectronyAccountsOAuthConfiguration();
     const catalogueReady = catalogueStatus.available === true;
     const databaseSecurityChecks = databaseReadiness.checks || {};
@@ -1567,15 +1668,55 @@ async function handleRequest(request, response) {
       paymentBlockers.push("anon_authenticated_grants_require_review");
     }
     const readinessChecks = {
+      databaseConnectivity: {
+        ready: databaseReadiness.connected === true,
+        status: databaseReadiness.connected ? "verified" : databaseReadiness.connectionFailure || "not_configured",
+        blocker: databaseReadiness.connected ? null : "database_connectivity_unverified"
+      },
+      databaseSchemaAndSecurity: {
+        ready: databaseReadinessStatus === "ready",
+        status: databaseReadinessStatus,
+        blocker: databaseReadinessStatus === "ready" ? null : `database_${databaseReadinessStatus}`
+      },
       database: {
         ready: databaseReadinessStatus === "ready",
         status: databaseReadinessStatus,
         blocker: databaseReadinessStatus === "ready" ? null : `database_${databaseReadinessStatus}`
       },
+      monnifySandboxAuthentication: {
+        ready: false,
+        status: sandboxMode.enabled ? "configured_not_tested" : sandboxMode.status,
+        blocker: "monnify_sandbox_authentication_not_live_verified"
+      },
       monnifyCatalogue: {
         ready: catalogueReady,
         status: catalogueStatus.status,
         blocker: catalogueReady ? null : `monnify_catalogue_${catalogueStatus.status}`
+      },
+      productCategoryMapping: {
+        ready: false,
+        status: catalogueReady ? "mapping_not_live_verified" : "catalogue_not_verified",
+        blocker: "product_category_mapping_not_live_verified"
+      },
+      customerValidation: {
+        ready: false,
+        status: sandboxMode.enabled ? "configured_not_live_verified" : sandboxMode.status,
+        blocker: "customer_validation_not_live_verified"
+      },
+      sandboxPaymentInitialization: {
+        ready: false,
+        status: "disabled_pending_contract_verification",
+        blocker: "sandbox_payment_contract_not_verified"
+      },
+      authoritativePaymentVerification: {
+        ready: false,
+        status: "unverified",
+        blocker: "authoritative_collection_payment_verification_unverified"
+      },
+      webhookAuthenticity: {
+        ready: false,
+        status: "unverified",
+        blocker: "monnify_webhook_authenticity_contract_unverified"
       },
       billVendingProvider: {
         ready: false,
@@ -1592,6 +1733,11 @@ async function handleRequest(request, response) {
         status: "unverified",
         blocker: "durable_idempotency_unverified"
       },
+      durableVendingClaim: {
+        ready: false,
+        status: "unverified",
+        blocker: "durable_vending_claim_not_end_to_end_verified"
+      },
       databaseBackedOrderPersistence: {
         ready: false,
         status: databaseReadiness.status === "connection_verified"
@@ -1607,6 +1753,11 @@ async function handleRequest(request, response) {
         ready: false,
         status: "unavailable",
         blocker: "vending_and_reconciliation_unavailable_without_provider"
+      },
+      transactionRequeryAndReconciliation: {
+        ready: false,
+        status: "unverified",
+        blocker: "transaction_requery_and_reconciliation_unverified"
       }
     };
     const readinessBlockers = Object.values(readinessChecks)
@@ -1625,6 +1776,7 @@ async function handleRequest(request, response) {
       readinessBlockers,
       service: "electrony-bills",
       mode: healthReady ? "ready" : "fail-closed",
+      sandboxMode,
       database: databaseReadiness,
       checks: {
         databaseReadiness: {
@@ -1653,6 +1805,16 @@ async function handleRequest(request, response) {
             ? null
             : databaseReadiness.connectionFailure
         },
+        sandboxMode,
+        monnifySandboxAuthentication: readinessChecks.monnifySandboxAuthentication,
+        monnifyCatalogueRetrieval: readinessChecks.monnifyCatalogue,
+        productCategoryMapping: readinessChecks.productCategoryMapping,
+        customerValidation: readinessChecks.customerValidation,
+        sandboxPaymentInitialization: readinessChecks.sandboxPaymentInitialization,
+        authoritativePaymentVerification: readinessChecks.authoritativePaymentVerification,
+        webhookAuthenticity: readinessChecks.webhookAuthenticity,
+        durableVendingClaim: readinessChecks.durableVendingClaim,
+        transactionRequeryAndReconciliation: readinessChecks.transactionRequeryAndReconciliation,
         runtimeRole: databaseSecurityChecks.runtimeRole || {
           status: databaseReadiness.connected ? "not_verified" : "not_checked",
           exists: null,
@@ -1756,6 +1918,7 @@ async function handleRequest(request, response) {
         monnify: hasMonnifyConfig(),
         monnifyEnvironment: monnifyBillsAdapter.getEnvironment(),
         missingMonnify: getMissingMonnifyConfig(),
+        sandboxMode,
         missingRequired: missingHealthConfiguration,
         electronyAccountsOAuth,
         paymentsBlocked: paymentsBlocked(),
@@ -2040,11 +2203,11 @@ async function handleRequest(request, response) {
   }
 
   if (request.method === "POST"
-    && paymentsBlocked()
+    && (paymentsBlocked() || !getSandboxModeStatus().enabled)
     && ["/api/payments/session", "/api/payments/verify", "/api/payments/webhook"].includes(url.pathname)) {
     sendJson(response, 503, {
       ok: false,
-      error: "Payment operations are blocked until the Monnify contract, persistence, idempotency, and fulfillment safety requirements are verified."
+      error: "Payment operations require the explicitly configured Monnify sandbox and verified payment, persistence, idempotency, and fulfillment contracts."
     });
     return;
   }
@@ -2138,8 +2301,16 @@ async function handleRequest(request, response) {
       });
       return;
     }
+    if (refreshRequested && !enforceCatalogueRefreshRateLimit(request)) {
+      sendJson(response, 429, {
+        ok: false,
+        status: "catalogue_refresh_rate_limited",
+        error: "Catalogue refresh is temporarily rate-limited. Use the cached catalogue and try again later."
+      });
+      return;
+    }
     const catalogue = await getVendingCatalogueStatus({
-      includeDiagnostics,
+      includeDiagnostics: includeDiagnostics || refreshRequested,
       refreshCatalogue: refreshRequested && (!includeDiagnostics || authorizedDiagnosticRefresh)
     });
     sendJson(response, catalogue.ok ? 200 : 503, catalogue);
@@ -2178,13 +2349,16 @@ async function handleRequest(request, response) {
         available: products.length > 0,
         status: products.length ? "available" : "empty_products",
         plans: products.map((product) => ({
+          categoryCode: product.categoryCode,
+          billerCode: product.billerCode,
           productCode: product.productCode,
           productName: product.productName,
           minAmount: product.minAmount,
           maxAmount: product.maxAmount,
           price: product.price,
           priceType: product.priceType
-        }))
+        })),
+        message: products.length ? "" : "Monnify currently lists no products for this provider."
       });
     } catch (error) {
       const status = error?.diagnosticStatus || "product_retrieval_failed";
@@ -2218,12 +2392,23 @@ async function handleRequest(request, response) {
         sendJson(response, 503, { ok: false, status: catalogue.status, error: catalogue.message });
         return;
       }
+      if (category?.validationReady !== true) {
+        sendJson(response, 503, {
+          ok: false,
+          status: "customer_validation_unavailable",
+          error: "Customer validation is unavailable for this sandbox service."
+        });
+        return;
+      }
       if (!category?.billers?.some((biller) => biller.billerCode === provider)) {
         sendJson(response, 400, { ok: false, error: "The selected provider is not in the current Monnify catalogue." });
         return;
       }
       const products = await monnifyBillsAdapter.getProducts(provider);
-      if (!products.some((product) => product.productCode === productCode)) {
+      const selectedBiller = category.billers.find((biller) => biller.billerCode === provider);
+      if (!products.some((product) => product.productCode === productCode
+        && product.categoryCode === selectedBiller.categoryCode
+        && product.billerCode === provider)) {
         sendJson(response, 400, { ok: false, error: "The selected product is not in the current Monnify catalogue." });
         return;
       }

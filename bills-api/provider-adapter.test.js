@@ -369,6 +369,68 @@ test("catalogue cache hits are reported and an explicit adapter refresh fetches 
   assert.equal(requests.filter(({ url }) => url.pathname.endsWith("/biller-categories")).length, 2);
 });
 
+test("a failed explicit catalogue refresh preserves the last valid cached catalogue", async () => {
+  let categoryRequestCount = 0;
+  const { fetch } = createFetch(({ url }) => {
+    if (url.pathname === "/api/v1/auth/login") return successful({ accessToken: "token", expiresIn: 3600 });
+    if (url.pathname.endsWith("/biller-categories")) {
+      categoryRequestCount += 1;
+      if (categoryRequestCount === 1) {
+        return successful({ content: [{ code: "ELECTRICITY", name: "Electricity" }] });
+      }
+      return jsonResponse({
+        requestSuccessful: false,
+        responseCode: "TEMPORARY_FAILURE"
+      }, 503);
+    }
+    if (url.pathname.endsWith("/billers")) {
+      return successful({ content: [], nextPage: null });
+    }
+    assert.fail(`Unexpected Monnify request: ${url.pathname}`);
+  });
+  const adapter = buildProviderAdapter(configuredEnvironment, { fetch });
+  const original = await adapter.getCatalogue();
+
+  await assert.rejects(adapter.getCatalogue({ refresh: true }), {
+    code: "provider_request_failed",
+    upstreamStatus: 503
+  });
+  const cached = await adapter.getCatalogue();
+
+  assert.equal(cached.diagnostics.catalogueCacheHit, true);
+  assert.deepEqual(cached.diagnostics.providerCategories, original.diagnostics.providerCategories);
+});
+
+test("a successful catalogue refresh invalidates products from the previous provider catalogue", async () => {
+  let productRequestCount = 0;
+  const { fetch } = createFetch(({ url }) => {
+    if (url.pathname === "/api/v1/auth/login") return successful({ accessToken: "token", expiresIn: 3600 });
+    if (url.pathname.endsWith("/biller-categories")) {
+      return successful({ content: [{ code: "ELECTRICITY", name: "Electricity" }] });
+    }
+    if (url.pathname.endsWith("/billers")) {
+      return successful({ content: [{ code: "LIVE-DISCO", name: "Catalogue Disco" }] });
+    }
+    if (url.pathname.endsWith("/biller-products")) {
+      productRequestCount += 1;
+      return successful({
+        content: [{
+          code: `PRODUCT-${productRequestCount}`,
+          name: `Product ${productRequestCount}`,
+          priceType: "OPEN"
+        }]
+      });
+    }
+    assert.fail(`Unexpected Monnify request: ${url.pathname}`);
+  });
+  const adapter = buildProviderAdapter(configuredEnvironment, { fetch });
+
+  assert.equal((await adapter.getProducts("LIVE-DISCO"))[0].productCode, "PRODUCT-1");
+  await adapter.getCatalogue({ refresh: true });
+  assert.equal((await adapter.getProducts("LIVE-DISCO"))[0].productCode, "PRODUCT-2");
+  assert.equal(productRequestCount, 2);
+});
+
 test("catalogue provider error diagnostics sanitize credentials and customer data", async () => {
   const { fetch } = createFetch(({ url }) => {
     if (url.pathname === "/api/v1/auth/login") return successful({ accessToken: "sensitive-access-token", expiresIn: 3600 });
@@ -575,6 +637,8 @@ test("products and customer validation use catalogue codes and preserve requireV
   ]);
   assert.deepEqual(duplicateProducts, products);
   assert.deepEqual(products[0], {
+    categoryCode: "ELECTRICITY",
+    billerCode: "LIVE-DISCO",
     productCode: "LIVE-PREPAID",
     productName: "Prepaid product returned by Monnify",
     minAmount: 100,

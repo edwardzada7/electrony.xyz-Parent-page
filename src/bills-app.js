@@ -256,20 +256,22 @@ function renderServicePanel() {
   const category = state.catalogue?.categories?.[service.id];
   const billers = Array.isArray(category?.billers) ? category.billers : [];
   const catalogueListed = category?.available === true && billers.length > 0;
-  const available = catalogueListed
+  const validationReady = catalogueListed && category?.validationReady === true;
+  const checkoutReady = validationReady
     && category?.purchaseReady === true
     && BILL_PAYMENT_OPERATIONS_ENABLED;
   const statusMessage = state.catalogueLoading
-    ? "Loading the configured provider catalogue…"
+    ? "Loading the Monnify sandbox catalogue…"
     : state.catalogueError
       ? `Catalogue unavailable: ${state.catalogueError}`
-      : catalogueListed && !available
-        ? "The catalogue lists this service, but provider mapping, payment verification, and vending readiness are not enabled. Purchases remain unavailable."
+      : catalogueListed && !checkoutReady
+        ? category?.checkoutMessage
+          || `Monnify lists ${service.label}, but sandbox checkout is not enabled for this service yet.`
       : category?.available === true && billers.length === 0
-        ? "The configured provider currently lists no billers for this service."
+        ? category.message || `Monnify currently lists no providers for ${service.label}.`
         : category?.message || "No verified provider is configured for this service.";
   const selectedProvider = state.selectedBillers[service.id] || "";
-  const providerSelect = available ? `
+  const providerSelect = validationReady ? `
     <label class="field">
       <span>${service.id === "electricity" ? "Electricity DisCo" : service.id === "bills" ? "Cable TV provider" : "Network"}</span>
       <select id="biller-code" name="provider" required>
@@ -280,7 +282,7 @@ function renderServicePanel() {
       </select>
     </label>
   ` : "";
-  const serviceFields = available ? renderGuestServiceFields(service.id, selectedProvider) : "";
+  const serviceFields = validationReady ? renderGuestServiceFields(service.id, selectedProvider) : "";
 
   panel.innerHTML = `
     <div class="service-panel-header">
@@ -292,14 +294,14 @@ function renderServicePanel() {
     </div>
     <p class="service-helper">${service.helper}</p>
     <div class="catalog-state" role="status" aria-live="polite">${escapeHtml(statusMessage)}</div>
-    ${available ? `
+    ${validationReady ? `
       <form id="purchase-form" novalidate>
         ${providerSelect}
         ${serviceFields}
         <button type="button" class="secondary-button" id="verify-customer-button">Verify customer details</button>
         <div id="verified-customer" class="catalog-state" role="status" aria-live="polite">${renderVerifiedCustomer()}</div>
-        <div id="fee-preview" class="catalog-state">Checkout remains unavailable until a verified vending provider and payment configuration are in place.</div>
-        <button type="submit" class="primary-button" disabled aria-disabled="true">Continue to payment</button>
+        <div id="fee-preview" class="catalog-state">${escapeHtml(state.catalogue?.checkoutMessage || "Sandbox checkout is not enabled. No payment will be taken.")}</div>
+        <button type="submit" class="primary-button" ${checkoutReady ? "" : 'disabled aria-disabled="true"'}>Continue to payment</button>
       </form>
     ` : '<button type="button" class="primary-button checkout-disabled" disabled aria-disabled="true">Continue to payment</button>'}
     <button class="secondary-button" type="button" id="catalogue-retry" ${state.catalogueLoading ? "disabled" : ""}>${state.catalogueLoading ? "Loading…" : "Retry catalogue"}</button>
@@ -357,7 +359,7 @@ function renderServicePanel() {
   panel.querySelector("#catalogue-retry")?.addEventListener("click", () => {
     void loadServiceCatalogue(true);
   });
-  if (available
+  if (validationReady
     && service.id
     && selectedProvider
     && state.plansFor !== `${service.id}:${selectedProvider}`
@@ -387,6 +389,7 @@ async function loadServiceCatalogue(forceRefresh = false) {
     Object.values(serviceCatalog).filter((service) => service.guestCheckout).forEach((service) => {
       const category = result.categories[service.id];
       if (!category
+        || typeof category.validationReady !== "boolean"
         || typeof category.purchaseReady !== "boolean"
         || !Array.isArray(category.billers)
         || !Array.isArray(category.products)

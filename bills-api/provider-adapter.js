@@ -659,13 +659,18 @@ function buildProviderAdapter(environment = process.env, options = {}) {
     }
     const catalogue = await getCatalogue();
     const knownBiller = Object.values(catalogue.categories)
-      .some((category) => category.billers.some((biller) => biller.billerCode === billerCode));
+      .flatMap((category) => category.billers)
+      .find((biller) => biller.billerCode === billerCode);
     if (!knownBiller) {
       throw createProviderError("The selected provider is not in the current Monnify catalogue.", "unknown_biller", 404);
     }
+    const catalogueVersion = catalogue.diagnostics.catalogueFetchedAt;
     const cached = productCache.get(billerCode);
-    if (cached && cached.expiresAt > Date.now()) return cached.products;
-    if (productRequests.has(billerCode)) return productRequests.get(billerCode);
+    if (cached
+      && cached.catalogueVersion === catalogueVersion
+      && cached.expiresAt > Date.now()) return cached.products;
+    const requestKey = `${catalogueVersion}:${billerCode}`;
+    if (productRequests.has(requestKey)) return productRequests.get(requestKey);
     const request = (async () => {
       const products = await getPages("/api/v1/vas/bills-payment/biller-products", {
         billerCode
@@ -673,6 +678,8 @@ function buildProviderAdapter(environment = process.env, options = {}) {
       const normalized = products
         .filter((product) => typeof product?.code === "string" && typeof product?.name === "string")
         .map((product) => ({
+          categoryCode: knownBiller.categoryCode,
+          billerCode: knownBiller.billerCode,
           productCode: product.code,
           productName: product.name,
           minAmount: normalizeCatalogueAmount(product.minAmount),
@@ -680,17 +687,20 @@ function buildProviderAdapter(environment = process.env, options = {}) {
           price: normalizeCatalogueAmount(product.price),
           priceType: typeof product.priceType === "string" ? product.priceType : ""
         }));
-      productCache.set(billerCode, {
-        products: normalized,
-        expiresAt: Date.now() + CATALOGUE_CACHE_MS
-      });
+      if (catalogueCache.value?.diagnostics.catalogueFetchedAt === catalogueVersion) {
+        productCache.set(billerCode, {
+          catalogueVersion,
+          products: normalized,
+          expiresAt: Date.now() + CATALOGUE_CACHE_MS
+        });
+      }
       return normalized;
     })();
-    productRequests.set(billerCode, request);
+    productRequests.set(requestKey, request);
     try {
       return await request;
     } finally {
-      if (productRequests.get(billerCode) === request) productRequests.delete(billerCode);
+      if (productRequests.get(requestKey) === request) productRequests.delete(requestKey);
     }
   }
 

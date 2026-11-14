@@ -153,7 +153,8 @@ test("OAuth start sends a secure-cookie 302 and callback provider errors stay re
       MONNIFY_SECRET_KEY: "sandbox-secret-key",
       MONNIFY_CONTRACT_CODE: "sandbox-contract-code",
       MONNIFY_ENVIRONMENT: "sandbox",
-      MONNIFY_BASE_URL: "https://sandbox.monnify.com"
+      MONNIFY_BASE_URL: "https://sandbox.monnify.com",
+      BILLS_SANDBOX_MODE: "true"
     },
     stdio: ["ignore", "pipe", "pipe"]
   });
@@ -168,8 +169,15 @@ test("OAuth start sends a secure-cookie 302 and callback provider errors stay re
     assert.equal(health.checks.catalogue.status, "not_checked");
     assert.equal(health.readinessChecks.monnifyCatalogue.status, "not_checked");
     assert.equal(health.configuration.monnifyEnvironment, "sandbox");
+    assert.deepEqual(health.sandboxMode, {
+      enabled: true,
+      status: "sandbox",
+      missingConfiguration: []
+    });
     assert.equal(health.readinessChecks.database.ready, false);
     assert.equal(health.readinessChecks.monnifyCatalogue.ready, false);
+    assert.equal(health.readinessChecks.sandboxPaymentInitialization.ready, false);
+    assert.equal(health.readinessChecks.webhookAuthenticity.ready, false);
 
     const appUrl = "https://bills.electrony.xyz/";
     const startOAuth = async (returnTo = appUrl) => fetch(
