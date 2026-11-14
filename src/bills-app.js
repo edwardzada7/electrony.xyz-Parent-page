@@ -373,7 +373,6 @@ async function loadServiceCatalogue(forceRefresh = false) {
 
   state.catalogueLoading = true;
   state.catalogueError = "";
-  state.catalogue = null;
   renderServicePanel();
 
   try {

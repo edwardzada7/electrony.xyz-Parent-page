@@ -169,6 +169,7 @@ test("OAuth start sends a secure-cookie 302 and callback provider errors stay re
     assert.equal(health.checks.catalogue.status, "not_checked");
     assert.equal(health.readinessChecks.monnifyCatalogue.status, "not_checked");
     assert.equal(health.configuration.monnifyEnvironment, "sandbox");
+    assert.equal(health.configuration.billsSandboxModeEnabled, true);
     assert.deepEqual(health.sandboxMode, {
       enabled: true,
       status: "sandbox",

@@ -176,7 +176,8 @@ test("guest services retain their existing catalogue request", () => {
   ready();
 
   assert.equal(requests.length, 1);
-  assert.match(requests[0][0], /\/api\/services\/catalog$/);
+  assert.equal(requests[0][0], "https://bills-api.example.test/api/services/catalog");
+  assert.doesNotMatch(requests[0][0], /localhost:4174/);
 });
 
 test("guest service catalogue renders unavailable without provider-supplied products", async () => {
@@ -268,6 +269,55 @@ test("Retry catalogue requests the backend refresh operation", async () => {
 
   assert.equal(requests.length, 1);
   assert.match(requests[0][0], /\/api\/services\/catalog\?refresh=true$/);
+});
+
+test("failed catalogue refresh preserves the last valid provider selectors", async () => {
+  let requestCount = 0;
+  const { context, servicePanel } = createAppContext("?service=electricity", async () => {
+    requestCount += 1;
+    if (requestCount > 1) {
+      return {
+        ok: false,
+        json: async () => ({
+          ok: false,
+          status: "provider_unavailable",
+          message: "Monnify is temporarily unavailable."
+        })
+      };
+    }
+
+    return {
+      ok: true,
+      json: async () => ({
+        ok: true,
+        purchaseReady: false,
+        unclassifiedCategories: [],
+        categories: {
+          electricity: {
+            available: true,
+            validationReady: true,
+            purchaseReady: false,
+            billers: [{ categoryCode: "ELECTRICITY", billerCode: "LIVE-DISCO", name: "Listed DisCo" }],
+            products: [],
+            message: ""
+          },
+          airtime: { available: false, validationReady: false, purchaseReady: false, billers: [], products: [], message: "" },
+          data: { available: false, validationReady: false, purchaseReady: false, billers: [], products: [], message: "" },
+          bills: { available: false, validationReady: false, purchaseReady: false, billers: [], products: [], message: "" }
+        }
+      })
+    };
+  });
+
+  await context.loadServiceCatalogue();
+  await context.loadServiceCatalogue(true);
+  context.renderServicePanel();
+
+  assert.equal(requestCount, 2);
+  assert.equal(vm.runInContext("state.catalogue.categories.electricity.billers[0].billerCode", context), "LIVE-DISCO");
+  assert.match(servicePanel.innerHTML, /Catalogue unavailable: Monnify is temporarily unavailable\./);
+  assert.match(servicePanel.innerHTML, /Listed DisCo/);
+  assert.match(servicePanel.innerHTML, /biller-code/);
 });
 
 test("guest service fields stay category-specific and preserve the returned product code", () => {

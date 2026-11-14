@@ -43,6 +43,7 @@ const BILLS_REFRESH_SESSION_COOKIE = "__Secure-electrony-bills-refresh";
 const BILLS_CSRF_COOKIE = "__Secure-electrony-bills-csrf";
 const BILLS_OAUTH_COOKIE = "__Secure-electrony-bills-oauth";
 const MONNIFY_PAYMENT_CONTRACT_VERIFIED = false;
+const BILLS_SANDBOX_MODE_ENABLED = readEnv("BILLS_SANDBOX_MODE").toLowerCase() === "true";
 const monnifyBillsAdapter = buildProviderAdapter();
 const marpleradAdapter = createMarpleradAdapter(readEnv);
 const teloadlyAdapter = createTeloadlyAdapter(readEnv);
@@ -70,7 +71,7 @@ function isVendingProviderAvailable() {
 }
 
 function getSandboxModeStatus() {
-  if (readEnv("BILLS_SANDBOX_MODE").toLowerCase() !== "true") {
+  if (!BILLS_SANDBOX_MODE_ENABLED) {
     return {
       enabled: false,
       status: "disabled",
@@ -970,7 +971,7 @@ function getMissingHealthConfiguration() {
     !name.startsWith("BILLS_PAYMENT_REDIRECT_URL")
     && !name.startsWith("BILLS_WEBHOOK_BASE_URL")
   ));
-  if (readEnv("BILLS_SANDBOX_MODE").toLowerCase() !== "true") {
+  if (!BILLS_SANDBOX_MODE_ENABLED) {
     missing.push("BILLS_SANDBOX_MODE");
   }
   const runtimeDatabaseUrl = readEnv("BILLS_RUNTIME_DATABASE_URL").trim();
@@ -1919,6 +1920,7 @@ async function handleRequest(request, response) {
         monnifyEnvironment: monnifyBillsAdapter.getEnvironment(),
         missingMonnify: getMissingMonnifyConfig(),
         sandboxMode,
+        billsSandboxModeEnabled: sandboxMode.enabled,
         missingRequired: missingHealthConfiguration,
         electronyAccountsOAuth,
         paymentsBlocked: paymentsBlocked(),
