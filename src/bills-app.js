@@ -1,5 +1,3 @@
-const BILL_PAYMENT_OPERATIONS_ENABLED = false;
-
 const serviceCatalog = {
   electricity: {
     id: "electricity",
@@ -257,9 +255,7 @@ function renderServicePanel() {
   const billers = Array.isArray(category?.billers) ? category.billers : [];
   const catalogueListed = category?.available === true && billers.length > 0;
   const validationReady = catalogueListed && category?.validationReady === true;
-  const checkoutReady = validationReady
-    && category?.purchaseReady === true
-    && BILL_PAYMENT_OPERATIONS_ENABLED;
+  const checkoutReady = validationReady && category?.purchaseReady === true;
   const statusMessage = state.catalogueLoading
     ? "Loading the Monnify sandbox catalogue…"
     : state.catalogueError
@@ -267,9 +263,11 @@ function renderServicePanel() {
       : catalogueListed && !checkoutReady
         ? category?.checkoutMessage
           || `Monnify lists ${service.label}, but sandbox checkout is not enabled for this service yet.`
-      : category?.available === true && billers.length === 0
-        ? category.message || `Monnify currently lists no providers for ${service.label}.`
-        : category?.message || "No verified provider is configured for this service.";
+        : checkoutReady
+          ? "Sandbox checkout is ready for this service."
+          : category?.available === true && billers.length === 0
+            ? category.message || `Monnify currently lists no providers for ${service.label}.`
+            : category?.message || "No verified provider is configured for this service.";
   const selectedProvider = state.selectedBillers[service.id] || "";
   const providerSelect = validationReady ? `
     <label class="field">
@@ -519,8 +517,23 @@ function renderVerifiedCustomer() {
   if (state.verificationError) return escapeHtml(state.verificationError);
   const details = state.verifiedCustomer;
   if (!details) return "Verify your customer details before continuing.";
-  const fields = [["Customer", details.customer_name]]
-    .filter(([, value]) => typeof value === "string" && value.trim());
+  const providerResponse = details.provider_response;
+  const providerFields = providerResponse && typeof providerResponse === "object" && !Array.isArray(providerResponse)
+    ? Object.entries(providerResponse)
+      .filter(([key, value]) => !/(password|secret|token|authorization|credential|signature)/i.test(key)
+        && !["vendInstruction", "validationReference"].includes(key)
+        && ["string", "number", "boolean"].includes(typeof value)
+        && String(value).trim())
+      .map(([key, value]) => [
+        key.replace(/([a-z0-9])([A-Z])/g, "$1 $2").replace(/^./, (character) => character.toUpperCase()),
+        value
+      ])
+    : [];
+  const fields = [
+    ["Customer", details.customer_name],
+    ...providerFields.filter(([label]) => label.toLowerCase() !== "customer name")
+  ].filter(([, value]) => (typeof value === "string" || typeof value === "number" || typeof value === "boolean")
+    && String(value).trim());
   return fields.map(([label, value]) => `<p><strong>${label}:</strong> ${escapeHtml(value)}</p>`).join("")
   || "Monnify validated the customer; it did not return customer details.";
 }
@@ -784,7 +797,8 @@ function renderCheckoutPanel() {
   panel.classList.remove("hidden");
   const { serviceId, summary, reference, amount, status, quote } = state.order;
   const service = serviceCatalog[serviceId];
-  const paymentReady = BILL_PAYMENT_OPERATIONS_ENABLED && quote.providerFeeStatus === "quoted";
+  const servicePurchaseReady = state.catalogue?.categories?.[serviceId]?.purchaseReady === true;
+  const paymentReady = servicePurchaseReady && quote.providerFeeStatus === "quoted";
 
   panel.innerHTML = `
     <div class="checkout-header">
@@ -792,7 +806,7 @@ function renderCheckoutPanel() {
         <p class="eyebrow eyebrow-soft">Order review</p>
         <h3>${service.title}</h3>
       </div>
-      <span class="status-badge ${status === "paid" ? "success" : paymentReady ? "pending" : "unavailable"}">${status === "paid" ? "Paid" : paymentReady ? "Awaiting payment" : BILL_PAYMENT_OPERATIONS_ENABLED ? "Provider quote required" : "Payments disabled"}</span>
+      <span class="status-badge ${status === "paid" ? "success" : paymentReady ? "pending" : "unavailable"}">${status === "paid" ? "Paid" : paymentReady ? "Awaiting payment" : servicePurchaseReady ? "Provider quote required" : "Service unavailable"}</span>
     </div>
     <div class="review-grid">
       ${summary.map((line) => `<div class="review-item"><span>${escapeHtml(line.label)}</span><strong>${escapeHtml(line.value)}</strong></div>`).join("")}
@@ -801,7 +815,7 @@ function renderCheckoutPanel() {
       <div class="review-item"><span>Provider fee</span><strong>${quote.providerFeeMinor === null ? "Not quoted" : formatMinorCurrency(quote.providerFeeMinor, quote.currency)}</strong></div>
       <div class="review-item review-total"><span>Total before any unquoted provider fee</span><strong>${formatMinorCurrency(quote.totalBeforeProviderFeesMinor, quote.currency)}</strong></div>
     </div>
-    ${paymentReady ? "" : `<p class="checkout-notice">${BILL_PAYMENT_OPERATIONS_ENABLED ? "Payment is unavailable until the configured service provider can disclose any applicable provider fee. No payment will be taken." : "Payment remains disabled until database authorization, payment verification, and provider readiness are verified. No payment will be taken."}</p>`}
+    ${paymentReady ? "" : `<p class="checkout-notice">${servicePurchaseReady ? "Payment is unavailable until the configured service provider can disclose any applicable provider fee. No payment will be taken." : escapeHtml(state.catalogue?.categories?.[serviceId]?.checkoutMessage || "This service's complete sandbox purchase path is not ready. No payment will be taken.")}</p>`}
     <div class="checkout-meta">
       <span>Reference</span>
       <strong>${escapeHtml(reference)}</strong>
@@ -872,8 +886,7 @@ async function handlePurchaseSubmission() {
     renderServicePanel();
     return;
   }
-  if (!BILL_PAYMENT_OPERATIONS_ENABLED
-    || state.catalogue?.categories?.[service.id]?.purchaseReady !== true) {
+  if (state.catalogue?.categories?.[service.id]?.purchaseReady !== true) {
     renderServicePanel();
     return;
   }
@@ -947,13 +960,15 @@ async function handlePurchaseSubmission() {
   };
 
   renderCheckoutPanel();
-  const paymentReady = BILL_PAYMENT_OPERATIONS_ENABLED && feeQuote.quote.providerFeeStatus === "quoted";
+  const paymentReady = state.catalogue?.categories?.[serviceId]?.purchaseReady === true
+    && feeQuote.quote.providerFeeStatus === "quoted";
   renderInlineMessage(
     paymentReady
       ? "Order review ready. Confirm payment to continue."
-      : BILL_PAYMENT_OPERATIONS_ENABLED
+      : state.catalogue?.categories?.[serviceId]?.purchaseReady === true
         ? "Order review is available, but payment is blocked until the provider supplies a complete fee quote."
-        : "Order review is available, but payment remains disabled until database authorization, payment verification, and provider readiness are verified.",
+        : state.catalogue?.categories?.[serviceId]?.checkoutMessage
+          || "Order review is available, but this service's complete sandbox purchase path is not ready.",
     paymentReady ? "success" : "error"
   );
 }
@@ -980,8 +995,13 @@ async function completePurchase() {
     return;
   }
 
-  if (!BILL_PAYMENT_OPERATIONS_ENABLED) {
-    displayTransactionResult("Payment unavailable.", "Payment remains disabled until database authorization, payment verification, and provider readiness are verified.", "error");
+  if (state.catalogue?.categories?.[state.order.serviceId]?.purchaseReady !== true) {
+    displayTransactionResult(
+      "Payment unavailable.",
+      state.catalogue?.categories?.[state.order.serviceId]?.checkoutMessage
+        || "This service's complete sandbox purchase path is not ready.",
+      "error"
+    );
     return;
   }
   if (state.order.quote.providerFeeStatus !== "quoted") {

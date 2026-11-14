@@ -1276,6 +1276,7 @@ function createPostgresPersistence(connectionString, PoolConstructor, environmen
     getOrderByPaymentReference: async () => { throw new Error("Bills PostgreSQL persistence is not configured."); },
     updateOrderPaymentState: async () => { throw new Error("Bills PostgreSQL persistence is not configured."); },
     updateOrderFulfillmentState: async () => { throw new Error("Bills PostgreSQL persistence is not configured."); },
+    claimVendOperation: async () => { throw new Error("Bills PostgreSQL persistence is not configured."); },
     createPaymentAttempt: async () => { throw new Error("Bills PostgreSQL persistence is not configured."); },
     getPaymentAttemptByMerchantReference: async () => { throw new Error("Bills PostgreSQL persistence is not configured."); },
     recordVerifiedPaymentAttemptStateChange: async () => { throw new Error("Bills PostgreSQL persistence is not configured."); },
@@ -2427,6 +2428,26 @@ function createPostgresPersistence(connectionString, PoolConstructor, environmen
     });
   }
 
+  async function claimVendOperation(orderReference) {
+    const reference = validateText(orderReference, "orderReference");
+    const result = await query(`
+      UPDATE public.bill_orders
+      SET fulfilment_status = 'processing',
+          updated_at = NOW()
+      WHERE order_reference = $1
+        AND payment_status = 'paid'
+        AND fulfilment_status = 'not_started'
+      RETURNING *
+    `, [reference]);
+    if (!result.rows[0]) {
+      throw persistenceError(
+        "Vending can only be claimed once for an authoritatively paid order.",
+        "state_conflict"
+      );
+    }
+    return sanitizeOrder(result.rows[0]);
+  }
+
   async function createPaymentAttempt(input) {
     if (!input || typeof input !== "object" || Array.isArray(input)) {
       throw persistenceError("A payment attempt is required.", "invalid_input");
@@ -2771,6 +2792,7 @@ function createPostgresPersistence(connectionString, PoolConstructor, environmen
     getOrderByPaymentReference,
     updateOrderPaymentState,
     updateOrderFulfillmentState,
+    claimVendOperation,
     createPaymentAttempt,
     getPaymentAttemptByMerchantReference,
     recordVerifiedPaymentAttemptStateChange,

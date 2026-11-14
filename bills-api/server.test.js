@@ -67,6 +67,14 @@ test("sandbox mode is fixed at startup and cannot be enabled by an API request",
       assert.equal(health.configuration.billsSandboxModeEnabled, false);
       assert.equal(health.sandboxMode.enabled, false);
       assert.equal(health.sandboxMode.status, "disabled");
+      assert.equal(health.readinessChecks.collectionInitialization.ready, false);
+      assert.equal(
+        health.readinessChecks.collectionInitialization.status,
+        "disabled_pending_contract_verification"
+      );
+      assert.equal(health.checks.collectionInitialization.ready, false);
+      assert.equal(health.readinessChecks.authoritativePaymentVerification.ready, false);
+      assert.equal(health.readinessChecks.webhookAuthenticity.ready, false);
 
       const catalogueResponse = await fetch(
         `http://127.0.0.1:${port}/api/services/catalog?BILLS_SANDBOX_MODE=true`
@@ -75,6 +83,20 @@ test("sandbox mode is fixed at startup and cannot be enabled by an API request",
       assert.equal(catalogueResponse.status, 503);
       assert.equal(catalogue.status, "disabled");
       assert.equal(catalogue.message, "Sandbox catalogue access is disabled. Set BILLS_SANDBOX_MODE=true to enable the Monnify sandbox.");
+
+      for (const [pathname, body] of [
+        ["/api/payments/session", { amount: 100, service: "airtime" }],
+        ["/api/payments/verify", { reference: "unverified-test-reference" }],
+        ["/api/payments/webhook", { event: "unverified-test-event" }]
+      ]) {
+        const paymentResponse = await fetch(`http://127.0.0.1:${port}${pathname}`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(body)
+        });
+        assert.equal(paymentResponse.status, 503);
+        assert.equal((await paymentResponse.json()).ok, false);
+      }
     } finally {
       if (child.exitCode === null) {
         const exited = once(child, "exit");

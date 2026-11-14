@@ -66,8 +66,11 @@ function paymentsBlocked() {
     || readEnv("PAYMENTS_BLOCKED", "true").toLowerCase() !== "false";
 }
 
-function isVendingProviderAvailable() {
-  return false;
+function isVendingProviderAvailable(service) {
+  return ["electricity", "airtime", "data", "bills"].includes(service)
+    && getSandboxModeStatus().enabled
+    && typeof monnifyBillsAdapter.vend === "function"
+    && typeof monnifyBillsAdapter.requery === "function";
 }
 
 function getSandboxModeStatus() {
@@ -702,16 +705,6 @@ function createReference(prefix = "ELECBILLS") {
   return `${prefix}-${dateStamp}-${suffix}`;
 }
 
-function parseJsonBody(rawBody) {
-  if (!rawBody) return {};
-
-  try {
-    return JSON.parse(rawBody);
-  } catch (error) {
-    throw new Error("Invalid JSON body.");
-  }
-}
-
 function getMonnifyConfig() {
   return {
     apiKey: readEnv("MONNIFY_API_KEY"),
@@ -772,11 +765,6 @@ function getElectronyAccountsOAuthConfiguration() {
 
 function hasMonnifyConfig() {
   return getMissingMonnifyConfig().length === 0;
-}
-
-function getMonnifyPaymentMode() {
-  const environment = monnifyBillsAdapter.getEnvironment();
-  return environment ? `monnify-${environment}` : "monnify-unconfigured";
 }
 
 function getUnavailableVendingCatalogue(message, status, diagnostics) {
@@ -864,20 +852,33 @@ async function getVendingCatalogueStatus({
   }
   try {
     const catalogue = await monnifyBillsAdapter.getCatalogue({ refresh: refreshCatalogue });
-    const purchaseReady = !paymentsBlocked() && isVendingProviderAvailable();
+    const categories = Object.fromEntries(Object.entries(catalogue.categories).map(([service, category]) => {
+      const hasBiller = category.available === true && category.billers.length > 0;
+      const vendingReady = hasBiller && isVendingProviderAvailable(service);
+      const purchaseReady = vendingReady && !paymentsBlocked();
+      const checkoutMessage = purchaseReady
+        ? ""
+        : !hasBiller
+          ? category.message || `Monnify currently lists no sandbox billers for ${service}.`
+          : !vendingReady
+            ? `Monnify sandbox vending is unavailable for ${service}.`
+            : !MONNIFY_PAYMENT_CONTRACT_VERIFIED
+              ? "Monnify sandbox collection and payment-verification contracts are not verified; checkout is disabled."
+              : "Payments are administratively blocked.";
+      return [service, {
+        ...category,
+        validationReady: hasBiller,
+        vendingReady,
+        purchaseReady,
+        checkoutMessage
+      }];
+    }));
+    const purchaseReady = Object.values(categories).some((category) => category.purchaseReady);
     const readyCatalogue = {
       ...catalogue,
       purchaseReady,
       sandboxMode,
-      checkoutMessage: "Sandbox checkout remains disabled until collection, webhook, persistence, and vending contracts are verified.",
-      categories: Object.fromEntries(Object.entries(catalogue.categories).map(([service, category]) => [
-        service,
-        {
-          ...category,
-          validationReady: category.available === true && category.billers.length > 0,
-          purchaseReady: purchaseReady && category.available === true && category.billers.length > 0
-        }
-      ]))
+      categories
     };
     if (includeDiagnostics) return readyCatalogue;
     const { diagnostics, ...customerCatalogue } = readyCatalogue;
@@ -1094,19 +1095,6 @@ function readPayload(request) {
   });
 }
 
-function readRawBody(request) {
-  return new Promise((resolve, reject) => {
-    const chunks = [];
-
-    request.on("data", (chunk) => chunks.push(chunk));
-    request.on("end", () => {
-      const raw = Buffer.concat(chunks).toString("utf8");
-      resolve(raw);
-    });
-    request.on("error", reject);
-  });
-}
-
 function readContactPayload(request) {
   const contentType = String(request.headers["content-type"] || "");
   if (!/^application\/json(?:\s*;|$)/i.test(contentType)) {
@@ -1169,190 +1157,30 @@ function upsertTransaction(reference, updater) {
   return next;
 }
 
-async function requestJson(url, options = {}) {
-  const headers = {
-    "Content-Type": "application/json",
-    ...(options.headers || {})
-  };
-
-  let response;
-  try {
-    response = await fetch(url, {
-      method: options.method || "GET",
-      headers,
-      body: options.body ? JSON.stringify(options.body) : undefined,
-      signal: AbortSignal.timeout(20000)
-    });
-  } catch {
-    const error = new Error("Payment provider is temporarily unavailable.");
-    error.code = "payment_provider_unavailable";
-    throw error;
-  }
-
-  const rawText = await response.text();
-  let payload = {};
-
-  if (rawText) {
-    try {
-      payload = JSON.parse(rawText);
-    } catch (error) {
-      payload = { raw: rawText };
-    }
-  }
-
-  if (!response.ok) {
-    const error = new Error(`Payment provider request failed with status ${response.status}.`);
-    error.code = "payment_provider_unavailable";
-    throw error;
-  }
-
-  return payload;
+function getUnavailableMonnifyPaymentContractError() {
+  const error = new Error("Monnify Collections contract is unavailable and payment operations are disabled.");
+  error.code = "payment_contract_unavailable";
+  return error;
 }
 
-async function authenticateMonnify() {
-  if (!hasMonnifyConfig()) {
-    throw new Error("Monnify is not configured. Set the required payment-provider and Bills return/webhook URL values.");
-  }
-  return monnifyBillsAdapter.getAccessToken();
+async function createMonnifyReservation() {
+  throw getUnavailableMonnifyPaymentContractError();
 }
 
-async function queryMonnifyTransaction(paymentReference) {
-  if (!paymentReference) {
-    throw new Error("A Monnify payment reference is required.");
-  }
+async function verifyMonnifyPayment() {
+  throw getUnavailableMonnifyPaymentContractError();
+}
 
-  let authenticated;
-  try {
-    authenticated = await authenticateMonnify();
-  } catch (error) {
-    error.code ||= "payment_provider_unavailable";
-    throw error;
-  }
-  const { token, config } = authenticated;
-  const endpoint = new URL("/api/v2/merchant/transactions/query", config.baseUrl);
-  endpoint.searchParams.set("paymentReference", paymentReference);
-  const payload = await requestJson(endpoint.toString(), {
-    headers: {
-      Authorization: `Bearer ${token}`
-    }
+async function handleWebhook(_request, response) {
+  sendJson(response, 503, {
+    ok: false,
+    error: "Monnify webhook authenticity contract is unavailable; payment notifications are disabled."
   });
-
-  if (payload?.requestSuccessful !== true || String(payload?.responseCode ?? "") !== "0") {
-    const error = new Error("Monnify could not verify the payment reference.");
-    error.code = "payment_verification_mismatch";
-    throw error;
-  }
-
-  const transaction = payload.responseBody;
-  return {
-    transaction,
-    status: extractMonnifyStatus(transaction),
-    paymentReference: transaction?.paymentReference || "",
-    providerReference: transaction?.transactionReference || "",
-    amount: transaction?.amountPaid,
-    currency: transaction?.currencyCode || transaction?.currency || ""
-  };
 }
 
-async function verifyMonnifyPayment(paymentReference, attempt) {
-  const result = await queryMonnifyTransaction(paymentReference);
-  let amountMinor;
-  try {
-    amountMinor = parseMoneyToMinor(result.amount);
-  } catch {
-    const error = new Error("Monnify returned an invalid transaction amount.");
-    error.code = "payment_verification_mismatch";
-    throw error;
-  }
-
-  if (result.status !== "paid"
-    || result.paymentReference !== paymentReference
-    || amountMinor !== Number(attempt.amount_minor)
-    || String(result.currency).toUpperCase() !== String(attempt.currency).toUpperCase()
-    || (attempt.provider_reference && result.providerReference !== attempt.provider_reference)) {
-    const error = new Error("Monnify transaction details do not match the payment attempt.");
-    error.code = "payment_verification_mismatch";
-    throw error;
-  }
-
-  return {
-    providerReference: result.providerReference,
-    verification: {
-      verified: true,
-      reference: paymentReference,
-      status: "successful",
-      amountMinor,
-      currency: String(result.currency).toUpperCase(),
-      verifiedAt: nowIso()
-    }
-  };
-}
-
-async function createMonnifyReservation(transaction) {
-  const { token, config } = await authenticateMonnify();
-  const endpoint = `${config.baseUrl.replace(/\/$/, "")}/api/v1/merchant/transactions/init-transaction`;
-  const payload = {
-    amount: Number(transaction.totalAmount),
-    currencyCode: "NGN",
-    paymentReference: transaction.reference,
-    contractCode: config.contractCode,
-    redirectUrl: config.redirectUrl,
-    customerName: transaction.customer?.name || "Electrony Bills Customer",
-    customerEmail: transaction.customer?.email || "guest@electrony.com",
-    customerMobileNumber: transaction.customer?.phone || "",
-    paymentMethods: ["CARD", "ACCOUNT_TRANSFER", "USSD", "BANK_TRANSFER"],
-    narration: `Electrony Bills ${transaction.service} purchase`,
-    metadata: {
-      service: transaction.service,
-      internalReference: transaction.reference,
-      provider: "monnify",
-      webhookUrl: `${config.webhookBaseUrl.replace(/\/$/, "")}/api/payments/webhook`
-    }
-  };
-
-  const response = await requestJson(endpoint, {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${token}`
-    },
-    body: payload
-  });
-
-  if (response?.requestSuccessful !== true || String(response?.responseCode ?? "") !== "0") {
-    throw new Error("Monnify could not initialize the checkout transaction.");
-  }
-  const transactionReference = response?.responseBody?.transactionReference || "";
-  const checkoutUrl = response?.responseBody?.checkoutUrl || "";
-  let parsedCheckoutUrl;
-  try {
-    parsedCheckoutUrl = new URL(checkoutUrl);
-  } catch {
-    throw new Error("Monnify did not return a valid checkout URL.");
-  }
-  if (!transactionReference
-    || parsedCheckoutUrl.protocol !== "https:"
-    || parsedCheckoutUrl.origin !== new URL(config.baseUrl).origin
-    || parsedCheckoutUrl.username
-    || parsedCheckoutUrl.password) {
-    throw new Error("Monnify returned an invalid transaction reference or unsafe checkout URL.");
-  }
-
-  return {
-    monnifyReference: transactionReference,
-    checkoutUrl,
-    raw: response
-  };
-}
-
-function extractMonnifyStatus(payload) {
-  const candidate = payload?.eventData || payload?.data || payload?.responseBody || payload?.result || payload || {};
-  const status = candidate.paymentStatus || candidate.status || candidate.transactionStatus || payload.status || payload.paymentStatus || "";
-  const normalized = String(status).toUpperCase();
-
-  if (["PAID", "SUCCESS", "SUCCESSFUL", "COMPLETED"].includes(normalized)) return "paid";
-  if (["PENDING", "AWAITING_PAYMENT", "PROCESSING"].includes(normalized)) return "payment_pending";
-  if (["FAILED", "DECLINED", "CANCELLED", "CANCELED"].includes(normalized)) return "payment_failed";
-  return normalized || "unknown";
+function getMonnifyPaymentMode() {
+  const environment = monnifyBillsAdapter.getEnvironment();
+  return environment ? `monnify-${environment}` : "monnify-unconfigured";
 }
 
 function normalizeService(service) {
@@ -1453,130 +1281,6 @@ function getTransactionLifecycleStatus(order) {
   return "created";
 }
 
-async function handleWebhook(request, response) {
-  let claimedEventId = "";
-  try {
-    const rawBody = await readRawBody(request);
-    const signature = request.headers["monnify-signature"] || "";
-    const webhookSecret = getMonnifyConfig().secretKey;
-
-    if (!webhookSecret || !signature) {
-      sendJson(response, 401, { ok: false, error: "Webhook signature verification is unavailable or missing." });
-      return;
-    }
-
-    const expected = crypto.createHmac("sha512", webhookSecret).update(rawBody).digest();
-    if (!/^[a-f\d]{128}$/i.test(signature)) {
-      sendJson(response, 401, { ok: false, error: "Webhook signature verification failed." });
-      return;
-    }
-    const received = Buffer.from(signature, "hex");
-    if (received.length !== expected.length || !crypto.timingSafeEqual(received, expected)) {
-      sendJson(response, 401, { ok: false, error: "Webhook signature verification failed." });
-      return;
-    }
-
-    if (!rawBody.trim()) {
-      sendJson(response, 400, { ok: false, error: "Missing webhook payload." });
-      return;
-    }
-
-    const payload = parseJsonBody(rawBody);
-    const event = payload?.eventData || payload?.event || payload?.data || payload;
-    const providerReference = event?.transactionReference || event?.reference || payload?.reference || "";
-    const merchantReference = event?.paymentReference || event?.customerReference || event?.merchantReference
-      || payload?.paymentReference || payload?.customerReference || "";
-    if (!merchantReference) {
-      sendJson(response, 400, { ok: false, error: "Webhook payment reference is required." });
-      return;
-    }
-    const monnifyStatus = extractMonnifyStatus(payload);
-    const eventType = String(event?.eventType || payload?.eventType || "payment");
-    const eventId = String(event?.eventId || payload?.eventId || crypto.createHash("sha256").update(rawBody).digest("hex"));
-    const recorded = await postgresPersistence.recordWebhookEvent({
-      provider: "monnify",
-      providerEventId: eventId,
-      eventType,
-      merchantReference,
-      payload: { eventType, status: monnifyStatus, merchantReference, providerReference }
-    });
-
-    if (recorded.duplicate
-      && (recorded.event?.event_type !== eventType
-        || recorded.event?.merchant_reference !== merchantReference)) {
-      sendJson(response, 409, { ok: false, error: "Webhook event identifier conflicts with a previously recorded event." });
-      return;
-    }
-
-    if (recorded.duplicate && recorded.event?.processing_status !== "failed") {
-      sendJson(response, 200, { ok: true, duplicate: true, reference: merchantReference });
-      return;
-    }
-
-    const claimed = await postgresPersistence.claimWebhookEvent("monnify", eventId);
-    if (!claimed) {
-      sendJson(response, 200, { ok: true, duplicate: true, reference: merchantReference });
-      return;
-    }
-    claimedEventId = eventId;
-
-    if (monnifyStatus !== "paid") {
-      await postgresPersistence.completeWebhookEvent({
-        provider: "monnify",
-        providerEventId: eventId,
-        status: "ignored"
-      });
-      claimedEventId = "";
-      sendJson(response, 200, { ok: true, reference: merchantReference, status: monnifyStatus });
-      return;
-    }
-
-    const attempt = await postgresPersistence.getPaymentAttemptByMerchantReference(merchantReference, merchantReference);
-    if (!attempt) {
-      await postgresPersistence.completeWebhookEvent({
-        provider: "monnify",
-        providerEventId: eventId,
-        status: "ignored",
-        errorMessage: "No matching payment attempt was found."
-      });
-      claimedEventId = "";
-      sendJson(response, 200, { ok: true, reference: merchantReference, status: "unmatched" });
-      return;
-    }
-
-    const verified = await verifyMonnifyPayment(merchantReference, attempt);
-    await postgresPersistence.recordVerifiedPaymentAttemptStateChange({
-      merchantReference,
-      orderReference: merchantReference,
-      status: "successful",
-      providerReference: verified.providerReference || providerReference,
-      verification: verified.verification
-    });
-    await postgresPersistence.completeWebhookEvent({
-      provider: "monnify",
-      providerEventId: eventId,
-      status: "processed"
-    });
-    claimedEventId = "";
-    sendJson(response, 200, { ok: true, reference: merchantReference, status: "paid" });
-  } catch (error) {
-    console.error("Monnify webhook processing failed.", error?.code || "verification_failed");
-    if (claimedEventId) {
-      try {
-        await postgresPersistence.completeWebhookEvent({
-          provider: "monnify",
-          providerEventId: claimedEventId,
-          status: "failed",
-          errorMessage: error?.message || "Webhook processing failed."
-        });
-      } catch (completionError) {
-        console.error("Monnify webhook failure could not be persisted.", completionError?.code || "unknown");
-      }
-    }
-    sendJson(response, 503, { ok: false, error: "Unable to verify or persist the payment notification." });
-  }
-}
-
 const port = Number(process.env.PORT || readEnv("ELECTRONY_BILLS_PORT") || 4174);
 if (!Number.isInteger(port) || port < 1 || port > 65535) {
   throw new Error("PORT or ELECTRONY_BILLS_PORT must be a valid TCP port.");
@@ -1598,7 +1302,7 @@ async function handleRequest(request, response) {
     }
     response.setHeader("Access-Control-Allow-Origin", origin);
     response.setHeader("Access-Control-Allow-Methods", "GET,POST,OPTIONS");
-    response.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization, X-CSRF-Token, X-Requested-With, monnify-signature");
+    response.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization, X-CSRF-Token, X-Requested-With");
     response.setHeader("Access-Control-Allow-Credentials", "true");
     response.setHeader("Vary", "Origin");
   }
@@ -1618,6 +1322,8 @@ async function handleRequest(request, response) {
     const databaseSecurityReady = databaseReadiness.securityStatus === "controls_verified";
     const catalogueStatus = getHealthCatalogueStatus();
     const sandboxMode = getSandboxModeStatus();
+    const monnifyVendingConfigured = ["electricity", "airtime", "data", "bills"]
+      .some((service) => isVendingProviderAvailable(service));
     const electronyAccountsOAuth = getElectronyAccountsOAuthConfiguration();
     const catalogueReady = catalogueStatus.available === true;
     const databaseSecurityChecks = databaseReadiness.checks || {};
@@ -1656,9 +1362,9 @@ async function handleRequest(request, response) {
               : "security_not_verified";
     const paymentBlockers = [
       "monnify_payment_contract_not_verified",
-      "payment_operations_disabled_pending_contract_review",
-      "no_authorized_bill_vending_provider_configured"
+      "payment_operations_disabled_pending_contract_review"
     ];
+    if (!monnifyVendingConfigured) paymentBlockers.push("monnify_sandbox_vending_not_configured");
     if (!databaseSecurityReady) paymentBlockers.push("database_security_controls_not_verified");
     if (databaseReadiness.schemaFailure) paymentBlockers.push("database_schema_contract_not_verified");
     if (missingHealthConfiguration.length) paymentBlockers.push(...missingHealthConfiguration);
@@ -1709,6 +1415,11 @@ async function handleRequest(request, response) {
         status: "disabled_pending_contract_verification",
         blocker: "sandbox_payment_contract_not_verified"
       },
+      collectionInitialization: {
+        ready: false,
+        status: "disabled_pending_contract_verification",
+        blocker: "sandbox_payment_contract_not_verified"
+      },
       authoritativePaymentVerification: {
         ready: false,
         status: "unverified",
@@ -1721,8 +1432,10 @@ async function handleRequest(request, response) {
       },
       billVendingProvider: {
         ready: false,
-        status: "provider_unconfigured",
-        blocker: "no_authorized_bill_vending_provider_configured"
+        status: monnifyVendingConfigured ? "sandbox_configured_not_live_verified" : "provider_unconfigured",
+        blocker: monnifyVendingConfigured
+          ? "monnify_sandbox_vending_not_live_verified"
+          : "monnify_sandbox_vending_not_configured"
       },
       authoritativeCollectionPaymentVerification: {
         ready: false,
@@ -1752,8 +1465,10 @@ async function handleRequest(request, response) {
       },
       vendingAndReconciliation: {
         ready: false,
-        status: "unavailable",
-        blocker: "vending_and_reconciliation_unavailable_without_provider"
+        status: monnifyVendingConfigured ? "sandbox_configured_not_live_verified" : "unavailable",
+        blocker: monnifyVendingConfigured
+          ? "sandbox_vending_and_reconciliation_not_live_verified"
+          : "vending_and_reconciliation_unavailable_without_provider"
       },
       transactionRequeryAndReconciliation: {
         ready: false,
@@ -1761,18 +1476,31 @@ async function handleRequest(request, response) {
         blocker: "transaction_requery_and_reconciliation_unverified"
       }
     };
-    const readinessBlockers = Object.values(readinessChecks)
+    const readinessBlockers = [...new Set(Object.values(readinessChecks)
       .filter((check) => !check.ready)
-      .map((check) => check.blocker);
+      .map((check) => check.blocker))];
     const healthReady = databaseSecurityReady
       && catalogueReady
       && !paymentsBlocked()
-      && isVendingProviderAvailable()
+      && monnifyVendingConfigured
       && readinessBlockers.length === 0;
     sendJson(response, 200, {
       ok: true,
       ready: healthReady,
       readiness: healthReady ? "ready" : "not-ready",
+      environmentReadiness: {
+        sandbox: {
+          enabled: sandboxMode.enabled,
+          ready: healthReady,
+          status: healthReady ? "ready" : "not-ready"
+        },
+        production: {
+          ready: false,
+          status: "disabled",
+          paymentsEnabled: false,
+          vendingEnabled: false
+        }
+      },
       readinessChecks,
       readinessBlockers,
       service: "electrony-bills",
@@ -1812,6 +1540,7 @@ async function handleRequest(request, response) {
         productCategoryMapping: readinessChecks.productCategoryMapping,
         customerValidation: readinessChecks.customerValidation,
         sandboxPaymentInitialization: readinessChecks.sandboxPaymentInitialization,
+        collectionInitialization: readinessChecks.collectionInitialization,
         authoritativePaymentVerification: readinessChecks.authoritativePaymentVerification,
         webhookAuthenticity: readinessChecks.webhookAuthenticity,
         durableVendingClaim: readinessChecks.durableVendingClaim,
@@ -1896,12 +1625,14 @@ async function handleRequest(request, response) {
         },
         vending: {
           ready: false,
-          status: "provider_unconfigured",
-          providerConfigured: false,
+          status: monnifyVendingConfigured ? "sandbox_configured_not_live_verified" : "provider_unconfigured",
+          providerConfigured: monnifyVendingConfigured,
           providerFeeQuoteAvailable: false,
           fulfillmentContractVerified: false,
           blockers: [
-            "no_authorized_bill_vending_provider_configured",
+            monnifyVendingConfigured
+              ? "monnify_sandbox_vending_not_live_verified"
+              : "monnify_sandbox_vending_not_configured",
             "provider_fee_and_reconciliation_contract_unverified",
             ...(databaseReadiness.schemaFailure ? ["database_schema_contract_not_verified"] : [])
           ]
@@ -1927,7 +1658,7 @@ async function handleRequest(request, response) {
         paymentsBlockedConfigured: !missingHealthConfiguration.includes("PAYMENTS_BLOCKED"),
         monnifyPaymentVerification: false,
         monnifyPaymentContractVerified: MONNIFY_PAYMENT_CONTRACT_VERIFIED,
-        vendingProvider: false,
+        vendingProvider: monnifyVendingConfigured,
         providerFeeQuote: false,
         providerFulfillmentContractVerified: false,
         durableTransactionalIdempotency: false,
@@ -2345,12 +2076,14 @@ async function handleRequest(request, response) {
         });
         return;
       }
-      const products = await monnifyBillsAdapter.getProducts(provider);
+      const selectedBiller = category.billers.find((biller) => biller.billerCode === provider);
+      const products = await monnifyBillsAdapter.getProducts(provider, selectedBiller.categoryCode);
       sendJson(response, 200, {
         ok: true,
         available: products.length > 0,
         status: products.length ? "available" : "empty_products",
         plans: products.map((product) => ({
+          providerProduct: product.providerProduct,
           categoryCode: product.categoryCode,
           billerCode: product.billerCode,
           productCode: product.productCode,
@@ -2406,8 +2139,8 @@ async function handleRequest(request, response) {
         sendJson(response, 400, { ok: false, error: "The selected provider is not in the current Monnify catalogue." });
         return;
       }
-      const products = await monnifyBillsAdapter.getProducts(provider);
       const selectedBiller = category.billers.find((biller) => biller.billerCode === provider);
+      const products = await monnifyBillsAdapter.getProducts(provider, selectedBiller.categoryCode);
       if (!products.some((product) => product.productCode === productCode
         && product.categoryCode === selectedBiller.categoryCode
         && product.billerCode === provider)) {
@@ -2419,6 +2152,7 @@ async function handleRequest(request, response) {
         ok: true,
         status: "validated",
         verification: {
+          provider_response: validation.providerResponse,
           ...(typeof validation.customerName === "string"
             ? { customer_name: validation.customerName }
             : {}),
@@ -2517,14 +2251,6 @@ async function handleRequest(request, response) {
   }
 
   if (request.method === "POST" && url.pathname === "/api/payments/session") {
-    if (!isVendingProviderAvailable()) {
-      sendJson(response, 503, {
-        ok: false,
-        status: "provider_unconfigured",
-        error: "Checkout is unavailable because no authorized vending provider is configured. No payment was created."
-      });
-      return;
-    }
     try {
       const readiness = await postgresPersistence.getReadiness();
       if (readiness.status !== "connection_verified") {
@@ -2536,6 +2262,14 @@ async function handleRequest(request, response) {
       }
       const payload = await readPayload(request);
       const validation = validateServiceRequest(payload);
+      if (!isVendingProviderAvailable(validation.service)) {
+        sendJson(response, 503, {
+          ok: false,
+          status: "provider_unconfigured",
+          error: "Checkout is unavailable because this service has no configured sandbox vending operation. No payment was created."
+        });
+        return;
+      }
       const quote = createPlatformFeeQuote(validation.service, validation.amountMinor);
       const quoteClaims = verifyQuoteToken(payload.quoteToken, quote);
       if (!quoteClaims) {

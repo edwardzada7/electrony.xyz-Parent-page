@@ -1677,6 +1677,28 @@ test("fulfilment requires provider confirmation and conditional transitions prev
   assert.equal(captured.transactionQueries.at(-1).text, "ROLLBACK");
 });
 
+test("a paid order can be atomically claimed for vending only once", async () => {
+  const captured = {};
+  const claim = configuredPersistence([
+    { rows: [{
+      order_reference: "ORDER-VEND-CLAIM",
+      payment_status: "paid",
+      fulfilment_status: "processing"
+    }] }
+  ], captured);
+
+  const claimed = await claim.claimVendOperation("ORDER-VEND-CLAIM");
+  assert.equal(claimed.fulfilment_status, "processing");
+  assert.match(captured.queries[0].text, /WHERE order_reference = \$1/);
+  assert.match(captured.queries[0].text, /AND payment_status = 'paid'/);
+  assert.match(captured.queries[0].text, /AND fulfilment_status = 'not_started'/);
+
+  const repeatedClaim = configuredPersistence([
+    { rows: [] }
+  ]);
+  await assert.rejects(repeatedClaim.claimVendOperation("ORDER-VEND-CLAIM"), { code: "state_conflict" });
+});
+
 test("webhook events are inserted idempotently and can only be claimed once", async () => {
   const captured = {};
   const event = { provider: "monnify", provider_event_id: "EVENT-1", processing_status: "processed" };

@@ -91,6 +91,28 @@ function normalizeCatalogueAmount(value) {
   return Number.isFinite(amount) && amount >= 0 ? amount : null;
 }
 
+function getBillerCategoryCodes(biller) {
+  if (!Array.isArray(biller?.categories)) return null;
+  return biller.categories
+    .map((category) => typeof category === "string" ? category : category?.code)
+    .filter((code) => typeof code === "string" && code.trim())
+    .map((code) => code.trim().toUpperCase());
+}
+
+function sanitizeProviderResponse(value, depth = 0) {
+  if (depth > 8) return null;
+  if (Array.isArray(value)) {
+    return value.slice(0, 100).map((item) => sanitizeProviderResponse(item, depth + 1));
+  }
+  if (!value || typeof value !== "object") {
+    return typeof value === "string" ? value.slice(0, 2000) : value;
+  }
+  return Object.fromEntries(Object.entries(value)
+    .filter(([key]) => !/(password|secret|token|authorization|credential|signature)/i.test(key))
+    .slice(0, 100)
+    .map(([key, nested]) => [key, sanitizeProviderResponse(nested, depth + 1)]));
+}
+
 function getProviderDiagnosticStatus(response, payload, stage) {
   const providerMessage = [
     payload?.responseMessage,
@@ -116,6 +138,7 @@ function buildProviderAdapter(environment = process.env, options = {}) {
   let tokenCache = null;
   let authenticationPromise = null;
   let cataloguePromise = null;
+  let catalogueGeneration = 0;
   const catalogueCache = { expiresAt: 0, value: null };
   const productCache = new Map();
   const productRequests = new Map();
@@ -592,12 +615,22 @@ function buildProviderAdapter(environment = process.env, options = {}) {
             categoryName: category.name
           });
           current.billers.push(...billers
-            .filter((biller) => typeof biller?.code === "string" && typeof biller?.name === "string")
+            .filter((biller) => {
+              if (typeof biller?.code !== "string" || typeof biller?.name !== "string") return false;
+              const returnedCategories = getBillerCategoryCodes(biller);
+              return returnedCategories === null || returnedCategories.includes(category.code.toUpperCase());
+            })
             .map((biller) => ({
               categoryCode: category.code,
               billerCode: biller.code,
-              name: biller.name
+              name: biller.name,
+              ...(getBillerCategoryCodes(biller)
+                ? { categoryCodes: getBillerCategoryCodes(biller) }
+                : {})
             })));
+          current.billers = [...new Map(
+            current.billers.map((biller) => [`${biller.categoryCode}:${biller.billerCode}`, biller])
+          ).values()];
           current.message = current.billers.length
             ? ""
             : "Monnify currently lists no billers for this service.";
@@ -644,6 +677,7 @@ function buildProviderAdapter(environment = process.env, options = {}) {
       };
       catalogueCache.value = value;
       catalogueCache.expiresAt = Date.now() + CATALOGUE_CACHE_MS;
+      catalogueGeneration += 1;
       return value;
     })();
     try {
@@ -653,23 +687,27 @@ function buildProviderAdapter(environment = process.env, options = {}) {
     }
   }
 
-  async function getProducts(billerCode) {
+  async function getProducts(billerCode, categoryCode) {
     if (typeof billerCode !== "string" || !billerCode.trim()) {
       throw createProviderError("A biller code is required.", "invalid_input", 400);
     }
     const catalogue = await getCatalogue();
-    const knownBiller = Object.values(catalogue.categories)
+    const knownBillers = Object.values(catalogue.categories)
       .flatMap((category) => category.billers)
-      .find((biller) => biller.billerCode === billerCode);
+      .filter((biller) => biller.billerCode === billerCode
+        && (!categoryCode || biller.categoryCode === categoryCode));
+    const knownBiller = knownBillers[0];
     if (!knownBiller) {
       throw createProviderError("The selected provider is not in the current Monnify catalogue.", "unknown_biller", 404);
     }
-    const catalogueVersion = catalogue.diagnostics.catalogueFetchedAt;
-    const cached = productCache.get(billerCode);
+    const catalogueGenerationAtRequest = catalogueGeneration;
+    const catalogueVersion = `${catalogue.diagnostics.catalogueFetchedAt}:${catalogueGenerationAtRequest}`;
+    const productKey = `${knownBiller.categoryCode}:${billerCode}`;
+    const cached = productCache.get(productKey);
     if (cached
       && cached.catalogueVersion === catalogueVersion
       && cached.expiresAt > Date.now()) return cached.products;
-    const requestKey = `${catalogueVersion}:${billerCode}`;
+    const requestKey = `${catalogueVersion}:${productKey}`;
     if (productRequests.has(requestKey)) return productRequests.get(requestKey);
     const request = (async () => {
       const products = await getPages("/api/v1/vas/bills-payment/biller-products", {
@@ -678,7 +716,10 @@ function buildProviderAdapter(environment = process.env, options = {}) {
       const normalized = products
         .filter((product) => typeof product?.code === "string" && typeof product?.name === "string")
         .map((product) => ({
-          categoryCode: knownBiller.categoryCode,
+          providerProduct: product,
+          categoryCode: typeof product.categoryCode === "string"
+            ? product.categoryCode
+            : knownBiller.categoryCode,
           billerCode: knownBiller.billerCode,
           productCode: product.code,
           productName: product.name,
@@ -687,8 +728,9 @@ function buildProviderAdapter(environment = process.env, options = {}) {
           price: normalizeCatalogueAmount(product.price),
           priceType: typeof product.priceType === "string" ? product.priceType : ""
         }));
-      if (catalogueCache.value?.diagnostics.catalogueFetchedAt === catalogueVersion) {
-        productCache.set(billerCode, {
+      if (catalogueGeneration === catalogueGenerationAtRequest
+        && catalogueCache.value?.diagnostics.catalogueFetchedAt === catalogue.diagnostics.catalogueFetchedAt) {
+        productCache.set(productKey, {
           catalogueVersion,
           products: normalized,
           expiresAt: Date.now() + CATALOGUE_CACHE_MS
@@ -724,6 +766,7 @@ function buildProviderAdapter(environment = process.env, options = {}) {
     return {
       productCode,
       customerId,
+      providerResponse: sanitizeProviderResponse(result),
       ...(typeof result.customerName === "string" ? { customerName: result.customerName } : {}),
       priceType: typeof result.priceType === "string" ? result.priceType : "",
       price: result.price ?? null,

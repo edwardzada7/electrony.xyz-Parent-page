@@ -249,6 +249,38 @@ test("catalogue-listed services remain browsable and validatable while checkout 
   assert.equal(requests.length, 1);
 });
 
+test("sandbox purchase readiness is applied per service instead of a frontend-wide payment switch", async () => {
+  const { context, servicePanel } = createAppContext("?service=airtime", async () => ({
+    ok: true,
+    json: async () => ({
+      ok: true,
+      purchaseReady: false,
+      unclassifiedCategories: [],
+      categories: {
+        electricity: { available: false, validationReady: false, purchaseReady: false, billers: [], products: [], message: "" },
+        airtime: {
+          available: true,
+          validationReady: true,
+          purchaseReady: true,
+          billers: [{ categoryCode: "AIRTIME", billerCode: "LIVE-NETWORK", name: "Live network" }],
+          products: [],
+          message: ""
+        },
+        data: { available: false, validationReady: false, purchaseReady: false, billers: [], products: [], message: "" },
+        bills: { available: false, validationReady: false, purchaseReady: false, billers: [], products: [], message: "" }
+      }
+    })
+  }));
+
+  await context.loadServiceCatalogue();
+  context.renderServicePanel();
+
+  assert.match(servicePanel.innerHTML, /Continue to payment/);
+  assert.match(servicePanel.innerHTML, /type="submit" class="primary-button"\s*>Continue to payment/);
+  assert.match(servicePanel.innerHTML, /Sandbox checkout is ready for this service/);
+  assert.doesNotMatch(servicePanel.innerHTML, /BILL_PAYMENT_OPERATIONS_ENABLED/);
+});
+
 test("Retry catalogue requests the backend refresh operation", async () => {
   const { context, requests } = createAppContext("?service=airtime", async () => ({
     ok: true,
@@ -361,6 +393,28 @@ test("sanitized provider validation feedback is rendered without inventing custo
     "Monnify validation: Meter account [redacted] was not found."
   );
   assert.doesNotMatch(context.renderVerifiedCustomer(), /customer name|successfully validated/i);
+});
+
+test("verified customer details come from Monnify's returned validation response", () => {
+  const { context } = createAppContext("?service=electricity");
+  vm.runInContext(`
+    state.verifiedCustomer = {
+      customer_name: "Verified Meter Customer",
+      provider_response: {
+        customerName: "Verified Meter Customer",
+        accountType: "Prepaid",
+        meterAddress: "Provider-supplied address",
+        vendInstruction: { requireValidationRef: true, validationReference: "internal-reference" },
+        accessToken: "must-not-render"
+      }
+    };
+  `, context);
+
+  const rendered = context.renderVerifiedCustomer();
+  assert.match(rendered, /Verified Meter Customer/);
+  assert.match(rendered, /Account Type:<\/strong> Prepaid/);
+  assert.match(rendered, /Meter Address:<\/strong> Provider-supplied address/);
+  assert.doesNotMatch(rendered, /internal-reference|must-not-render/);
 });
 
 test("paid transaction history distinguishes vending that has not started for unverified funds", () => {

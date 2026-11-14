@@ -133,7 +133,12 @@ test("catalogue reads authenticated Monnify categories and billers and caches th
   assert.equal(first.available, true);
   assert.equal(first.status, "available");
   assert.deepEqual(first.categories.electricity.billers, [
-    { categoryCode: "ELECTRICITY", billerCode: "LIVE-DISCO", name: "Catalogue Disco" }
+    {
+      categoryCode: "ELECTRICITY",
+      billerCode: "LIVE-DISCO",
+      name: "Catalogue Disco",
+      categoryCodes: ["ELECTRICITY"]
+    }
   ]);
   assert.equal(first.categories.bills.available, true);
   assert.deepEqual(first.categories.bills.billers, []);
@@ -478,6 +483,86 @@ test("category retrieval makes one authenticated request without pagination para
   assert.equal(requests[1].options.headers.Authorization, "Bearer token");
 });
 
+test("biller categories use Monnify's returned relationships instead of assigning every queried biller", async () => {
+  const { fetch } = createFetch(({ url }) => {
+    if (url.pathname === "/api/v1/auth/login") return successful({ accessToken: "token", expiresIn: 3600 });
+    if (url.pathname.endsWith("/biller-categories")) {
+      return successful({
+        content: [
+          { code: "ELECTRICITY", name: "Electricity" },
+          { code: "AIRTIME", name: "Airtime" },
+          { code: "DATA_BUNDLE", name: "Data" },
+          { code: "CABLE_TV", name: "Cable TV" }
+        ],
+        nextPage: null
+      });
+    }
+    if (url.pathname.endsWith("/billers")) {
+      return successful({
+        content: [
+          { code: "biller-electricity", name: "Electricity provider", categories: [{ code: "ELECTRICITY" }] },
+          { code: "biller-airtime", name: "Airtime provider", categories: [{ code: "AIRTIME" }] },
+          { code: "biller-data", name: "Data provider", categories: [{ code: "DATA_BUNDLE" }] },
+          { code: "biller-cable", name: "Cable provider", categories: [{ code: "CABLE_TV" }] },
+          { code: "biller-uncategorized", name: "Unrelated provider", categories: [] }
+        ],
+        nextPage: null
+      });
+    }
+    assert.fail(`Unexpected Monnify request: ${url.pathname}`);
+  });
+  const result = await buildProviderAdapter(configuredEnvironment, { fetch }).getCatalogue();
+
+  assert.deepEqual(result.categories.electricity.billers.map(({ billerCode }) => billerCode), ["biller-electricity"]);
+  assert.deepEqual(result.categories.airtime.billers.map(({ billerCode }) => billerCode), ["biller-airtime"]);
+  assert.deepEqual(result.categories.data.billers.map(({ billerCode }) => billerCode), ["biller-data"]);
+  assert.deepEqual(result.categories.bills.billers.map(({ billerCode }) => billerCode), ["biller-cable"]);
+});
+
+test("product retrieval requires the selected category when a biller code appears in multiple categories", async () => {
+  const productRequests = [];
+  const { fetch } = createFetch(({ url }) => {
+    if (url.pathname === "/api/v1/auth/login") return successful({ accessToken: "token", expiresIn: 3600 });
+    if (url.pathname.endsWith("/biller-categories")) {
+      return successful({
+        content: [
+          { code: "AIRTIME", name: "Airtime" },
+          { code: "DATA", name: "Data" }
+        ],
+        nextPage: null
+      });
+    }
+    if (url.pathname.endsWith("/billers")) {
+      return successful({
+        content: [{
+          code: "shared-biller",
+          name: "Shared provider",
+          categories: [{ code: "AIRTIME" }, { code: "DATA" }]
+        }],
+        nextPage: null
+      });
+    }
+    if (url.pathname.endsWith("/biller-products")) {
+      productRequests.push(url.searchParams.get("billerCode"));
+      return successful({
+        content: [{ code: "provider-product", name: "Provider product" }],
+        nextPage: null
+      });
+    }
+    assert.fail(`Unexpected Monnify request: ${url.pathname}`);
+  });
+  const adapter = buildProviderAdapter(configuredEnvironment, { fetch });
+
+  await adapter.getCatalogue();
+  const airtimeProducts = await adapter.getProducts("shared-biller", "AIRTIME");
+  const dataProducts = await adapter.getProducts("shared-biller", "DATA");
+
+  assert.equal(airtimeProducts[0].categoryCode, "AIRTIME");
+  assert.equal(dataProducts[0].categoryCode, "DATA");
+  assert.deepEqual(productRequests, ["shared-biller", "shared-biller"]);
+  await assert.rejects(adapter.getProducts("shared-biller", "ELECTRICITY"), { code: "unknown_biller" });
+});
+
 test("catalogue failures identify authentication, activation, access, and endpoint errors without provider bodies", async () => {
   const cases = [
     {
@@ -608,7 +693,11 @@ test("products and customer validation use catalogue codes and preserve requireV
           price: null,
           priceType: "OPEN",
           minAmount: 100,
-          maxAmount: 200000
+          maxAmount: 200000,
+          identifierRequirement: {
+            type: "meter",
+            label: "Meter number"
+          }
         }],
         nextPage: null
       });
@@ -621,6 +710,8 @@ test("products and customer validation use catalogue codes and preserve requireV
       });
       return successful({
         customerName: "Provider-confirmed customer",
+        accountType: "Prepaid",
+        accessToken: "provider-token-not-for-client",
         vendInstruction: {
           requireValidationRef: true,
           validationReference: "validated-reference"
@@ -637,6 +728,18 @@ test("products and customer validation use catalogue codes and preserve requireV
   ]);
   assert.deepEqual(duplicateProducts, products);
   assert.deepEqual(products[0], {
+    providerProduct: {
+      code: "LIVE-PREPAID",
+      name: "Prepaid product returned by Monnify",
+      price: null,
+      priceType: "OPEN",
+      minAmount: 100,
+      maxAmount: 200000,
+      identifierRequirement: {
+        type: "meter",
+        label: "Meter number"
+      }
+    },
     categoryCode: "ELECTRICITY",
     billerCode: "LIVE-DISCO",
     productCode: "LIVE-PREPAID",
@@ -657,6 +760,14 @@ test("products and customer validation use catalogue codes and preserve requireV
   assert.equal(products[0].price, null);
   assert.equal(products[0].minAmount, 100);
   assert.equal(validation.customerName, "Provider-confirmed customer");
+  assert.deepEqual(validation.providerResponse, {
+    customerName: "Provider-confirmed customer",
+    accountType: "Prepaid",
+    vendInstruction: {
+      requireValidationRef: true,
+      validationReference: "validated-reference"
+    }
+  });
   assert.equal(validation.requireValidationRef, true);
   assert.equal(validation.validationReference, "validated-reference");
   assert.equal(requests.filter(({ url }) => url.pathname === "/api/v1/auth/login").length, 1);
