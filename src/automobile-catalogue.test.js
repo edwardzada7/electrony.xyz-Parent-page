@@ -7,6 +7,8 @@ const vm = require("node:vm");
 const repositoryRoot = path.resolve(__dirname, "..");
 const catalogueSource = fs.readFileSync(path.join(__dirname, "automobile-catalogue.js"), "utf8");
 const automobileSource = fs.readFileSync(path.join(__dirname, "automobile.js"), "utf8");
+const internalProvenance = JSON.parse(fs.readFileSync(path.join(repositoryRoot, "internal/catalogue-provenance.json"), "utf8"));
+const automobileProvenance = internalProvenance.automobile;
 const browserContext = { window: {}, URL };
 vm.runInNewContext(catalogueSource, browserContext, { filename: "automobile-catalogue.js" });
 
@@ -45,7 +47,7 @@ test("catalogue and renderer do not redeclare page-level lexical bindings", () =
   assert.deepEqual(conflicts, []);
 });
 
-test("contains each of the 13 original brochure vehicles exactly once", () => {
+test("contains each of the 13 original vehicle models exactly once", () => {
   assert.equal(originalVehicles.length, 13);
   assert.deepEqual(Array.from(originalVehicles, (vehicle) => vehicle.name), expectedModels);
   assert.equal(new Set(vehicles.map((vehicle) => vehicle.id)).size, 17);
@@ -177,6 +179,11 @@ test("priced vehicle cards and detail views render the catalogue amount", () => 
     rendererContext.testVehicle = vehicle;
     const detailHtml = vm.runInContext("(renderVehicleDetail(testVehicle), document.title, document)", rendererContext);
     assert.ok(renderable.innerHTML.includes(`Price: ${formatVehiclePrice(price)}`), `${name} detail price`);
+    assert.doesNotMatch(renderable.innerHTML, /Source and qualifications|Fouani|PDF page|supplier|manufacturer partnership/i);
+    if (name === "NAMMI BOX") {
+      assert.match(renderable.innerHTML, /Features marked with \* may vary by trim and market/);
+      assert.match(renderable.innerHTML, /CLTC range figures are test-cycle values/);
+    }
     assert.equal(enquiryValues["#automobile-enquiry-price"], formatVehiclePrice(price), `${name} enquiry price`);
     const expectedProduct = vehicle.brand === "Dongfeng" ? `${vehicle.brand} ${name}` : `${vehicle.brand} — ${name}`;
     assert.equal(enquiryValues["#automobile-enquiry-product"], expectedProduct, `${name} enquiry identity`);
@@ -196,11 +203,14 @@ test("priced vehicle cards and detail views render the catalogue amount", () => 
   assert.ok(elements.get("#featured-grid").innerHTML.includes(`Price: ${formatVehiclePrice(120550000)}`));
 });
 
-test("each original brochure vehicle retains its sourced specs, source pages and images", () => {
+test("each original vehicle retains its specifications, internal provenance and images", () => {
   for (const [index, vehicle] of originalVehicles.entries()) {
-    assert.equal(vehicle.source.publisher, "Fouani Nigeria Ltd");
-    assert.equal(vehicle.source.pdfPage, index + 4);
-    assert.equal(vehicle.source.modelPage, index + 1);
+    const provenance = automobileProvenance[vehicle.id];
+    assert.ok(provenance);
+    assert.equal(provenance.publisher, "Fouani Nigeria Ltd");
+    assert.equal(provenance.pdfPage, index + 4);
+    assert.equal(provenance.modelPage, index + 1);
+    assert.equal(vehicle.source, undefined);
     assert.ok(vehicle.vehicleType);
     assert.ok(vehicle.powertrain);
     assert.ok(vehicle.headlineSpecifications.length);
@@ -221,16 +231,18 @@ test("each original brochure vehicle retains its sourced specs, source pages and
   }
 });
 
-test("pickup models preserve brochure-specific variants, specs and images while requesting prices by enquiry", () => {
+test("pickup models preserve distinct variants, specs and images while requesting prices by enquiry", () => {
   assert.equal(pickupVehicles.length, 4);
   assert.deepEqual(Array.from(pickupVehicles, (vehicle) => vehicle.name), ["RICH 6T", "RICH 6", "RICH 7", "Z9"]);
   for (const [index, vehicle] of pickupVehicles.entries()) {
     assert.equal(vehicle.brand, "Dongfeng");
     assert.equal(vehicle.category, "Pickup");
-    assert.equal(vehicle.source.brochure, "Dongfeng_Pickups_-_Fouani_Nigeria_(with_prices).pdf");
-    assert.equal(vehicle.source.pdfPage, index + 4);
-    assert.equal(vehicle.source.modelPage, index + 1);
-    assert.equal(vehicle.source.modelPageCount, 4);
+    const provenance = automobileProvenance[vehicle.id];
+    assert.equal(provenance.brochure, "Dongfeng_Pickups_-_Fouani_Nigeria_(with_prices).pdf");
+    assert.equal(provenance.pdfPage, index + 4);
+    assert.equal(provenance.modelPage, index + 1);
+    assert.equal(provenance.modelPageCount, 4);
+    assert.equal(vehicle.source, undefined);
     assert.ok(vehicle.price > 0);
     assert.equal(vehicle.statusLabel, "Confirm current price and availability");
     assert.ok(vehicle.images.length);
@@ -254,12 +266,14 @@ test("pickup navigation, filter option and requested Automobile copy are present
   assert.match(html, /href="#vehicle-inventory" data-category-link="Pickup">Pickup<\/a>/);
   assert.match(html, /<option value="Pickup">Pickup<\/option>/);
   assert.doesNotMatch(html, /data-brand="pickup"/);
-  assert.ok(html.includes("Vehicle specifications and photographs are attributed to the Dongfeng range brochure. Equipment may vary by trim and market."));
+  assert.doesNotMatch(html, /Fouani|Dongfeng_Pickups|Dongfeng Range - Fouani|PDF page|Source and qualifications/i);
+  assert.doesNotMatch(catalogueSource, /Fouani|Dongfeng_Pickups|Dongfeng Range - Fouani|pdfPage|modelPage/);
+  assert.doesNotMatch(automobileSource, /Source and qualifications|Fouani|PDF page/i);
   assert.ok(html.includes("ROX Motor Collection"));
   assert.ok(html.includes("Explore the ROX range — engineered for comfort, capability and modern adventure."));
 });
 
-test("ROX models use the supplied comparison wording and qualified equipment claims", () => {
+test("ROX models retain qualified equipment claims without catalogue-origin notes", () => {
   const rox01 = legacyShowcaseVehicles.find((vehicle) => vehicle.id === "rox-01");
   const adamas = legacyShowcaseVehicles.find((vehicle) => vehicle.id === "rox-adamas");
   assert.ok(rox01);
@@ -279,7 +293,7 @@ test("ROX models use the supplied comparison wording and qualified equipment cla
     ["Normal doors", "Soft-close doors"],
     ["More simple/minimalist", "More luxurious, with Nappa and comfort features"],
     ["Approximately 13-inch screen", "Larger approximately 15–16-inch system; rear-entertainment options depending on version"],
-    ["Not present in the supplied comparison", "Present in the supplied comparison"],
+    ["Not specified for ROX 01", "Not specified for ROX ADAMAS"],
     ["Older system", "Newer connected/cloud features"],
     ["7-seat available in some versions", "7-seat available in some markets/configurations"],
     ["Very good", "Better equipment for serious off-road use"]
@@ -305,7 +319,8 @@ test("ROX collection preserves the in-page detail, contact and responsive compar
   assert.match(automobileSource, /data-gallery-open="\$\{escapeHtml\(automobileRoxSharedMedia\.id\)\}"/);
   assert.ok(css.includes(".automobile-rox-comparison__table-wrap { display: none; }"));
   assert.ok(css.includes(".automobile-rox-comparison__mobile { display: grid; gap: 1rem; }"));
-  assert.ok(html.includes("Specifications are based on the supplied comparison and may vary by market, model year and vehicle configuration. Confirm the exact vehicle specification before purchase."));
+  assert.ok(html.includes("Vehicle specifications and equipment may vary by market, model year and configuration. Confirm the exact vehicle specification before purchase."));
+  assert.doesNotMatch(catalogueSource, /supplied comparison|repository image|existing Electrony Automobile showcase image/i);
 });
 
 test("optional YouTube data is empty until verified media is supplied", () => {

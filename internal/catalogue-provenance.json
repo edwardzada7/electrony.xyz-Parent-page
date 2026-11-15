@@ -1,0 +1,1548 @@
+{
+  "automobile": {
+    "nammi-box": {
+      "brochure": "Dongfeng Range - Fouani Nigeria (no contacts).pdf",
+      "publisher": "Fouani Nigeria Ltd",
+      "pdfPage": 4,
+      "modelPage": 1
+    },
+    "nammi-06-vigo": {
+      "brochure": "Dongfeng Range - Fouani Nigeria (no contacts).pdf",
+      "publisher": "Fouani Nigeria Ltd",
+      "pdfPage": 5,
+      "modelPage": 2
+    },
+    "mage-m57": {
+      "brochure": "Dongfeng Range - Fouani Nigeria (no contacts).pdf",
+      "publisher": "Fouani Nigeria Ltd",
+      "pdfPage": 6,
+      "modelPage": 3
+    },
+    "mage-s01-ev": {
+      "brochure": "Dongfeng Range - Fouani Nigeria (no contacts).pdf",
+      "publisher": "Fouani Nigeria Ltd",
+      "pdfPage": 7,
+      "modelPage": 4
+    },
+    "huge-g59": {
+      "brochure": "Dongfeng Range - Fouani Nigeria (no contacts).pdf",
+      "publisher": "Fouani Nigeria Ltd",
+      "pdfPage": 8,
+      "modelPage": 5
+    },
+    "epi-008": {
+      "brochure": "Dongfeng Range - Fouani Nigeria (no contacts).pdf",
+      "publisher": "Fouani Nigeria Ltd",
+      "pdfPage": 9,
+      "modelPage": 6
+    },
+    "shine-c65": {
+      "brochure": "Dongfeng Range - Fouani Nigeria (no contacts).pdf",
+      "publisher": "Fouani Nigeria Ltd",
+      "pdfPage": 10,
+      "modelPage": 7
+    },
+    "shine-gs-c68": {
+      "brochure": "Dongfeng Range - Fouani Nigeria (no contacts).pdf",
+      "publisher": "Fouani Nigeria Ltd",
+      "pdfPage": 11,
+      "modelPage": 8
+    },
+    "voyah-dream": {
+      "brochure": "Dongfeng Range - Fouani Nigeria (no contacts).pdf",
+      "publisher": "Fouani Nigeria Ltd",
+      "pdfPage": 12,
+      "modelPage": 9
+    },
+    "voyah-taishan": {
+      "brochure": "Dongfeng Range - Fouani Nigeria (no contacts).pdf",
+      "publisher": "Fouani Nigeria Ltd",
+      "pdfPage": 13,
+      "modelPage": 10
+    },
+    "voyah-free-plus": {
+      "brochure": "Dongfeng Range - Fouani Nigeria (no contacts).pdf",
+      "publisher": "Fouani Nigeria Ltd",
+      "pdfPage": 14,
+      "modelPage": 11
+    },
+    "m-hero-ii-817": {
+      "brochure": "Dongfeng Range - Fouani Nigeria (no contacts).pdf",
+      "publisher": "Fouani Nigeria Ltd",
+      "pdfPage": 15,
+      "modelPage": 12
+    },
+    "m-hero-i": {
+      "brochure": "Dongfeng Range - Fouani Nigeria (no contacts).pdf",
+      "publisher": "Fouani Nigeria Ltd",
+      "pdfPage": 16,
+      "modelPage": 13
+    },
+    "dongfeng-rich-6t": {
+      "brochure": "Dongfeng_Pickups_-_Fouani_Nigeria_(with_prices).pdf",
+      "publisher": "Fouani Nigeria Ltd",
+      "pdfPage": 4,
+      "modelPage": 1,
+      "modelPageCount": 4
+    },
+    "dongfeng-rich-6": {
+      "brochure": "Dongfeng_Pickups_-_Fouani_Nigeria_(with_prices).pdf",
+      "publisher": "Fouani Nigeria Ltd",
+      "pdfPage": 5,
+      "modelPage": 2,
+      "modelPageCount": 4
+    },
+    "dongfeng-rich-7": {
+      "brochure": "Dongfeng_Pickups_-_Fouani_Nigeria_(with_prices).pdf",
+      "publisher": "Fouani Nigeria Ltd",
+      "pdfPage": 6,
+      "modelPage": 3,
+      "modelPageCount": 4
+    },
+    "dongfeng-z9": {
+      "brochure": "Dongfeng_Pickups_-_Fouani_Nigeria_(with_prices).pdf",
+      "publisher": "Fouani Nigeria Ltd",
+      "pdfPage": 7,
+      "modelPage": 4,
+      "modelPageCount": 4
+    }
+  },
+  "energy": {
+    "products": {
+      "jinko-525m-72hl4-tv": {
+        "source": {
+          "document": "POWER-SOLAR PL-1.pdf",
+          "page": 1
+        },
+        "priceSource": {
+          "document": "POWER-SOLAR PL-1.pdf",
+          "page": 1
+        }
+      },
+      "jinko-595n-72hl4-bd": {
+        "source": {
+          "document": "POWER-SOLAR PL-1.pdf",
+          "page": 1
+        },
+        "priceSource": {
+          "document": "POWER-SOLAR PL-1.pdf",
+          "page": 1
+        }
+      },
+      "jinko-620n-66hl4-bd": {
+        "source": {
+          "document": "POWER-SOLAR PL-1.pdf",
+          "page": 1
+        },
+        "priceSource": {
+          "document": "POWER-SOLAR PL-1.pdf",
+          "page": 1
+        }
+      },
+      "jinko-625n-66hl4-bd": {
+        "source": {
+          "document": "POWER-SOLAR PL-1.pdf",
+          "page": 1
+        },
+        "priceSource": {
+          "document": "POWER-SOLAR PL-1.pdf",
+          "page": 1
+        }
+      },
+      "jinko-630n-66hl4-bd": {
+        "source": {
+          "document": "POWER-SOLAR PL-1.pdf",
+          "page": 1
+        },
+        "priceSource": {
+          "document": "POWER-SOLAR PL-1.pdf",
+          "page": 1
+        }
+      },
+      "jinko-640n-66hl4-bd": {
+        "source": {
+          "document": "POWER-SOLAR PL-1.pdf",
+          "page": 1
+        },
+        "priceSource": {
+          "document": "POWER-SOLAR PL-1.pdf",
+          "page": 1
+        }
+      },
+      "jinko-650n-66ql6-bd": {
+        "source": {
+          "document": "POWER-SOLAR PL-1.pdf",
+          "page": 1
+        },
+        "priceSource": {
+          "document": "POWER-SOLAR PL-1.pdf",
+          "page": 1
+        }
+      },
+      "jinko-725n-66hl5-bd": {
+        "source": {
+          "document": "POWER-SOLAR PL-1.pdf",
+          "page": 1
+        },
+        "priceSource": {
+          "document": "POWER-SOLAR PL-1.pdf",
+          "page": 1
+        }
+      },
+      "huawei-power-cabinet": {
+        "source": {
+          "document": "POWER-SOLAR PL-1.pdf",
+          "page": 2
+        },
+        "priceSource": {
+          "document": "POWER-SOLAR PL-1.pdf",
+          "page": 2
+        },
+        "sourceNote": "Please ask your sales rep for date sheet"
+      },
+      "huawei-battery-cabinet": {
+        "source": {
+          "document": "POWER-SOLAR PL-1.pdf",
+          "page": 2
+        },
+        "priceSource": {
+          "document": "POWER-SOLAR PL-1.pdf",
+          "page": 2
+        },
+        "sourceNote": "Please ask your sales rep for date sheet"
+      },
+      "huawei-esm-48200a1": {
+        "source": {
+          "document": "POWER-SOLAR PL-1.pdf",
+          "page": 2
+        },
+        "priceSource": {
+          "document": "POWER-SOLAR PL-1.pdf",
+          "page": 2
+        },
+        "sourceNote": "Please ask your sales rep for date sheet"
+      },
+      "huawei-esm-48100a7": {
+        "source": {
+          "document": "POWER-SOLAR PL-1.pdf",
+          "page": 2
+        },
+        "priceSource": {
+          "document": "POWER-SOLAR PL-1.pdf",
+          "page": 2
+        },
+        "sourceNote": "Please ask your sales rep for date sheet"
+      },
+      "huawei-i23003": {
+        "source": {
+          "document": "POWER-SOLAR PL-1.pdf",
+          "page": 2
+        },
+        "priceSource": {
+          "document": "POWER-SOLAR PL-1.pdf",
+          "page": 2
+        },
+        "sourceNote": "Please ask your sales rep for date sheet"
+      },
+      "huawei-pvdu-8kw": {
+        "source": {
+          "document": "POWER-SOLAR PL-1.pdf",
+          "page": 3
+        },
+        "priceSource": {
+          "document": "POWER-SOLAR PL-1.pdf",
+          "page": 3
+        },
+        "sourceNote": "Please ask your sales rep for date sheet"
+      },
+      "huawei-s4875": {
+        "source": {
+          "document": "POWER-SOLAR PL-1.pdf",
+          "page": 3
+        },
+        "priceSource": {
+          "document": "POWER-SOLAR PL-1.pdf",
+          "page": 3
+        },
+        "sourceNote": "Please ask your sales rep for date sheet"
+      },
+      "huawei-huwinv100ktl-m2": {
+        "source": {
+          "document": "POWER-SOLAR PL-1.pdf",
+          "page": 3
+        },
+        "priceSource": {
+          "document": "POWER-SOLAR PL-1.pdf",
+          "page": 3
+        },
+        "sourceNote": "Please ask your sales rep for date sheet",
+        "reviewNote": "The source associates model HUWINV100KTL-M2 with a 150 KW description; retain both as printed and verify before advising."
+      },
+      "huawei-huwinv150k-mg0": {
+        "source": {
+          "document": "POWER-SOLAR PL-1.pdf",
+          "page": 3
+        },
+        "priceSource": {
+          "document": "POWER-SOLAR PL-1.pdf",
+          "page": 3
+        },
+        "sourceNote": "Please ask your sales rep for date sheet",
+        "reviewNote": "The source associates model HUWINV150K-MG0 with a 100 KW description; retain both as printed and verify before advising."
+      },
+      "huawei-luna-2000-97kwh": {
+        "source": {
+          "document": "POWER-SOLAR PL-1.pdf",
+          "page": 3
+        },
+        "priceSource": {
+          "document": "POWER-SOLAR PL-1.pdf",
+          "page": 3
+        },
+        "sourceNote": "Please ask your sales rep for date sheet",
+        "sourceUrl": "https://solar.huawei.com/en/professionals/all-products/LUNA2000-97-129-161-200kwh/specs"
+      },
+      "huawei-luna-2000-129kwh": {
+        "source": {
+          "document": "POWER-SOLAR PL-1.pdf",
+          "page": 3
+        },
+        "priceSource": {
+          "document": "POWER-SOLAR PL-1.pdf",
+          "page": 3
+        },
+        "sourceNote": "Please ask your sales rep for date sheet",
+        "sourceUrl": "https://solar.huawei.com/en/professionals/all-products/LUNA2000-97-129-161-200kwh/specs"
+      },
+      "huawei-luna-2000-215kwh": {
+        "source": {
+          "document": "POWER-SOLAR PL-1.pdf",
+          "page": 3
+        },
+        "priceSource": {
+          "document": "POWER-SOLAR PL-1.pdf",
+          "page": 3
+        },
+        "sourceNote": "Please ask your sales rep for date sheet",
+        "sourceUrl": "https://solar.huawei.com/en/professionals/all-products/LUNA2000-97-129-161-200kwh/specs"
+      },
+      "huawei-installation-tray": {
+        "source": {
+          "document": "POWER-SOLAR PL-1.pdf",
+          "page": 3
+        },
+        "priceSource": {
+          "document": "POWER-SOLAR PL-1.pdf",
+          "page": 3
+        },
+        "sourceNote": "Please ask your sales rep for date sheet"
+      },
+      "huawei-ats-63a": {
+        "source": {
+          "document": "POWER-SOLAR PL-1.pdf",
+          "page": 3
+        },
+        "priceSource": {
+          "document": "POWER-SOLAR PL-1.pdf",
+          "page": 3
+        },
+        "sourceNote": "Please ask your sales rep for date sheet"
+      },
+      "huawei-ats-100a": {
+        "source": {
+          "document": "POWER-SOLAR PL-1.pdf",
+          "page": 3
+        },
+        "priceSource": {
+          "document": "POWER-SOLAR PL-1.pdf",
+          "page": 3
+        },
+        "sourceNote": "Please ask your sales rep for date sheet"
+      },
+      "huawei-lquid-level-sensor": {
+        "source": {
+          "document": "POWER-SOLAR PL-1.pdf",
+          "page": 3
+        },
+        "priceSource": {
+          "document": "POWER-SOLAR PL-1.pdf",
+          "page": 3
+        },
+        "sourceNote": "Please ask your sales rep for date sheet"
+      },
+      "huawei-touch-screen": {
+        "source": {
+          "document": "POWER-SOLAR PL-1.pdf",
+          "page": 3
+        },
+        "priceSource": {
+          "document": "POWER-SOLAR PL-1.pdf",
+          "page": 3
+        },
+        "sourceNote": "Please ask your sales rep for date sheet"
+      },
+      "huawei-merc-1300wp": {
+        "source": {
+          "document": "POWER-SOLAR PL-1.pdf",
+          "page": 3
+        },
+        "priceSource": {
+          "document": "POWER-SOLAR PL-1.pdf",
+          "page": 3
+        },
+        "sourceNote": "Please ask your sales rep for date sheet"
+      },
+      "huawei-dtsu666-hw": {
+        "source": {
+          "document": "POWER-SOLAR PL-1.pdf",
+          "page": 3
+        },
+        "priceSource": {
+          "document": "POWER-SOLAR PL-1.pdf",
+          "page": 3
+        },
+        "sourceNote": "Please ask your sales rep for date sheet"
+      },
+      "huawei-huwsmartmodul1000a01": {
+        "source": {
+          "document": "POWER-SOLAR PL-1.pdf",
+          "page": 3
+        },
+        "priceSource": {
+          "document": "POWER-SOLAR PL-1.pdf",
+          "page": 3
+        },
+        "sourceNote": "Please ask your sales rep for date sheet"
+      },
+      "huawei-smart-logger-3000a01eu": {
+        "source": {
+          "document": "POWER-SOLAR PL-1.pdf",
+          "page": 3
+        },
+        "priceSource": {
+          "document": "POWER-SOLAR PL-1.pdf",
+          "page": 3
+        },
+        "sourceNote": "Please ask your sales rep for date sheet"
+      },
+      "hisense-inv6ks-aa1": {
+        "source": {
+          "document": "POWER-SOLAR PL-1.pdf",
+          "page": 1
+        },
+        "priceSource": {
+          "document": "POWER-SOLAR PL-1.pdf",
+          "page": 1
+        }
+      },
+      "hisense-bathel5-e-bb1": {
+        "source": {
+          "document": "POWER-SOLAR PL-1.pdf",
+          "page": 1
+        },
+        "priceSource": {
+          "document": "POWER-SOLAR PL-1.pdf",
+          "page": 1
+        }
+      },
+      "hisense-ketrans50kva-11-04": {
+        "source": {
+          "document": "POWER-SOLAR PL-1.pdf",
+          "page": 1
+        },
+        "priceSource": {
+          "document": "POWER-SOLAR PL-1.pdf",
+          "page": 1
+        }
+      },
+      "hisense-ketrans100kva-11-04": {
+        "source": {
+          "document": "POWER-SOLAR PL-1.pdf",
+          "page": 1
+        },
+        "priceSource": {
+          "document": "POWER-SOLAR PL-1.pdf",
+          "page": 1
+        }
+      },
+      "hisense-ketrans200kva-11-04": {
+        "source": {
+          "document": "POWER-SOLAR PL-1.pdf",
+          "page": 1
+        },
+        "priceSource": {
+          "document": "POWER-SOLAR PL-1.pdf",
+          "page": 1
+        }
+      },
+      "hisense-ketrans315kva-11-04": {
+        "source": {
+          "document": "POWER-SOLAR PL-1.pdf",
+          "page": 1
+        },
+        "priceSource": {
+          "document": "POWER-SOLAR PL-1.pdf",
+          "page": 1
+        }
+      },
+      "hisense-ketrans500kva-11-04": {
+        "source": {
+          "document": "POWER-SOLAR PL-1.pdf",
+          "page": 1
+        },
+        "priceSource": {
+          "document": "POWER-SOLAR PL-1.pdf",
+          "page": 1
+        }
+      },
+      "hisense-ketrans800kva-11-04": {
+        "source": {
+          "document": "POWER-SOLAR PL-1.pdf",
+          "page": 1
+        },
+        "priceSource": {
+          "document": "POWER-SOLAR PL-1.pdf",
+          "page": 1
+        }
+      },
+      "hisense-ketrans1000kva-11-04": {
+        "source": {
+          "document": "POWER-SOLAR PL-1.pdf",
+          "page": 1
+        },
+        "priceSource": {
+          "document": "POWER-SOLAR PL-1.pdf",
+          "page": 1
+        }
+      },
+      "growatt-sim-6000es-plus-h-battery-base-6kw-5-5-kwh": {
+        "source": {
+          "document": "POWER-SOLAR PL-1.pdf",
+          "page": 3
+        },
+        "priceSource": {
+          "document": "POWER-SOLAR PL-1.pdf",
+          "page": 3
+        },
+        "sourceNote": "Please ask your sales rep for date sheet",
+        "reviewNote": "The source warranty cell spans the integrated system and battery rows."
+      },
+      "growatt-sim-6000es-plus-h-battery-base-6kw-5-12-kwh": {
+        "source": {
+          "document": "POWER-SOLAR PL-1.pdf",
+          "page": 3
+        },
+        "priceSource": {
+          "document": "POWER-SOLAR PL-1.pdf",
+          "page": 3
+        },
+        "sourceNote": "Please ask your sales rep for date sheet",
+        "reviewNote": "The source warranty cell spans the integrated system and battery rows."
+      },
+      "growatt-abm-5-5-a1-h": {
+        "source": {
+          "document": "POWER-SOLAR PL-1.pdf",
+          "page": 3
+        },
+        "priceSource": {
+          "document": "POWER-SOLAR PL-1.pdf",
+          "page": 3
+        },
+        "sourceNote": "Please ask your sales rep for date sheet"
+      },
+      "growatt-abm-5-ls-b1-h": {
+        "source": {
+          "document": "POWER-SOLAR PL-1.pdf",
+          "page": 3
+        },
+        "priceSource": {
+          "document": "POWER-SOLAR PL-1.pdf",
+          "page": 3
+        },
+        "sourceNote": "Please ask your sales rep for date sheet"
+      },
+      "growatt-hope5l-b1": {
+        "source": {
+          "document": "POWER-SOLAR PL-1.pdf",
+          "page": 3
+        },
+        "priceSource": {
+          "document": "POWER-SOLAR PL-1.pdf",
+          "page": 3
+        },
+        "sourceNote": "Please ask your sales rep for date sheet"
+      },
+      "growatt-hope16lm-a1": {
+        "source": {
+          "document": "POWER-SOLAR PL-1.pdf",
+          "page": 3
+        },
+        "priceSource": {
+          "document": "POWER-SOLAR PL-1.pdf",
+          "page": 3
+        },
+        "sourceNote": "Please ask your sales rep for date sheet"
+      },
+      "growatt-spf-6000es": {
+        "source": {
+          "document": "POWER-SOLAR PL-1.pdf",
+          "page": 3
+        },
+        "priceSource": {
+          "document": "POWER-SOLAR PL-1.pdf",
+          "page": 3
+        },
+        "sourceNote": "Please ask your sales rep for date sheet"
+      },
+      "growatt-sph-3600tl-bl-up": {
+        "source": {
+          "document": "POWER-SOLAR PL-1.pdf",
+          "page": 3
+        },
+        "priceSource": {
+          "document": "POWER-SOLAR PL-1.pdf",
+          "page": 3
+        },
+        "sourceNote": "Please ask your sales rep for date sheet"
+      },
+      "growatt-sph-5000tl-bl-up": {
+        "source": {
+          "document": "POWER-SOLAR PL-1.pdf",
+          "page": 3
+        },
+        "priceSource": {
+          "document": "POWER-SOLAR PL-1.pdf",
+          "page": 3
+        },
+        "sourceNote": "Please ask your sales rep for date sheet"
+      },
+      "growatt-wit-100k-hu": {
+        "source": {
+          "document": "POWER-SOLAR PL-1.pdf",
+          "page": 3
+        },
+        "priceSource": {
+          "document": "POWER-SOLAR PL-1.pdf",
+          "page": 3
+        },
+        "sourceNote": "Please ask your sales rep for date sheet"
+      },
+      "growatt-ace-209h-2h": {
+        "source": {
+          "document": "POWER-SOLAR PL-1.pdf",
+          "page": 3
+        },
+        "priceSource": {
+          "document": "POWER-SOLAR PL-1.pdf",
+          "page": 3
+        },
+        "sourceNote": "Please ask your sales rep for date sheet"
+      },
+      "growatt-sem-xa-rm": {
+        "source": {
+          "document": "POWER-SOLAR PL-1.pdf",
+          "page": 3
+        },
+        "priceSource": {
+          "document": "POWER-SOLAR PL-1.pdf",
+          "page": 3
+        },
+        "sourceNote": "Please ask your sales rep for date sheet"
+      },
+      "growatt-ct-600-5a": {
+        "source": {
+          "document": "POWER-SOLAR PL-1.pdf",
+          "page": 3
+        },
+        "priceSource": {
+          "document": "POWER-SOLAR PL-1.pdf",
+          "page": 3
+        },
+        "sourceNote": "Please ask your sales rep for date sheet"
+      },
+      "deye-6-6kog03lp1": {
+        "source": {
+          "document": "POWER-SOLAR PL-1.pdf",
+          "page": 1
+        },
+        "priceSource": {
+          "document": "POWER-SOLAR PL-1.pdf",
+          "page": 1
+        },
+        "sourceNote": "Please ask your sales rep for date sheet"
+      },
+      "deye-8k-sg06lp1-eu": {
+        "source": {
+          "document": "POWER-SOLAR PL-1.pdf",
+          "page": 1
+        },
+        "priceSource": {
+          "document": "POWER-SOLAR PL-1.pdf",
+          "page": 1
+        },
+        "sourceNote": "Please ask your sales rep for date sheet"
+      },
+      "deye-12k-sg05lp3-e": {
+        "source": {
+          "document": "POWER-SOLAR PL-1.pdf",
+          "page": 1
+        },
+        "priceSource": {
+          "document": "POWER-SOLAR PL-1.pdf",
+          "page": 1
+        },
+        "sourceNote": "Please ask your sales rep for date sheet"
+      },
+      "deye-16k-sg01lp1-e": {
+        "source": {
+          "document": "POWER-SOLAR PL-1.pdf",
+          "page": 1
+        },
+        "priceSource": {
+          "document": "POWER-SOLAR PL-1.pdf",
+          "page": 1
+        },
+        "sourceNote": "Please ask your sales rep for date sheet"
+      },
+      "deye-20k-sg05lp3-e": {
+        "source": {
+          "document": "POWER-SOLAR PL-1.pdf",
+          "page": 1
+        },
+        "priceSource": {
+          "document": "POWER-SOLAR PL-1.pdf",
+          "page": 1
+        },
+        "sourceNote": "Please ask your sales rep for date sheet"
+      },
+      "deye-12k-sg06lp1-e": {
+        "source": {
+          "document": "POWER-SOLAR PL-1.pdf",
+          "page": 1
+        },
+        "priceSource": {
+          "document": "POWER-SOLAR PL-1.pdf",
+          "page": 1
+        },
+        "sourceNote": "Please ask your sales rep for date sheet"
+      },
+      "deye-50k-sg01hp3-e": {
+        "source": {
+          "document": "POWER-SOLAR PL-1.pdf",
+          "page": 2
+        },
+        "priceSource": {
+          "document": "POWER-SOLAR PL-1.pdf",
+          "page": 2
+        },
+        "sourceNote": "Please ask your sales rep for date sheet"
+      },
+      "deye-80k-sg02hp3-e": {
+        "source": {
+          "document": "POWER-SOLAR PL-1.pdf",
+          "page": 2
+        },
+        "priceSource": {
+          "document": "POWER-SOLAR PL-1.pdf",
+          "page": 2
+        },
+        "sourceNote": "Please ask your sales rep for date sheet"
+      },
+      "deye-125k-sg02hp3": {
+        "source": {
+          "document": "POWER-SOLAR PL-1.pdf",
+          "page": 2
+        },
+        "priceSource": {
+          "document": "POWER-SOLAR PL-1.pdf",
+          "page": 2
+        },
+        "sourceNote": "Please ask your sales rep for date sheet"
+      },
+      "deye-100k-g": {
+        "source": {
+          "document": "POWER-SOLAR PL-1.pdf",
+          "page": 2
+        },
+        "priceSource": {
+          "document": "POWER-SOLAR PL-1.pdf",
+          "page": 2
+        },
+        "sourceNote": "Please ask your sales rep for date sheet"
+      },
+      "deye-136k-g": {
+        "source": {
+          "document": "POWER-SOLAR PL-1.pdf",
+          "page": 2
+        },
+        "priceSource": {
+          "document": "POWER-SOLAR PL-1.pdf",
+          "page": 2
+        },
+        "sourceNote": "Please ask your sales rep for date sheet"
+      },
+      "deye-batse-f16-c": {
+        "source": {
+          "document": "POWER-SOLAR PL-1.pdf",
+          "page": 2
+        },
+        "priceSource": {
+          "document": "POWER-SOLAR PL-1.pdf",
+          "page": 2
+        },
+        "sourceNote": "Please ask your sales rep for date sheet"
+      },
+      "deye-se-f5-l": {
+        "source": {
+          "document": "POWER-SOLAR PL-1.pdf",
+          "page": 2
+        },
+        "priceSource": {
+          "document": "POWER-SOLAR PL-1.pdf",
+          "page": 2
+        },
+        "sourceNote": "Please ask your sales rep for date sheet"
+      },
+      "deye-bos-gm-5-1-hv": {
+        "source": {
+          "document": "POWER-SOLAR PL-1.pdf",
+          "page": 2
+        },
+        "priceSource": {
+          "document": "POWER-SOLAR PL-1.pdf",
+          "page": 2
+        },
+        "sourceNote": "Please ask your sales rep for date sheet"
+      },
+      "deye-bos-g-pro51": {
+        "source": {
+          "document": "POWER-SOLAR PL-1.pdf",
+          "page": 2
+        },
+        "priceSource": {
+          "document": "POWER-SOLAR PL-1.pdf",
+          "page": 2
+        },
+        "sourceNote": "Please ask your sales rep for date sheet"
+      },
+      "deye-gb-w-12": {
+        "source": {
+          "document": "POWER-SOLAR PL-1.pdf",
+          "page": 2
+        },
+        "priceSource": {
+          "document": "POWER-SOLAR PL-1.pdf",
+          "page": 2
+        },
+        "sourceNote": "Please ask your sales rep for date sheet"
+      },
+      "deye-bos-b-pack16": {
+        "source": {
+          "document": "POWER-SOLAR PL-1.pdf",
+          "page": 2
+        },
+        "priceSource": {
+          "document": "POWER-SOLAR PL-1.pdf",
+          "page": 2
+        },
+        "sourceNote": "Please ask your sales rep for date sheet"
+      },
+      "deye-pdu-gb-w-2": {
+        "source": {
+          "document": "POWER-SOLAR PL-1.pdf",
+          "page": 2
+        },
+        "priceSource": {
+          "document": "POWER-SOLAR PL-1.pdf",
+          "page": 2
+        },
+        "sourceNote": "Please ask your sales rep for date sheet"
+      },
+      "deye-acc-gb-w-parts": {
+        "source": {
+          "document": "POWER-SOLAR PL-1.pdf",
+          "page": 2
+        },
+        "priceSource": {
+          "document": "POWER-SOLAR PL-1.pdf",
+          "page": 2
+        },
+        "sourceNote": "Please ask your sales rep for date sheet"
+      },
+      "deye-pcs-125k-l01hp3": {
+        "source": {
+          "document": "POWER-SOLAR PL-1.pdf",
+          "page": 2
+        },
+        "priceSource": {
+          "document": "POWER-SOLAR PL-1.pdf",
+          "page": 2
+        },
+        "sourceNote": "Please ask your sales rep for date sheet"
+      },
+      "deye-mppt-200kw": {
+        "source": {
+          "document": "POWER-SOLAR PL-1.pdf",
+          "page": 2
+        },
+        "priceSource": {
+          "document": "POWER-SOLAR PL-1.pdf",
+          "page": 2
+        },
+        "sourceNote": "Please ask your sales rep for date sheet"
+      },
+      "deye-control-box-hv-bos-b-pdu-2-a": {
+        "source": {
+          "document": "POWER-SOLAR PL-1.pdf",
+          "page": 2
+        },
+        "priceSource": {
+          "document": "POWER-SOLAR PL-1.pdf",
+          "page": 2
+        },
+        "sourceNote": "Please ask your sales rep for date sheet"
+      },
+      "deye-sts-500l": {
+        "source": {
+          "document": "POWER-SOLAR PL-1.pdf",
+          "page": 2
+        },
+        "priceSource": {
+          "document": "POWER-SOLAR PL-1.pdf",
+          "page": 2
+        },
+        "sourceNote": "Please ask your sales rep for date sheet"
+      },
+      "deye-control-box-hv-bos-g-pdu-pro": {
+        "source": {
+          "document": "POWER-SOLAR PL-1.pdf",
+          "page": 2
+        },
+        "priceSource": {
+          "document": "POWER-SOLAR PL-1.pdf",
+          "page": 2
+        },
+        "sourceNote": "Please ask your sales rep for date sheet"
+      },
+      "deye-deyerack-3u-h": {
+        "source": {
+          "document": "POWER-SOLAR PL-1.pdf",
+          "page": 2
+        },
+        "priceSource": {
+          "document": "POWER-SOLAR PL-1.pdf",
+          "page": 2
+        },
+        "sourceNote": "Please ask your sales rep for date sheet"
+      },
+      "pylon-tech-pylonbatfb-l-16-16-kwh": {
+        "source": {
+          "document": "POWER-SOLAR PL-1.pdf",
+          "page": 2
+        },
+        "priceSource": {
+          "document": "POWER-SOLAR PL-1.pdf",
+          "page": 2
+        },
+        "sourceNote": "Please ask your sales rep for date sheet"
+      },
+      "pylon-tech-uf5000-5-12-kwh": {
+        "source": {
+          "document": "POWER-SOLAR PL-1.pdf",
+          "page": 2
+        },
+        "priceSource": {
+          "document": "POWER-SOLAR PL-1.pdf",
+          "page": 2
+        },
+        "sourceNote": "Please ask your sales rep for date sheet"
+      },
+      "pylon-tech-kit-usc": {
+        "source": {
+          "document": "POWER-SOLAR PL-1.pdf",
+          "page": 2
+        },
+        "priceSource": {
+          "document": "POWER-SOLAR PL-1.pdf",
+          "page": 2
+        },
+        "sourceNote": "Please ask your sales rep for date sheet"
+      },
+      "tsty-transformer-400kva-400-400v": {
+        "source": {
+          "document": "POWER-SOLAR PL-1.pdf",
+          "page": 3
+        },
+        "priceSource": {
+          "document": "POWER-SOLAR PL-1.pdf",
+          "page": 3
+        },
+        "sourceNote": "Please ask your sales rep for date sheet"
+      },
+      "tsty-transformer-600kva-400-400v": {
+        "source": {
+          "document": "POWER-SOLAR PL-1.pdf",
+          "page": 3
+        },
+        "priceSource": {
+          "document": "POWER-SOLAR PL-1.pdf",
+          "page": 3
+        },
+        "sourceNote": "Please ask your sales rep for date sheet",
+        "reviewNote": "The source model label says 600kva while its description says 650 Kva; both values are retained as printed."
+      },
+      "antai-pv-roof-mounting-set": {
+        "source": {
+          "document": "POWER-SOLAR PL-1.pdf",
+          "page": 4
+        },
+        "priceSource": {
+          "document": "POWER-SOLAR PL-1.pdf",
+          "page": 4
+        }
+      },
+      "antai-antairailcg010-01": {
+        "source": {
+          "document": "POWER-SOLAR PL-1.pdf",
+          "page": 4
+        },
+        "priceSource": {
+          "document": "POWER-SOLAR PL-1.pdf",
+          "page": 4
+        }
+      },
+      "antai-antaimidgn003-05": {
+        "source": {
+          "document": "POWER-SOLAR PL-1.pdf",
+          "page": 4
+        },
+        "priceSource": {
+          "document": "POWER-SOLAR PL-1.pdf",
+          "page": 4
+        }
+      },
+      "antai-antailugtyn16-01": {
+        "source": {
+          "document": "POWER-SOLAR PL-1.pdf",
+          "page": 4
+        },
+        "priceSource": {
+          "document": "POWER-SOLAR PL-1.pdf",
+          "page": 4
+        }
+      },
+      "antai-antailfeettyn353-01": {
+        "source": {
+          "document": "POWER-SOLAR PL-1.pdf",
+          "page": 4
+        },
+        "priceSource": {
+          "document": "POWER-SOLAR PL-1.pdf",
+          "page": 4
+        }
+      },
+      "antai-antaijoinercg037": {
+        "source": {
+          "document": "POWER-SOLAR PL-1.pdf",
+          "page": 4
+        },
+        "priceSource": {
+          "document": "POWER-SOLAR PL-1.pdf",
+          "page": 4
+        }
+      },
+      "antai-antaiendcg018-01": {
+        "source": {
+          "document": "POWER-SOLAR PL-1.pdf",
+          "page": 4
+        },
+        "priceSource": {
+          "document": "POWER-SOLAR PL-1.pdf",
+          "page": 4
+        }
+      },
+      "suntree-sunacguard63a-230v": {
+        "source": {
+          "document": "POWER-SOLAR PL-1.pdf",
+          "page": 4
+        },
+        "priceSource": {
+          "document": "POWER-SOLAR PL-1.pdf",
+          "page": 4
+        }
+      },
+      "suntree-sunacsurge20ka-275v": {
+        "source": {
+          "document": "POWER-SOLAR PL-1.pdf",
+          "page": 4
+        },
+        "priceSource": {
+          "document": "POWER-SOLAR PL-1.pdf",
+          "page": 4
+        }
+      },
+      "suntree-sunacsurge20ka-385v": {
+        "source": {
+          "document": "POWER-SOLAR PL-1.pdf",
+          "page": 4
+        },
+        "priceSource": {
+          "document": "POWER-SOLAR PL-1.pdf",
+          "page": 4
+        }
+      },
+      "suntree-sunbrkac100amps-2p": {
+        "source": {
+          "document": "POWER-SOLAR PL-1.pdf",
+          "page": 4
+        },
+        "priceSource": {
+          "document": "POWER-SOLAR PL-1.pdf",
+          "page": 4
+        }
+      },
+      "suntree-sunbrkac100amps-4p": {
+        "source": {
+          "document": "POWER-SOLAR PL-1.pdf",
+          "page": 4
+        },
+        "priceSource": {
+          "document": "POWER-SOLAR PL-1.pdf",
+          "page": 4
+        }
+      },
+      "suntree-sunbrkac20amps-2p": {
+        "source": {
+          "document": "POWER-SOLAR PL-1.pdf",
+          "page": 4
+        },
+        "priceSource": {
+          "document": "POWER-SOLAR PL-1.pdf",
+          "page": 4
+        }
+      },
+      "suntree-sunbrkac25amps-2p": {
+        "source": {
+          "document": "POWER-SOLAR PL-1.pdf",
+          "page": 4
+        },
+        "priceSource": {
+          "document": "POWER-SOLAR PL-1.pdf",
+          "page": 4
+        }
+      },
+      "suntree-sunbrkac25amps-4p": {
+        "source": {
+          "document": "POWER-SOLAR PL-1.pdf",
+          "page": 4
+        },
+        "priceSource": {
+          "document": "POWER-SOLAR PL-1.pdf",
+          "page": 4
+        }
+      },
+      "suntree-sunbrkac32amps-2p": {
+        "source": {
+          "document": "POWER-SOLAR PL-1.pdf",
+          "page": 4
+        },
+        "priceSource": {
+          "document": "POWER-SOLAR PL-1.pdf",
+          "page": 4
+        }
+      },
+      "suntree-sunbrkac32amps-4p": {
+        "source": {
+          "document": "POWER-SOLAR PL-1.pdf",
+          "page": 4
+        },
+        "priceSource": {
+          "document": "POWER-SOLAR PL-1.pdf",
+          "page": 4
+        }
+      },
+      "suntree-sunbrkac40amps-2p": {
+        "source": {
+          "document": "POWER-SOLAR PL-1.pdf",
+          "page": 4
+        },
+        "priceSource": {
+          "document": "POWER-SOLAR PL-1.pdf",
+          "page": 4
+        }
+      },
+      "suntree-sunbrkac63amps-2p": {
+        "source": {
+          "document": "POWER-SOLAR PL-1.pdf",
+          "page": 4
+        },
+        "priceSource": {
+          "document": "POWER-SOLAR PL-1.pdf",
+          "page": 4
+        }
+      },
+      "suntree-sunbrkac63amps-4p": {
+        "source": {
+          "document": "POWER-SOLAR PL-1.pdf",
+          "page": 4
+        },
+        "priceSource": {
+          "document": "POWER-SOLAR PL-1.pdf",
+          "page": 4
+        }
+      },
+      "suntree-sunbrkdc125a-2p": {
+        "source": {
+          "document": "POWER-SOLAR PL-1.pdf",
+          "page": 4
+        },
+        "priceSource": {
+          "document": "POWER-SOLAR PL-1.pdf",
+          "page": 4
+        }
+      },
+      "suntree-sunbrkdc63a-2p": {
+        "source": {
+          "document": "POWER-SOLAR PL-1.pdf",
+          "page": 4
+        },
+        "priceSource": {
+          "document": "POWER-SOLAR PL-1.pdf",
+          "page": 4
+        }
+      },
+      "suntree-sundb4way": {
+        "source": {
+          "document": "POWER-SOLAR PL-1.pdf",
+          "page": 4
+        },
+        "priceSource": {
+          "document": "POWER-SOLAR PL-1.pdf",
+          "page": 4
+        }
+      },
+      "suntree-sundb6way": {
+        "source": {
+          "document": "POWER-SOLAR PL-1.pdf",
+          "page": 4
+        },
+        "priceSource": {
+          "document": "POWER-SOLAR PL-1.pdf",
+          "page": 4
+        }
+      },
+      "suntree-sundb12way": {
+        "source": {
+          "document": "POWER-SOLAR PL-1.pdf",
+          "page": 4
+        },
+        "priceSource": {
+          "document": "POWER-SOLAR PL-1.pdf",
+          "page": 4
+        }
+      },
+      "suntree-sundb18way": {
+        "source": {
+          "document": "POWER-SOLAR PL-1.pdf",
+          "page": 4
+        },
+        "priceSource": {
+          "document": "POWER-SOLAR PL-1.pdf",
+          "page": 4
+        }
+      },
+      "suntree-sundb18wayip65": {
+        "source": {
+          "document": "POWER-SOLAR PL-1.pdf",
+          "page": 4
+        },
+        "priceSource": {
+          "document": "POWER-SOLAR PL-1.pdf",
+          "page": 4
+        }
+      },
+      "suntree-sundb24way": {
+        "source": {
+          "document": "POWER-SOLAR PL-1.pdf",
+          "page": 4
+        },
+        "priceSource": {
+          "document": "POWER-SOLAR PL-1.pdf",
+          "page": 4
+        }
+      },
+      "suntree-sundb24wayip65": {
+        "source": {
+          "document": "POWER-SOLAR PL-1.pdf",
+          "page": 4
+        },
+        "priceSource": {
+          "document": "POWER-SOLAR PL-1.pdf",
+          "page": 4
+        }
+      },
+      "suntree-sundciso25a-1500v": {
+        "source": {
+          "document": "POWER-SOLAR PL-1.pdf",
+          "page": 4
+        },
+        "priceSource": {
+          "document": "POWER-SOLAR PL-1.pdf",
+          "page": 4
+        }
+      },
+      "suntree-sundciso32a-1000v-4p": {
+        "source": {
+          "document": "POWER-SOLAR PL-1.pdf",
+          "page": 4
+        },
+        "priceSource": {
+          "document": "POWER-SOLAR PL-1.pdf",
+          "page": 4
+        }
+      },
+      "suntree-sunacmccb100a-4p": {
+        "source": {
+          "document": "POWER-SOLAR PL-1.pdf",
+          "page": 4
+        },
+        "priceSource": {
+          "document": "POWER-SOLAR PL-1.pdf",
+          "page": 4
+        }
+      },
+      "suntree-sunacmccb-sm8e-125m": {
+        "source": {
+          "document": "POWER-SOLAR PL-1.pdf",
+          "page": 4
+        },
+        "priceSource": {
+          "document": "POWER-SOLAR PL-1.pdf",
+          "page": 4
+        }
+      },
+      "suntree-sunacmccb160a-4p": {
+        "source": {
+          "document": "POWER-SOLAR PL-1.pdf",
+          "page": 4
+        },
+        "priceSource": {
+          "document": "POWER-SOLAR PL-1.pdf",
+          "page": 4
+        }
+      },
+      "suntree-sunmccb250a-2p": {
+        "source": {
+          "document": "POWER-SOLAR PL-1.pdf",
+          "page": 4
+        },
+        "priceSource": {
+          "document": "POWER-SOLAR PL-1.pdf",
+          "page": 4
+        }
+      },
+      "suntree-sunacmccb-sm8e-250m": {
+        "source": {
+          "document": "POWER-SOLAR PL-1.pdf",
+          "page": 4
+        },
+        "priceSource": {
+          "document": "POWER-SOLAR PL-1.pdf",
+          "page": 4
+        }
+      },
+      "suntree-sundcmccb400a-2p": {
+        "source": {
+          "document": "POWER-SOLAR PL-1.pdf",
+          "page": 4
+        },
+        "priceSource": {
+          "document": "POWER-SOLAR PL-1.pdf",
+          "page": 4
+        }
+      },
+      "suntree-sundcmccb400a-1500v": {
+        "source": {
+          "document": "POWER-SOLAR PL-1.pdf",
+          "page": 4
+        },
+        "priceSource": {
+          "document": "POWER-SOLAR PL-1.pdf",
+          "page": 4
+        }
+      },
+      "suntree-sunacmccb250a-4p": {
+        "source": {
+          "document": "POWER-SOLAR PL-1.pdf",
+          "page": 4
+        },
+        "priceSource": {
+          "document": "POWER-SOLAR PL-1.pdf",
+          "page": 4
+        }
+      },
+      "suntree-sundcsurge20ka-1000v": {
+        "source": {
+          "document": "POWER-SOLAR PL-1.pdf",
+          "page": 4
+        },
+        "priceSource": {
+          "document": "POWER-SOLAR PL-1.pdf",
+          "page": 4
+        }
+      },
+      "suntree-sunenclosure20x25x15": {
+        "source": {
+          "document": "POWER-SOLAR PL-1.pdf",
+          "page": 4
+        },
+        "priceSource": {
+          "document": "POWER-SOLAR PL-1.pdf",
+          "page": 4
+        }
+      },
+      "suntree-sunenclosure25x35x15": {
+        "source": {
+          "document": "POWER-SOLAR PL-1.pdf",
+          "page": 4
+        },
+        "priceSource": {
+          "document": "POWER-SOLAR PL-1.pdf",
+          "page": 4
+        }
+      },
+      "suntree-sunenclosure40x60x20": {
+        "source": {
+          "document": "POWER-SOLAR PL-1.pdf",
+          "page": 4
+        },
+        "priceSource": {
+          "document": "POWER-SOLAR PL-1.pdf",
+          "page": 4
+        }
+      },
+      "suntree-sunenclosure50x70x20": {
+        "source": {
+          "document": "POWER-SOLAR PL-1.pdf",
+          "page": 4
+        },
+        "priceSource": {
+          "document": "POWER-SOLAR PL-1.pdf",
+          "page": 4
+        }
+      },
+      "suntree-sunenclosure60x80x25": {
+        "source": {
+          "document": "POWER-SOLAR PL-1.pdf",
+          "page": 4
+        },
+        "priceSource": {
+          "document": "POWER-SOLAR PL-1.pdf",
+          "page": 4
+        }
+      },
+      "suntree-sunfusedc20a-1000v": {
+        "source": {
+          "document": "POWER-SOLAR PL-1.pdf",
+          "page": 5
+        },
+        "priceSource": {
+          "document": "POWER-SOLAR PL-1.pdf",
+          "page": 5
+        }
+      },
+      "suntree-sunmc4-45a": {
+        "source": {
+          "document": "POWER-SOLAR PL-1.pdf",
+          "page": 5
+        },
+        "priceSource": {
+          "document": "POWER-SOLAR PL-1.pdf",
+          "page": 5
+        }
+      },
+      "suntree-sunpvcable1c6mmred": {
+        "source": {
+          "document": "POWER-SOLAR PL-1.pdf",
+          "page": 5
+        },
+        "priceSource": {
+          "document": "POWER-SOLAR PL-1.pdf",
+          "page": 5
+        }
+      },
+      "suntree-sunpvcable1c6mmblack": {
+        "source": {
+          "document": "POWER-SOLAR PL-1.pdf",
+          "page": 5
+        },
+        "priceSource": {
+          "document": "POWER-SOLAR PL-1.pdf",
+          "page": 5
+        }
+      }
+    },
+    "packages": {
+      "basic-small-home-office": {
+        "source": {
+          "document": "POWER-SOLAR PL-1.pdf",
+          "page": 1
+        },
+        "compositionSource": {
+          "document": "Solar_Power_Solution_Packages.pdf",
+          "page": 1
+        }
+      },
+      "medium-home-office": {
+        "source": {
+          "document": "POWER-SOLAR PL-1.pdf",
+          "page": 3
+        },
+        "compositionSource": {
+          "document": "Solar_Power_Solution_Packages.pdf",
+          "page": 1
+        }
+      },
+      "medium-home-office-option-2": {
+        "source": {
+          "document": "POWER-SOLAR PL-1.pdf",
+          "page": 3
+        },
+        "compositionSource": {
+          "document": "Solar_Power_Solution_Packages.pdf",
+          "page": 1
+        }
+      },
+      "medium-home-office-option-3": {
+        "source": {
+          "document": "POWER-SOLAR PL-1.pdf",
+          "page": 3
+        },
+        "compositionSource": {
+          "document": "Solar_Power_Solution_Packages.pdf",
+          "page": 1
+        }
+      },
+      "premium-executive-corporate": {
+        "source": {
+          "document": "POWER-SOLAR PL-1.pdf",
+          "page": 1
+        },
+        "compositionSource": {
+          "document": "Solar_Power_Solution_Packages.pdf",
+          "page": 2
+        }
+      },
+      "heavy-commercial-industrial": {
+        "source": {
+          "document": "POWER-SOLAR PL-1.pdf",
+          "page": 2
+        },
+        "compositionSource": {
+          "document": "Solar_Power_Solution_Packages.pdf",
+          "page": 2
+        }
+      }
+    }
+  }
+}

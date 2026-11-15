@@ -82,17 +82,6 @@ function safeImageUrl(value) {
   }
 }
 
-function safeSourceUrl(value) {
-  if (typeof value !== "string" || !value.trim()) return null;
-  try {
-    const sourceUrl = new URL(value, document.baseURI);
-    if (sourceUrl.protocol !== "https:" || sourceUrl.username || sourceUrl.password) return null;
-    return sourceUrl.href;
-  } catch {
-    return null;
-  }
-}
-
 function getYouTubeVideoId(value) {
   if (typeof value !== "string" || !value.trim()) return "";
   const candidate = value.trim();
@@ -521,12 +510,10 @@ function createPackageCard(solarPackage, comparison = null) {
   details.append(disclosure, componentList, pricingSummary);
   card.appendChild(details);
   card.appendChild(createElement("p", "energy-package-card__review", `Compatibility: ${solarPackage.compatibilityNotes}`));
-  card.appendChild(createElement("p", "energy-package-card__source", `Installation: ${solarPackage.installationNotes}`));
+  card.appendChild(createElement("p", "energy-package-card__note", `Installation: ${solarPackage.installationNotes}`));
   card.appendChild(createElement("p", "energy-package-card__suitability",
     "Package suitability is not guaranteed. Final system design requires load assessment and site evaluation, including battery/inverter compatibility, PV string sizing and project-specific circuit protection."));
-  const source = createElement("p", "energy-package-card__source", `Source: ${solarPackage.source.document}, page ${solarPackage.source.page}.`);
-  const compositionSource = createElement("p", "energy-package-card__source", `Package quantities adapted from ${solarPackage.compositionSource.document}, page ${solarPackage.compositionSource.page}.`);
-  const priceSource = createElement("p", "energy-package-card__source", "Current item prices are drawn from the product catalogue and recalculated for each package. Confirm prices before an order is accepted; no stock or availability is implied.");
+  const packageNote = createElement("p", "energy-package-card__note", "Component prices are recalculated for this package. Confirm current prices before an order is accepted; no stock or availability is implied.");
   const footer = createElement("div", "energy-package-card__footer");
   const quote = document.createElement("a");
   quote.className = "button energy-button energy-button--primary";
@@ -542,7 +529,7 @@ function createPackageCard(solarPackage, comparison = null) {
     footer.appendChild(viewPackage);
   }
   footer.appendChild(quote);
-  card.append(source, compositionSource, priceSource, footer);
+  card.append(packageNote, footer);
   card.insertBefore(pricingSummary.cloneNode(true), details);
   return card;
 }
@@ -795,9 +782,6 @@ function requestSolarPackage(solarPackage, estimate = null) {
       ? `Components requiring a quote: ${pricing.unpricedLines.map((line) => `${line.manufacturer} ${line.model} (${line.component.quantity} ${line.component.unit})`).join("; ")}.`
       : "",
     "Displayed component prices exclude installation, transportation, labour, taxes, engineering and other fees not explicitly priced in the catalogue.",
-    solarPackage.reviewNote ? `Please confirm: ${solarPackage.reviewNote}` : "",
-    `Source: ${solarPackage.source.document}, page ${solarPackage.source.page}.`,
-    `Package quantities: ${solarPackage.compositionSource.document}, page ${solarPackage.compositionSource.page}.`,
     `Compatibility notes: ${solarPackage.compatibilityNotes}`,
     `Installation notes: ${solarPackage.installationNotes}`,
     "Package suitability is not guaranteed. Please perform load assessment and site evaluation and confirm battery/inverter compatibility, PV string sizing and project-specific circuit protection.",
@@ -854,20 +838,8 @@ function renderProductDetails(product, calculationSummary = "") {
   });
   specificationsSection.hidden = !product.specifications.length;
   document.querySelector("#energy-dialog-warranty").textContent = product.warranty
-    ? `Warranty stated in source: ${product.warranty}`
-    : "Warranty was not stated in the supplied catalogue.";
-  const sourceDetails = document.querySelector("#energy-dialog-source");
-  sourceDetails.replaceChildren();
-  sourceDetails.append(`Source: ${product.source.document}, page ${product.source.page}.`);
-  if (product.sourceNote) sourceDetails.append(` Source note: ${product.sourceNote}.`);
-  const sourceUrl = safeSourceUrl(product.sourceUrl);
-  if (sourceUrl) {
-    const sourceLink = createElement("a", "", "View full specifications");
-    sourceLink.href = sourceUrl;
-    sourceLink.target = "_blank";
-    sourceLink.rel = "noopener noreferrer";
-    sourceDetails.append(" ", sourceLink);
-  }
+    ? `Warranty: ${product.warranty}`
+    : "Warranty information is not listed for this product.";
 
   const videoSection = document.querySelector("#energy-dialog-video");
   const videoFrame = document.querySelector("#energy-dialog-video-frame");
@@ -885,13 +857,10 @@ function requestProduct(product, calculationSummary = "") {
     `Brand: ${product.brand}`,
     product.model ? `Model: ${product.model}` : "",
     `Category: ${energyCategories[product.category] || "Energy equipment"}`,
-    product.description ? `Source description: ${product.description}` : "",
+    product.description ? `Product description: ${product.description}` : "",
     product.specifications.length ? `Specifications: ${product.specifications.join("; ")}` : "",
-    product.warranty ? `Source-stated warranty: ${product.warranty}` : "",
+    product.warranty ? `Warranty: ${product.warranty}` : "",
     `Catalogue price: ${cataloguePriceLabel(product)}`,
-    `Source: ${product.source.document}, page ${product.source.page}.`,
-    product.sourceNote ? `Source note: ${product.sourceNote}.` : "",
-    safeSourceUrl(product.sourceUrl) ? `Full specifications: ${safeSourceUrl(product.sourceUrl)}` : "",
     calculationSummary ? `Energy calculator estimates:\n${calculationSummary}` : "",
     "Please confirm current availability, compatibility and suitability for my application."
   ].filter(Boolean).join("\n");

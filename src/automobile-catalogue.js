@@ -1,5 +1,3 @@
-const dongfengBrochure = "Dongfeng Range - Fouani Nigeria (no contacts).pdf";
-const dongfengPickupBrochure = "Dongfeng_Pickups_-_Fouani_Nigeria_(with_prices).pdf";
 
 const automobileVehicles = [
   {
@@ -13,7 +11,7 @@ const automobileVehicles = [
     seats: "5",
     price: 29055000,
     statusLabel: "Confirm availability",
-    imageAlt: "NAMMI BOX fully electric hatchback in the Fouani Nigeria brochure",
+    imageAlt: "NAMMI BOX fully electric hatchback",
     images: [
       "../assets/automobile/vehicles/nammi-box/01-exterior.jpg",
       "../assets/automobile/vehicles/nammi-box/02-cabin-detail.jpg",
@@ -31,7 +29,6 @@ const automobileVehicles = [
       { title: "Comfort & cabin", items: ["12.8-inch central touchscreen", "5-inch digital instrument cluster", "1 front USB charging port*", "Premium fabric / leather seats*", "Wireless phone connectivity*", "Multi-function steering wheel", "Smart climate control", "Smart keyless entry", "Push-button start"] },
       { title: "Safety & technology", items: ["Rear parking camera", "Parking sensors", "ABS & Electronic Stability Control"] }
     ],
-    source: { brochure: dongfengBrochure, publisher: "Fouani Nigeria Ltd", pdfPage: 4, modelPage: 1 },
     featured: false
   },
   {
@@ -45,7 +42,7 @@ const automobileVehicles = [
     seats: "5",
     priceLabel: "Request current price",
     statusLabel: "Confirm availability",
-    imageAlt: "NAMMI 06 VIGO fully electric crossover in the Fouani Nigeria brochure",
+    imageAlt: "NAMMI 06 VIGO fully electric crossover",
     images: [
       "../assets/automobile/vehicles/nammi-06-vigo/01-exterior.jpg",
       "../assets/automobile/vehicles/nammi-06-vigo/02-cabin-detail.jpg",
@@ -60,7 +57,6 @@ const automobileVehicles = [
       { title: "Comfort & cabin", items: ["12.8-inch touchscreen multimedia", "8.8-inch digital instrument cluster", "Premium modern cabin", "Ergonomic, supportive seats", "Spacious rear seating", "USB charging ports", "Smart connectivity"] },
       { title: "Safety & technology", items: ["Six airbags", "Reverse camera", "Rear parking sensors", "Electronic Stability Control"] }
     ],
-    source: { brochure: dongfengBrochure, publisher: "Fouani Nigeria Ltd", pdfPage: 5, modelPage: 2 },
     featured: false
   },
   {
@@ -74,7 +70,7 @@ const automobileVehicles = [
     seats: "5",
     price: 43850000,
     statusLabel: "Confirm availability",
-    imageAlt: "Dongfeng MAGE M57 turbo petrol SUV in the Fouani Nigeria brochure",
+    imageAlt: "Dongfeng MAGE M57 turbo petrol SUV",
     images: [
       "../assets/automobile/vehicles/mage-m57/01-exterior.jpg",
       "../assets/automobile/vehicles/mage-m57/02-cabin-detail.jpg"
@@ -91,7 +87,6 @@ const automobileVehicles = [
       { title: "Comfort & cabin", items: ["13.2-inch central touchscreen", "10.25-inch digital instrument cluster", "Premium leather interior", "Panoramic sunroof*", "Dual-zone air conditioning*", "Ambient lighting*", "Generous boot"] },
       { title: "Safety & technology", items: ["360-degree camera", "Adaptive cruise control*", "Blind-spot monitoring*", "Parking assist", "Multiple airbags", "Electronic Stability Control"] }
     ],
-    source: { brochure: dongfengBrochure, publisher: "Fouani Nigeria Ltd", pdfPage: 6, modelPage: 3 }
   },
   {
     id: "mage-s01-ev",
@@ -104,7 +99,7 @@ const automobileVehicles = [
     seats: "5",
     priceLabel: "Request current price",
     statusLabel: "Confirm availability",
-    imageAlt: "Dongfeng MAGE S01 EV fully electric SUV in the Fouani Nigeria brochure",
+    imageAlt: "Dongfeng MAGE S01 EV fully electric SUV",
     images: [
       "../assets/automobile/vehicles/mage-s01-ev/01-exterior.jpg",
       "../assets/automobile/vehicles/mage-s01-ev/02-cabin-detail.jpg"
@@ -118,7 +113,6 @@ const automobileVehicles = [
       { title: "Comfort & cabin", items: ["10.4-inch central touchscreen", "10.25-inch digital instrument cluster", "2 USB ports: USB-A front, USB-C rear", "Wireless phone charging*", "Leather seats*", "Panoramic roof*"] },
       { title: "Safety & technology", items: ["Driver assistance systems", "Lane keeping assist*", "360-degree camera", "Collision warning*", "Electronic safety package*"] }
     ],
-    source: { brochure: dongfengBrochure, publisher: "Fouani Nigeria Ltd", pdfPage: 7, modelPage: 4 }
   },
   {
     id: "huge-g59",
@@ -131,7 +125,7 @@ const automobileVehicles = [
     seats: "5",
     priceLabel: "Request current price",
     statusLabel: "Confirm availability",
-    imageAlt: "Dongfeng HUGE G59 mid-size petrol SUV in the Fouani Nigeria brochure",
+    imageAlt: "Dongfeng HUGE G59 mid-size petrol SUV",
     images: [
       "../assets/automobile/vehicles/huge-g59/01-exterior.jpg",
       "../assets/automobile/vehicles/huge-g59/02-cabin-detail.jpg"
@@ -145,7 +139,6 @@ const automobileVehicles = [
       { title: "Comfort & cabin", items: ["Premium interior finish", "Large panoramic sunroof*", "Leather seats*", "Large infotainment display", "Premium sound system*"] },
       { title: "Safety & technology", items: ["Advanced safety systems", "360-degree parking camera", "Adaptive cruise control*", "Driver assistance systems", "Multiple airbags"] }
     ],
-    source: { brochure: dongfengBrochure, publisher: "Fouani Nigeria Ltd", pdfPage: 8, modelPage: 5 }
   },
   {
     id: "epi-008",
@@ -158,7 +151,7 @@ const automobileVehicles = [
     seats: "6",
     price: 63350000,
     statusLabel: "Confirm availability",
-    imageAlt: "Dongfeng eπ 008 six-seat extended-range SUV in the Fouani Nigeria brochure",
+    imageAlt: "Dongfeng eπ 008 six-seat extended-range SUV",
     images: [
       "../assets/automobile/vehicles/epi-008/01-exterior.jpg",
       "../assets/automobile/vehicles/epi-008/02-cabin-detail.jpg"
@@ -177,7 +170,6 @@ const automobileVehicles = [
       { title: "Seating & comfort", items: ["Six-seat 2+2+2 layout", "15.6-inch 2.5K central touchscreen", "10.25-inch digital instrument cluster", "15.6-inch fold-down rear roof screen", "Heated, ventilated & massage front seats*", "20-speaker sound system*"] },
       { title: "Safety & technology", items: ["eπ PILOT driver assistance", "360-degree surround camera", "Intelligent parking assist", "Adaptive cruise with lane keeping", "Multiple airbags & active safety", "Over-the-air updates*"] }
     ],
-    source: { brochure: dongfengBrochure, publisher: "Fouani Nigeria Ltd", pdfPage: 9, modelPage: 6 }
   },
   {
     id: "shine-c65",
@@ -190,7 +182,7 @@ const automobileVehicles = [
     seats: "5",
     price: 34160000,
     statusLabel: "Confirm availability",
-    imageAlt: "Dongfeng SHINE C65 petrol sedan in the Fouani Nigeria brochure",
+    imageAlt: "Dongfeng SHINE C65 petrol sedan",
     images: [
       "../assets/automobile/vehicles/shine-c65/01-exterior.jpg",
       "../assets/automobile/vehicles/shine-c65/02-cabin-detail.jpg"
@@ -206,7 +198,6 @@ const automobileVehicles = [
       { title: "Comfort & cabin", items: ["Modern dashboard design", "Comfortable seating", "Smart infotainment system", "Spacious cabin", "Rear AC vents*", "Multi-function steering wheel"] },
       { title: "Safety & technology", items: ["Rear camera", "Parking sensors", "ABS braking system", "Electronic Stability Control", "Multiple airbags"] }
     ],
-    source: { brochure: dongfengBrochure, publisher: "Fouani Nigeria Ltd", pdfPage: 10, modelPage: 7 }
   },
   {
     id: "shine-gs-c68",
@@ -219,7 +210,7 @@ const automobileVehicles = [
     seats: "5",
     price: 34160000,
     statusLabel: "Confirm availability",
-    imageAlt: "Dongfeng SHINE GS C68 petrol sport crossover in the Fouani Nigeria brochure",
+    imageAlt: "Dongfeng SHINE GS C68 petrol sport crossover",
     images: [
       "../assets/automobile/vehicles/shine-gs-c68/01-exterior.jpg",
       "../assets/automobile/vehicles/shine-gs-c68/02-cabin-detail.jpg",
@@ -233,7 +224,6 @@ const automobileVehicles = [
       { title: "Comfort & cabin", items: ["Sport-inspired interior", "Premium cabin materials", "Smart multimedia system", "Generous luggage capacity", "Comfortable rear seats", "Smart connectivity", "Ambient lighting*"] },
       { title: "Safety & technology", items: ["Driver assistance systems*", "Rear camera", "Stability control"] }
     ],
-    source: { brochure: dongfengBrochure, publisher: "Fouani Nigeria Ltd", pdfPage: 11, modelPage: 8 }
   },
   {
     id: "voyah-dream",
@@ -246,7 +236,7 @@ const automobileVehicles = [
     seats: "7",
     priceLabel: "Request current price",
     statusLabel: "Confirm availability",
-    imageAlt: "VOYAH DREAM plug-in hybrid luxury MPV in the Fouani Nigeria brochure",
+    imageAlt: "VOYAH DREAM plug-in hybrid luxury MPV",
     images: [
       "../assets/automobile/vehicles/voyah-dream/01-exterior.jpg",
       "../assets/automobile/vehicles/voyah-dream/02-cabin-detail.jpg",
@@ -261,7 +251,6 @@ const automobileVehicles = [
       { title: "Seating & comfort", items: ["7 seats (2+2+3)", "15.6-inch central touchscreen", "17.3-inch rear ceiling entertainment screen", "29-inch AR head-up display", "Digital instrument cluster", "Zero-gravity second-row captain seats, 26-point massage", "13 L fridge"] },
       { title: "Safety & technology", items: ["Advanced driver assistance", "Adaptive cruise control", "360-degree camera", "Intelligent parking assist", "Advanced safety package"] }
     ],
-    source: { brochure: dongfengBrochure, publisher: "Fouani Nigeria Ltd", pdfPage: 12, modelPage: 9 }
   },
   {
     id: "voyah-taishan",
@@ -274,7 +263,7 @@ const automobileVehicles = [
     seats: "6",
     priceLabel: "Request current price",
     statusLabel: "Confirm availability",
-    imageAlt: "VOYAH TAISHAN plug-in hybrid luxury SUV in the Fouani Nigeria brochure",
+    imageAlt: "VOYAH TAISHAN plug-in hybrid luxury SUV",
     images: [
       "../assets/automobile/vehicles/voyah-taishan/01-exterior.jpg",
       "../assets/automobile/vehicles/voyah-taishan/02-cabin-detail.jpg",
@@ -290,7 +279,6 @@ const automobileVehicles = [
       { title: "Seating & comfort", items: ["Six seats", "10 screens in total", "16.1-inch central touchscreen", "21.4-inch rear ceiling screen", "55-inch AR head-up display", "3.5-inch armrest control screens", "Zero-gravity second-row seats, massage on 4 seats"] },
       { title: "Safety & technology", items: ["Huawei ADS advanced driver assistance", "Lidar-based sensing", "Adaptive suspension", "Intelligent parking assist", "High-level safety systems"] }
     ],
-    source: { brochure: dongfengBrochure, publisher: "Fouani Nigeria Ltd", pdfPage: 13, modelPage: 10 }
   },
   {
     id: "voyah-free-plus",
@@ -303,7 +291,7 @@ const automobileVehicles = [
     seats: "5",
     price: 90420100,
     statusLabel: "Confirm availability",
-    imageAlt: "VOYAH FREE+ range-extended electric SUV in the Fouani Nigeria brochure",
+    imageAlt: "VOYAH FREE+ range-extended electric SUV",
     images: [
       "../assets/automobile/vehicles/voyah-free-plus/01-exterior.jpg",
       "../assets/automobile/vehicles/voyah-free-plus/02-cabin-detail.jpg"
@@ -320,7 +308,6 @@ const automobileVehicles = [
       { title: "Comfort & cabin", items: ["15.6-inch 2K central touchscreen", "10.25-inch digital instrument cluster", "29-inch AR head-up display", "Rear passenger control screen", "Luxury leather seats", "Panoramic sunroof* · ambient lighting*"] },
       { title: "Safety & technology", items: ["Huawei ADS 4 advanced driver assistance", "Adaptive cruise control", "Intelligent parking assist", "Full safety suite"] }
     ],
-    source: { brochure: dongfengBrochure, publisher: "Fouani Nigeria Ltd", pdfPage: 14, modelPage: 11 }
   },
   {
     id: "m-hero-ii-817",
@@ -333,7 +320,7 @@ const automobileVehicles = [
     seats: "5",
     price: 120550000,
     statusLabel: "Confirm availability",
-    imageAlt: "M-HERO II 817 plug-in hybrid off-road SUV in the Fouani Nigeria brochure",
+    imageAlt: "M-HERO II 817 plug-in hybrid off-road SUV",
     images: ["../assets/automobile/vehicles/m-hero-ii-817/01-exterior.jpg"],
     videos: [{
       src: "../assets/automobile/vehicles/m-hero-ii-817/01-walkaround.mp4/VID-20261010-WA0040.mp4",
@@ -349,7 +336,6 @@ const automobileVehicles = [
       { title: "Comfort & cabin", items: ["15.6-inch central touchscreen", "10.25-inch digital cluster", "Head-up display · streaming mirror", "Rear passenger screen", "18-speaker Dynaudio sound", "Nappa leather; heated, ventilated, massage front seats", "Fridge · dual 50 W wireless chargers"] },
       { title: "Safety & technology", items: ["Huawei ADS 4 driver assistance", "27 sensors incl. lidar", "HarmonySpace 5 smart cockpit", "360-degree camera", "Off-road assistance systems", "Intelligent parking assist", "Over-the-air updates*"] }
     ],
-    source: { brochure: dongfengBrochure, publisher: "Fouani Nigeria Ltd", pdfPage: 15, modelPage: 12 }
   },
   {
     id: "m-hero-i",
@@ -362,7 +348,7 @@ const automobileVehicles = [
     seats: "5",
     price: 195935000,
     statusLabel: "Confirm availability",
-    imageAlt: "M-HERO I extended-range off-road SUV in the Fouani Nigeria brochure",
+    imageAlt: "M-HERO I extended-range off-road SUV",
     images: ["../assets/automobile/vehicles/m-hero-i/01-exterior.jpg"],
     videos: [{
       src: "../assets/automobile/vehicles/m-hero-i/01-walkaround.mp4/VID-20261010-WA0039.mp4",
@@ -377,7 +363,6 @@ const automobileVehicles = [
       { title: "Comfort & cabin", items: ["15.6-inch central touchscreen", "12.3-inch digital cluster", "12.3-inch passenger screen", "16-speaker premium sound (DIRAC)", "Nappa leather; heated, ventilated, massage seats front & rear", "16-way electric driver seat", "Front & rear sunroofs"] },
       { title: "Safety & technology", items: ["Advanced driver assistance", "Off-road terrain management (M-ATS)", "Intelligent parking assist", "360-degree camera", "Full premium safety package"] }
     ],
-    source: { brochure: dongfengBrochure, publisher: "Fouani Nigeria Ltd", pdfPage: 16, modelPage: 13 }
   },
   {
     id: "dongfeng-rich-6t",
@@ -390,7 +375,7 @@ const automobileVehicles = [
     seats: "5",
     price: 35140100,
     statusLabel: "Confirm current price and availability",
-    imageAlt: "Dongfeng RICH 6T pickup pictured in the Fouani Nigeria pickup brochure",
+    imageAlt: "Dongfeng RICH 6T pickup",
     images: ["../assets/automobile/vehicles/dongfeng-rich-6t/01-exterior.jpg"],
     videos: [],
     youtubeVideo: null,
@@ -401,7 +386,6 @@ const automobileVehicles = [
       { title: "Cabin & dimensions", items: ["Double cab, 5 seats", "Zero-gravity seats with 7-point support*", "Black interior", "73 L fuel tank", "Overall dimensions 5,290 x 1,850 x 1,810 mm*"] },
       { title: "Available colours", items: ["White", "Silver", "Black"] }
     ],
-    source: { brochure: dongfengPickupBrochure, publisher: "Fouani Nigeria Ltd", pdfPage: 4, modelPage: 1, modelPageCount: 4 }
   },
   {
     id: "dongfeng-rich-6",
@@ -414,7 +398,7 @@ const automobileVehicles = [
     seats: "5",
     price: 35140100,
     statusLabel: "Confirm current price and availability",
-    imageAlt: "Dongfeng RICH 6 pickup pictured in the Fouani Nigeria pickup brochure",
+    imageAlt: "Dongfeng RICH 6 pickup",
     images: ["../assets/automobile/vehicles/dongfeng-rich-6/01-exterior.jpg"],
     videos: [],
     youtubeVideo: null,
@@ -425,7 +409,6 @@ const automobileVehicles = [
       { title: "Cabin & dimensions", items: ["Double cab, 5 seats", "Zero-gravity seats with 7-point support*", "Black interior", "73 L fuel tank", "Overall dimensions 5,290 x 1,850 x 1,810 mm*"] },
       { title: "Available colours", items: ["White", "Silver", "Black"] }
     ],
-    source: { brochure: dongfengPickupBrochure, publisher: "Fouani Nigeria Ltd", pdfPage: 5, modelPage: 2, modelPageCount: 4 }
   },
   {
     id: "dongfeng-rich-7",
@@ -438,7 +421,7 @@ const automobileVehicles = [
     seats: "5",
     price: 41350000,
     statusLabel: "Confirm current price and availability",
-    imageAlt: "Dongfeng RICH 7 pickup pictured in the Fouani Nigeria pickup brochure",
+    imageAlt: "Dongfeng RICH 7 pickup",
     images: ["../assets/automobile/vehicles/dongfeng-rich-7/01-exterior.jpg"],
     videos: [],
     youtubeVideo: null,
@@ -449,7 +432,6 @@ const automobileVehicles = [
       { title: "Cabin & cargo", items: ["10-inch touchscreen with smartphone integration", "Smart entry and push-button start", "Double cab, 5 seats", "490 kg payload", "73 L fuel tank", "Cargo box 1,510 x 1,562 x 475 mm"] },
       { title: "Available colours", items: ["White", "Grey", "Silver", "Black"] }
     ],
-    source: { brochure: dongfengPickupBrochure, publisher: "Fouani Nigeria Ltd", pdfPage: 6, modelPage: 3, modelPageCount: 4 }
   },
   {
     id: "dongfeng-z9",
@@ -462,7 +444,7 @@ const automobileVehicles = [
     seats: "5",
     price: 60000000,
     statusLabel: "Confirm current price and availability",
-    imageAlt: "Dongfeng Z9 pickup pictured in the Fouani Nigeria pickup brochure",
+    imageAlt: "Dongfeng Z9 pickup",
     images: ["../assets/automobile/vehicles/dongfeng-z9/01-exterior.jpg"],
     videos: [
       {
@@ -482,7 +464,6 @@ const automobileVehicles = [
       { title: "Chassis & cabin", items: ["3,300 mm wheelbase", "Cargo box 1,520 x 1,600 x 550 mm", "865 kg payload", "Double-wishbone front suspension and leaf-spring rear", "Four-wheel disc brakes", "Electronic handbrake with auto hold", "5 seats", "73 L fuel tank"] },
       { title: "Available colours", items: ["White", "Grey", "Black", "Orange", "Dark gold"] }
     ],
-    source: { brochure: dongfengPickupBrochure, publisher: "Fouani Nigeria Ltd", pdfPage: 7, modelPage: 4, modelPageCount: 4 }
   }
 ];
 
@@ -495,7 +476,7 @@ const roxComparisonRows = [
   { label: "Doors", rox01: "Normal doors", adamas: "Soft-close doors" },
   { label: "Interior", rox01: "More simple/minimalist", adamas: "More luxurious, with Nappa and comfort features" },
   { label: "Infotainment", rox01: "Approximately 13-inch screen", adamas: "Larger approximately 15–16-inch system; rear-entertainment options depending on version" },
-  { label: "Cool box", rox01: "Not present in the supplied comparison", adamas: "Present in the supplied comparison" },
+  { label: "Cool box", rox01: "Not specified for ROX 01", adamas: "Not specified for ROX ADAMAS" },
   { label: "Software/connectivity", rox01: "Older system", adamas: "Newer connected/cloud features" },
   { label: "Seating", rox01: "7-seat available in some versions", adamas: "7-seat available in some markets/configurations" },
   { label: "Off-road capability", rox01: "Very good", adamas: "Better equipment for serious off-road use" }
@@ -547,24 +528,24 @@ const legacyShowcaseVehicles = [
     powertrain: "",
     price: 114900000,
     statusLabel: "",
-    description: "The original ROX model, with the supplied comparison describing a simpler interior and very good off-road capability.",
+    description: "The original ROX model, with a simpler interior and very good off-road capability.",
     images: ["../assets/automobile/vehicles/rox-01.jpg"],
-    imageAlts: ["ROX 01 SUV in the existing Electrony Automobile showcase image."],
+    imageAlts: ["ROX 01 SUV."],
     videos: [],
     sharedMedia: roxMotorSharedMedia,
     cardImage: "../assets/automobile/vehicles/rox-01.jpg",
-    cardImageAlt: "ROX 01 SUV in the existing Electrony Automobile showcase image.",
+    cardImageAlt: "ROX 01 SUV.",
     cardImageNote: "",
     headlineSpecifications: ["Approximately 470 hp", "740 Nm torque", "Electronic multi-link suspension"],
     specificationGroups: [
       { title: "Model overview", items: ["Position: Original model"] },
       { title: "Power & torque", items: ["Power: Approximately 470 hp", "Torque: 740 Nm"] },
-      { title: "Comfort & interior", items: ["Doors: Normal doors", "Interior: More simple/minimalist", "Cool box: Not present in the supplied comparison"] },
+      { title: "Comfort & interior", items: ["Doors: Normal doors", "Interior: More simple/minimalist", "Cool box: Not specified for ROX 01"] },
       { title: "Technology & infotainment", items: ["Infotainment: Approximately 13-inch screen", "Software/connectivity: Older system"] },
       { title: "Suspension & capability", items: ["Suspension: Electronic multi-link", "Ground clearance: Lower/fixed", "Off-road capability: Very good"] },
       { title: "Seating", items: ["7-seat available in some versions"] }
     ],
-    specificationNote: "Specifications are based on the supplied comparison and may vary by market, model year and vehicle configuration. Confirm the exact vehicle specification before purchase.",
+    specificationNote: "Vehicle specifications and equipment may vary by market, model year and configuration. Confirm the exact vehicle specification before purchase.",
     detailBackHref: "#rox"
   },
   {
@@ -576,24 +557,24 @@ const legacyShowcaseVehicles = [
     powertrain: "",
     price: 121100000,
     statusLabel: "",
-    description: "A newer, upgraded ROX model, with the supplied comparison noting additional luxury and capability equipment; fitment depends on version and market.",
+    description: "A newer, upgraded ROX model with additional luxury and capability equipment; fitment depends on version and market.",
     images: [],
     imageAlts: [],
     videos: [],
     sharedMedia: roxMotorSharedMedia,
     cardImage: "../assets/automobile/vehicles/roxmotor1/IMG-20260918-WA0049.jpg",
-    cardImageAlt: "ROX Motor SUV; the exact model is not verified for this repository image.",
+    cardImageAlt: "ROX Motor SUV; the exact model is not identified.",
     cardImageNote: "ROX Motor image · model not verified",
     headlineSpecifications: ["Approximately 469–476 hp", "740 Nm torque", "Height-adjustable air suspension"],
     specificationGroups: [
       { title: "Model overview", items: ["Position: Newer/upgraded model"] },
       { title: "Power & torque", items: ["Power: Approximately 469–476 hp", "Torque: 740 Nm"] },
-      { title: "Comfort & interior", items: ["Doors: Soft-close doors", "Interior: More luxurious, with Nappa and comfort features", "Cool box: Present in the supplied comparison"] },
+      { title: "Comfort & interior", items: ["Doors: Soft-close doors", "Interior: More luxurious, with Nappa and comfort features", "Cool box: Not specified for ROX ADAMAS"] },
       { title: "Technology & infotainment", items: ["Infotainment: Larger approximately 15–16-inch system", "Rear-entertainment options depending on version", "Software/connectivity: Newer connected/cloud features"] },
       { title: "Suspension & capability", items: ["Suspension: Height-adjustable air suspension", "Ground clearance: Adjustable, up to approximately 270–285 mm depending on version", "Off-road capability: Better equipment for serious off-road use"] },
       { title: "Seating", items: ["7-seat available in some markets/configurations"] }
     ],
-    specificationNote: "Specifications are based on the supplied comparison and may vary by market, model year and vehicle configuration. Confirm the exact vehicle specification before purchase.",
+    specificationNote: "Vehicle specifications and equipment may vary by market, model year and configuration. Confirm the exact vehicle specification before purchase.",
     detailBackHref: "#rox"
   },
   {

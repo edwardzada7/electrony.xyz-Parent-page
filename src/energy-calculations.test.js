@@ -14,6 +14,7 @@ const energyPricingSource = fs.readFileSync(path.join(__dirname, "energy-pricing
 const energyCatalogueSource = fs.readFileSync(path.join(__dirname, "energy-catalogue.js"), "utf8");
 const energyStylesSource = fs.readFileSync(path.join(projectRoot, "styles/energy.css"), "utf8");
 const energyPageSource = fs.readFileSync(path.join(projectRoot, "energy/index.html"), "utf8");
+const internalProvenance = JSON.parse(fs.readFileSync(path.join(projectRoot, "internal/catalogue-provenance.json"), "utf8"));
 const calculatorContext = { window: {} };
 vm.runInNewContext(calculatorSource, calculatorContext);
 const {
@@ -210,8 +211,9 @@ test("package catalogue contains the six reconciled customer packages", () => {
   ]);
   solarPackages.forEach((solarPackage) => {
     assert.ok(solarPackage.components.length > 0);
-    assert.equal(solarPackage.source.document, "POWER-SOLAR PL-1.pdf");
-    assert.equal(solarPackage.compositionSource.document, "Solar_Power_Solution_Packages.pdf");
+    assert.ok(internalProvenance.energy.packages[solarPackage.id]);
+    assert.equal(solarPackage.source, undefined);
+    assert.equal(solarPackage.compositionSource, undefined);
     assert.ok(solarPackage.solarArrayWatts > 0);
     assert.ok(solarPackage.batteryNominalWh > 0);
     assert.ok(solarPackage.compatibilityNotes);
@@ -253,7 +255,11 @@ test("Energy page replaces the connected-landscape intro with one Solar Packages
   assert.doesNotMatch(energyPageSource, /A connected(?: energy)? landscape/i);
   assert.doesNotMatch(energyPageSource, /Product image unavailable/i);
   assert.equal((energyPageSource.match(/<section\b[^>]*id="solar-packages"/g) || []).length, 1);
-  assert.match(energyPageSource, /Six solar packages, aligned to the current product catalogue/);
+  assert.match(energyPageSource, /Six solar packages for different needs/);
+  assert.doesNotMatch(energyPageSource, /POWER-SOLAR PL-1|Solar_Power_Solution_Packages|PDF page|supplier|source catalogue/i);
+  assert.doesNotMatch(energySource, /POWER-SOLAR PL-1|Solar_Power_Solution_Packages|sourceNote|priceSource|sourceUrl/);
+  assert.doesNotMatch(energyCatalogueSource, /POWER-SOLAR PL-1|sourceDocument|sourceNote|priceSource|sourceUrl|reviewNote/);
+  assert.doesNotMatch(energyPackageSource, /POWER-SOLAR PL-1|Solar_Power_Solution_Packages|compositionSource/);
 });
 
 test("calculator chooses the smallest package that meets inverter, solar and backup requirements", () => {

@@ -4,7 +4,9 @@ const path = require("node:path");
 const test = require("node:test");
 const vm = require("node:vm");
 
+const projectRoot = path.resolve(__dirname, "..");
 const source = (filename) => fs.readFileSync(path.join(__dirname, filename), "utf8");
+const internalProvenance = JSON.parse(fs.readFileSync(path.join(projectRoot, "internal/catalogue-provenance.json"), "utf8"));
 const context = { window: {} };
 for (const filename of ["energy-catalogue.js", "energy-packages.js", "energy-pricing.js"]) {
   vm.runInNewContext(source(filename), context, { filename });
@@ -16,17 +18,21 @@ const { calculateSolarPackagePricing } = context.window.ElectronyEnergyPricing;
 const packageById = (id) => packages.find((solarPackage) => solarPackage.id === id);
 const pricingFor = (id, catalogue = products) => calculateSolarPackagePricing(packageById(id), catalogue);
 
-test("reconciles all source catalogue products and preserves explicit price provenance", () => {
+test("reconciles all products while retaining provenance outside the public catalogue", () => {
   assert.equal(products.length, 130);
   assert.equal(new Set(products.map((product) => product.id)).size, products.length);
   assert.equal(new Set(products.map((product) => `${product.brand}|${product.model}`)).size, products.length);
   assert.equal(products.filter((product) => product.priceNgn !== null).length, 128);
 
   products.forEach((product) => {
-    assert.equal(product.source.document, "POWER-SOLAR PL-1.pdf", product.model);
-    assert.ok(product.source.page >= 1 && product.source.page <= 5, product.model);
-    assert.equal(product.priceSource.document, "POWER-SOLAR PL-1.pdf", product.model);
-    assert.equal(product.priceSource.page, product.source.page, product.model);
+    const provenance = internalProvenance.energy.products[product.id];
+    assert.ok(provenance, product.model);
+    assert.equal(provenance.source.document, "POWER-SOLAR PL-1.pdf", product.model);
+    assert.ok(provenance.source.page >= 1 && provenance.source.page <= 5, product.model);
+    assert.equal(provenance.priceSource.document, "POWER-SOLAR PL-1.pdf", product.model);
+    assert.equal(provenance.priceSource.page, provenance.source.page, product.model);
+    assert.equal(product.source, undefined, product.model);
+    assert.equal(product.priceSource, undefined, product.model);
     if (product.priceNgn === null) {
       assert.equal(product.priceDisplay, null, product.model);
     } else {
@@ -43,8 +49,9 @@ test("reconciles all source catalogue products and preserves explicit price prov
     ["ANTAI|PV ROOF MOUNTING SET", "SUNTREE|SUNDB24WAY"]
   );
   assert.equal(productByModel.get("SUNTREE|SUNBRKAC32AMPS-2P").priceDisplay, "2,700.00");
-  assert.equal(productByModel.get("HUAWEI|HUWSMARTMODUL1000A01").source.page, 3);
-  assert.equal(productByModel.get("HUAWEI|SMART LOGGER 3000A01EU").source.page, 3);
+  assert.equal(internalProvenance.energy.products[productByModel.get("HUAWEI|HUWSMARTMODUL1000A01").id].source.page, 3);
+  assert.equal(internalProvenance.energy.products[productByModel.get("HUAWEI|SMART LOGGER 3000A01EU").id].source.page, 3);
+  assert.doesNotMatch(source("energy-catalogue.js"), /POWER-SOLAR PL-1|priceSource|sourceNote|sourceUrl|reviewNote/);
   assert.equal(productByModel.get("GROWATT|ABM 5.5-A1-H").warranty, undefined);
   assert.equal(productByModel.get("GROWATT|ABM 5-LS-B1-H").warranty, undefined);
   assert.equal(
@@ -124,6 +131,61 @@ test("packages use the current listed product models and guide component quantit
     assert.equal(option.components.some((component) => ["Inverter", "Battery"].includes(component.category)), false);
     assert.deepEqual(remainingComponents(option), remainingComponents(medium));
     assert.equal(pricingFor(id).complete, true);
+  });
+
+  test("package provenance stays internal while package content remains customer-facing", () => {
+    for (const solarPackage of packages) {
+      const provenance = internalProvenance.energy.packages[solarPackage.id];
+      assert.ok(provenance, solarPackage.id);
+      assert.equal(provenance.source.document, "POWER-SOLAR PL-1.pdf");
+      assert.equal(provenance.compositionSource.document, "Solar_Power_Solution_Packages.pdf");
+      assert.equal(solarPackage.source, undefined);
+      assert.equal(solarPackage.compositionSource, undefined);
+    }
+    assert.doesNotMatch(source("energy-packages.js"), /POWER-SOLAR PL-1|Solar_Power_Solution_Packages|compositionSource/);
+  });
+
+  test("solar package enquiries keep the selected package and component details", () => {
+    const energySource = source("energy.js");
+    const start = energySource.indexOf("function requestSolarPackage(");
+    const end = energySource.indexOf("\nfunction renderProductDetails(", start);
+    assert.ok(start >= 0 && end > start);
+    class SelectField {
+      dispatchEvent(event) {
+        this.lastEvent = event.type;
+      }
+    }
+    const categorySelect = new SelectField();
+    const productInput = new SelectField();
+    productInput.focus = () => {};
+    const requirementsInput = new SelectField();
+    const context = vm.createContext({
+      window: {
+        ElectronyEnergyPricing: { calculateSolarPackagePricing },
+        matchMedia: () => ({ matches: true })
+      },
+      document: { querySelector: () => ({ scrollIntoView() {} }) },
+      HTMLSelectElement: SelectField,
+      Event: class {
+        constructor(type) { this.type = type; }
+      },
+      energyProducts: products,
+      categorySelect,
+      productInput,
+      requirementsInput,
+      formatNaira: (amount) => String(amount),
+      cataloguePriceLabel: (product) => product.priceDisplay
+    });
+    vm.runInContext(energySource.slice(start, end), context);
+    context.solarPackage = packageById("heavy-commercial-industrial");
+    vm.runInContext("requestSolarPackage(solarPackage)", context);
+
+    assert.equal(categorySelect.value, "complete-systems");
+    assert.equal(productInput.value, "Industrial / Company Solar Package");
+    assert.match(requirementsInput.value, /Solar package enquiry: Industrial \/ Company Solar Package — 50 kW three-phase inverter/);
+    assert.match(requirementsInput.value, /Solar panels: DEYE|Solar panels: JINKO/);
+    assert.match(requirementsInput.value, /Deye 50K-SG01HP3-E/);
+    assert.doesNotMatch(requirementsInput.value, /POWER-SOLAR PL-1|Solar_Power_Solution_Packages|PDF page/i);
   });
   assert.equal(products.find((product) => product.id === mediumOptions[0][2]).name, "Future-H all-in-one solution");
   assert.equal(products.find((product) => product.id === mediumOptions[1][2]).name, "Future-H all-in-one solution 2");

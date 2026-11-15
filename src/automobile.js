@@ -30,8 +30,7 @@ function normalizeBrandName(value) {
 function vehicleAlt(vehicle, index = 0) {
   if (vehicle.imageAlts?.[index]) return vehicle.imageAlts[index];
   if (vehicle.imageAlt && index === 0) return vehicle.imageAlt;
-  if (!vehicle.source) return `${vehicle.brand} ${vehicle.name} image in the Electrony Automobile selection`;
-  return `${vehicle.name} interior detail from the Fouani Nigeria brochure`;
+  return `${vehicle.brand} ${vehicle.name} image in the Electrony Automobile selection`;
 }
 
 function vehicleImage(vehicle) {
@@ -562,6 +561,15 @@ function renderVehicleDetail(vehicle) {
       <h3 id="specification-${escapeHtml(vehicle.id)}-${normalizeBrandName(group.title)}">${escapeHtml(group.title)}</h3>
       <ul>${group.items.map((item) => `<li>${escapeHtml(item)}</li>`).join("")}</ul>
     </section>`).join("");
+  const specificationNotes = [
+    vehicle.specificationNote,
+    vehicle.specificationGroups.some((group) => group.items.some((item) => item.includes("*")))
+      ? "Features marked with * may vary by trim and market."
+      : "",
+    vehicle.headlineSpecifications.some((item) => /\bCLTC\b/.test(item))
+      ? "CLTC range figures are test-cycle values and may differ from real-world range."
+      : ""
+  ].filter(Boolean);
   const youtubeVideo = configuredYouTubeVideo(vehicle.youtubeVideo, `${vehicle.name} video`);
   const sharedVideos = vehicle.sharedMedia?.videos || [];
   const detailVideos = sharedVideos.length ? sharedVideos : vehicle.videos;
@@ -584,14 +592,11 @@ function renderVehicleDetail(vehicle) {
   } else {
     videoMarkup = `<p class="automobile-detail-video-fallback">${vehicle.sharedMedia ? "No model-verified video is currently available. Browse shared ROX Motor media for unassigned clips." : "No verified vehicle video is currently configured."}</p>`;
   }
-  const sourceUrl = new URL(window.location.href);
-  sourceUrl.hash = `vehicle/${vehicle.id}`;
+  const detailUrl = new URL(window.location.href);
+  detailUrl.hash = `vehicle/${vehicle.id}`;
   const canonicalUrl = "https://auto.electrony.xyz/";
-  const sourceModel = vehicle.brand === "Dongfeng" ? `${vehicle.brand} ${vehicle.name}` : `${vehicle.brand} — ${vehicle.name}`;
+  const vehicleLabel = vehicle.brand === "Dongfeng" ? `${vehicle.brand} ${vehicle.name}` : `${vehicle.brand} — ${vehicle.name}`;
   const detailType = [vehicle.vehicleType, vehicle.powertrain].filter(Boolean).join(" · ");
-  const sourceMarkup = vehicle.source
-    ? `<p>Source: <cite>${escapeHtml(vehicle.source.brochure)}</cite>, identified in the brochure as supplied by ${escapeHtml(vehicle.source.publisher)} (PDF page ${vehicle.source.pdfPage}; model page ${vehicle.source.modelPage} of ${vehicle.source.modelPageCount || 13}).</p>`
-    : `<p>${escapeHtml(vehicle.specificationNote || "Specifications are provided for reference and should be confirmed for the exact vehicle before purchase.")}</p>`;
   const detailStatus = [getVehiclePriceLabel(vehicle), vehicle.statusLabel].filter(Boolean);
 
   content.innerHTML = `
@@ -600,7 +605,7 @@ function renderVehicleDetail(vehicle) {
       <p class="automobile-kicker automobile-kicker--dark"><span></span>${escapeHtml(vehicle.brand)} · ${escapeHtml(vehicle.category)}</p>
       <h1 id="automobile-detail-title" tabindex="-1">${escapeHtml(vehicle.name)}</h1>
       ${detailType ? `<p class="automobile-detail-heading__type">${escapeHtml(detailType)}</p>` : ""}
-      <div class="automobile-detail-heading__status">${detailStatus.map((item) => `<span>${escapeHtml(item)}</span>`).join("")}${vehicle.statusLabel ? createStatusMarkup(vehicle) : ""}${vehicle.priceLabel === "Price on Request" || (vehicle.price > 0 && vehicle.category === "Pickup") ? '<a class="automobile-button automobile-button--red" href="#automobile-vehicle-enquiry">Enquire for Price</a>' : ""}${!vehicle.source ? `<a class="automobile-button automobile-button--red" href="#automobile-vehicle-enquiry">Enquire about ${escapeHtml(vehicle.name)}</a>` : ""}</div>
+      <div class="automobile-detail-heading__status">${detailStatus.map((item) => `<span>${escapeHtml(item)}</span>`).join("")}${vehicle.statusLabel ? createStatusMarkup(vehicle) : ""}${vehicle.priceLabel === "Price on Request" || (vehicle.price > 0 && vehicle.category === "Pickup") ? '<a class="automobile-button automobile-button--red" href="#automobile-vehicle-enquiry">Enquire for Price</a>' : ""}<a class="automobile-button automobile-button--red" href="#automobile-vehicle-enquiry">Enquire about ${escapeHtml(vehicle.name)}</a></div>
     </header>
     ${vehicle.description ? `<section class="automobile-detail-overview" aria-labelledby="automobile-detail-overview-title"><h2 id="automobile-detail-overview-title">Model overview</h2><p>${escapeHtml(vehicle.description)}</p></section>` : ""}
     <div class="automobile-detail-gallery" aria-label="${escapeHtml(vehicle.name)} image gallery">${galleryContent}</div>
@@ -609,16 +614,11 @@ function renderVehicleDetail(vehicle) {
       <ul>${vehicle.headlineSpecifications.map((item) => `<li>${escapeHtml(item)}</li>`).join("")}</ul>
     </section>
     <div class="automobile-detail-specifications">${specificationGroups}</div>
+    ${specificationNotes.length ? `<p class="automobile-detail-specification-note">${specificationNotes.map(escapeHtml).join(" ")}</p>` : ""}
     <section class="automobile-detail-video" aria-labelledby="automobile-detail-video-title">
       <h2 id="automobile-detail-video-title">${hasSharedVideos ? "ROX Motor video gallery" : "Vehicle video"}</h2>
       ${videoMarkup}
     </section>
-    <aside class="automobile-detail-caveats">
-      <h2>Source and qualifications</h2>
-      ${sourceMarkup}
-      ${vehicle.source ? "<p>Equipment marked with an asterisk may vary by trim and market. Specifications may change. CLTC is a test-cycle figure and may differ from real-world range.</p>" : ""}
-      <p>Electrony Automobile presents this information for enquiry; this listing does not claim vehicle ownership, confirmed stock, authorized-dealer status or a manufacturer partnership.</p>
-    </aside>
     ${detailStatus.length ? `<p class="automobile-detail-price-note">${detailStatus.map(escapeHtml).join(" · ")}</p>` : ""}`;
 
   content.querySelectorAll(".automobile-detail-local-video").forEach((detailVideo) => {
@@ -633,8 +633,8 @@ function renderVehicleDetail(vehicle) {
 
   const form = document.querySelector("#automobile-vehicle-enquiry");
   if (form) {
-    form.querySelector("#automobile-enquiry-product").value = sourceModel;
-    form.querySelector("#automobile-enquiry-url").value = sourceUrl.href;
+    form.querySelector("#automobile-enquiry-product").value = vehicleLabel;
+    form.querySelector("#automobile-enquiry-url").value = detailUrl.href;
     form.querySelector("#automobile-enquiry-specifications").value = vehicle.headlineSpecifications.join("; ");
     form.querySelector("#automobile-enquiry-price").value = formatAutomobileVehiclePrice(vehicle.price);
   }
@@ -677,12 +677,12 @@ function renderVehicleRoute() {
 
   if (!showDetail) {
     const canonical = document.querySelector('link[rel="canonical"]');
-    document.title = "Electrony Automobile | Source-documented vehicle catalogue";
-    document.querySelector('meta[name="description"]')?.setAttribute("content", "Explore 17 source-documented NAMMI, Dongfeng, VOYAH and M-HERO vehicles, plus the ROX 01 and ROX ADAMAS collection.");
+    document.title = "Electrony Automobile | Explore the vehicle range";
+    document.querySelector('meta[name="description"]')?.setAttribute("content", "Explore 17 NAMMI, Dongfeng, VOYAH and M-HERO vehicle models, plus the ROX 01 and ROX ADAMAS collection.");
     document.querySelector('meta[property="og:title"]')?.setAttribute("content", document.title);
-    document.querySelector('meta[property="og:description"]')?.setAttribute("content", "Explore 17 source-documented NAMMI, Dongfeng, VOYAH and M-HERO vehicles, plus the ROX 01 and ROX ADAMAS collection.");
+    document.querySelector('meta[property="og:description"]')?.setAttribute("content", "Explore 17 NAMMI, Dongfeng, VOYAH and M-HERO vehicle models, plus the ROX 01 and ROX ADAMAS collection.");
     document.querySelector('meta[name="twitter:title"]')?.setAttribute("content", document.title);
-    document.querySelector('meta[name="twitter:description"]')?.setAttribute("content", "Explore 17 source-documented NAMMI, Dongfeng, VOYAH and M-HERO vehicles, plus the ROX 01 and ROX ADAMAS collection.");
+    document.querySelector('meta[name="twitter:description"]')?.setAttribute("content", "Explore 17 NAMMI, Dongfeng, VOYAH and M-HERO vehicle models, plus the ROX 01 and ROX ADAMAS collection.");
     document.querySelector('meta[property="og:url"]')?.setAttribute("content", "https://auto.electrony.xyz/");
     canonical?.setAttribute("href", "https://auto.electrony.xyz/");
     return;

@@ -1,136 +1,133 @@
-const sourceDocument = "POWER-SOLAR PL-1.pdf";
-const sourceDataSheetNote = "Please ask your sales rep for date sheet";
-const priceSourceDocument = "POWER-SOLAR PL-1.pdf";
 const confirmedPrices = Object.freeze({
-  "JINKO|525M-72HL4-TV": { amountNgn: 83000, display: "83,000", page: 1 },
-  "JINKO|595N-72HL4-BD": { amountNgn: 112000, display: "112,000", page: 1 },
-  "JINKO|620N-66HL4-BD": { amountNgn: 122500, display: "122,500", page: 1 },
-  "JINKO|625N-66HL4-BD": { amountNgn: 124000, display: "124,000", page: 1 },
-  "JINKO|630N-66HL4-BD": { amountNgn: 125500, display: "125,500", page: 1 },
-  "JINKO|640N-66HL4-BD": { amountNgn: 127000, display: "127,000", page: 1 },
-  "JINKO|650N-66QL6-BD": { amountNgn: 140000, display: "140,000", page: 1 },
-  "JINKO|725N-66HL5-BD": { amountNgn: 155000, display: "155,000", page: 1 },
-  "HISENSE|INV6KS-AA1": { amountNgn: 359000, display: "359,000", page: 1 },
-  "HISENSE|BATHEL5-E-BB1": { amountNgn: 810000, display: "810,000", page: 1 },
-  "HISENSE|KETRANS50KVA-11/04": { amountNgn: 2700000, display: "2,700,000", page: 1 },
-  "HISENSE|KETRANS100KVA-11/04": { amountNgn: 3750000, display: "3,750,000", page: 1 },
-  "HISENSE|KETRANS200KVA-11/04": { amountNgn: 5600000, display: "5,600,000", page: 1 },
-  "HISENSE|KETRANS315KVA-11/04": { amountNgn: 7350000, display: "7,350,000", page: 1 },
-  "HISENSE|KETRANS500KVA-11/04": { amountNgn: 9550000, display: "9,550,000", page: 1 },
-  "HISENSE|KETRANS800KVA-11/04": { amountNgn: 15250000, display: "15,250,000", page: 1 },
-  "HISENSE|KETRANS1000KVA-11/04": { amountNgn: 16450000, display: "16,450,000", page: 1 },
-  "DEYE|6/6KOG03LP1": { amountNgn: 463000, display: "463,000", page: 1 },
-  "DEYE|8K-SG06LP1-EU": { amountNgn: 1255000, display: "1,255,000.00", page: 1 },
-  "DEYE|12K-SG05LP3-E": { amountNgn: 1859000, display: "1,859,000.00", page: 1 },
-  "DEYE|16K-SG01LP1-E": { amountNgn: 2275000, display: "2,275,000.00", page: 1 },
-  "DEYE|20K-SG05LP3-E": { amountNgn: 2775000, display: "2,775,000.00", page: 1 },
-  "DEYE|12K-SG06LP1-E": { amountNgn: 1799000, display: "1,799,000.00", page: 1 },
-  "DEYE|50K-SG01HP3-E": { amountNgn: 4750000, display: "4,750,000.00", page: 2 },
-  "DEYE|80K-SG02HP3-E": { amountNgn: 6500000, display: "6,500,000.00", page: 2 },
-  "DEYE|125K-SG02HP3": { amountNgn: 8750000, display: "8,750,000.00", page: 2 },
-  "DEYE|100K-G": { amountNgn: 3225000, display: "3,225,000.00", page: 2 },
-  "DEYE|136K-G": { amountNgn: 4599000, display: "4,599,000.00", page: 2 },
-  "DEYE|BATSE-F16-C": { amountNgn: 2250000, display: "2,250,000.00", page: 2 },
-  "DEYE|SE-F5-L": { amountNgn: 849000, display: "849,000.00", page: 2 },
-  "DEYE|BOS-GM-5.1 HV": { amountNgn: 1015000, display: "1,015,000.00", page: 2 },
-  "DEYE|BOS-G-PRO51": { amountNgn: 1026500, display: "1,026,500.00", page: 2 },
-  "DEYE|GB-W-12": { amountNgn: 2020000, display: "2,020,000.00", page: 2 },
-  "DEYE|BOS-B-PACK16": { amountNgn: 2325000, display: "2,325,000.00", page: 2 },
-  "DEYE|PDU-GB-W-2": { amountNgn: 1402000, display: "1,402,000.00", page: 2 },
-  "DEYE|ACC-GB-W-PARTS": { amountNgn: 392000, display: "392,000", page: 2 },
-  "DEYE|PCS 125K-L01HP3": { amountNgn: 5195000, display: "5,195,000.00", page: 2 },
-  "DEYE|MPPT 200KW": { amountNgn: 2250000, display: "2,250,000.00", page: 2 },
-  "DEYE|CONTROL BOX HV BOS-B-PDU-2-A": { amountNgn: 1950000, display: "1,950,000.00", page: 2 },
-  "DEYE|STS 500L": { amountNgn: 7227500, display: "7,227,500.00", page: 2 },
-  "DEYE|CONTROL BOX HV BOS-G-PDU-PRO": { amountNgn: 1015000, display: "1,015,000.00", page: 2 },
-  "DEYE|DEYERACK-3U-H": { amountNgn: 565000, display: "565,000.00", page: 2 },
-  "PYLON-TECH|PYLONBATFB-L-16 ( 16 Kwh )": { amountNgn: 2325000, display: "2,325,000", page: 2 },
-  "PYLON-TECH|UF5000 (5.12 Kwh)": { amountNgn: 999000, display: "999,000.00", page: 2 },
-  "PYLON-TECH|KIT-USC": { amountNgn: 40000, display: "40,000.00", page: 2 },
-  "HUAWEI|POWER CABINET": { amountNgn: 7500000, display: "7,500,000", page: 2 },
-  "HUAWEI|BATTERY CABINET": { amountNgn: 4375000, display: "4,375,000", page: 2 },
-  "HUAWEI|ESM-48200A1": { amountNgn: 3850000, display: "3,850,000", page: 2 },
-  "HUAWEI|ESM-48100A7": { amountNgn: 1999000, display: "1,999,000", page: 2 },
-  "HUAWEI|I23003": { amountNgn: 327000, display: "327,000", page: 2 },
-  "HUAWEI|PVDU-8kW": { amountNgn: 448500, display: "448,500", page: 3 },
-  "HUAWEI|S4875": { amountNgn: 285500, display: "285,500", page: 3 },
-  "HUAWEI|HUWINV100KTL-M2": { amountNgn: 5350000, display: "5,350,000", page: 3 },
-  "HUAWEI|HUWINV150K-MG0": { amountNgn: 7350000, display: "7,350,000", page: 3 },
-  "HUAWEI|LUNA 2000-97KWH": { amountNgn: 56500000, display: "56,500,000", page: 3 },
-  "HUAWEI|LUNA 2000-129KWH": { amountNgn: 63000000, display: "63,000,000", page: 3 },
-  "HUAWEI|LUNA 2000-215KWH": { amountNgn: 76800000, display: "76,800,000", page: 3 },
-  "HUAWEI|INSTALLATION TRAY": { amountNgn: 2150000, display: "2,150,000", page: 3 },
-  "HUAWEI|ATS 63A": { amountNgn: 1040000, display: "1,040,000", page: 3 },
-  "HUAWEI|ATS 100A": { amountNgn: 1525000, display: "1,525,000", page: 3 },
-  "HUAWEI|LQUID LEVEL SENSOR": { amountNgn: 795000, display: "795,000", page: 3 },
-  "HUAWEI|TOUCH SCREEN": { amountNgn: 440000, display: "440,000", page: 3 },
-  "HUAWEI|MERC-1300WP": { amountNgn: 95000, display: "95,000", page: 3 },
-  "HUAWEI|DTSU666-HW": { amountNgn: 160000, display: "160,000", page: 3 },
-  "HUAWEI|HUWSMARTMODUL1000A01": { amountNgn: 800000, display: "800,000", page: 3 },
-  "HUAWEI|SMART LOGGER 3000A01EU": { amountNgn: 619000, display: "619,000", page: 3 },
-  "GROWATT|SIM 6000ES PLUS-H + BATTERY + BASE 6KW + 5.5 KWH": { amountNgn: 1492000, display: "1,492,000", page: 3 },
-  "GROWATT|ABM 5.5-A1-H": { amountNgn: 899000, display: "899,000", page: 3 },
-  "GROWATT|SIM 6000ES PLUS-H + BATTERY + BASE 6KW + 5.12 kwh": { amountNgn: 1453000, display: "1,453,000", page: 3 },
-  "GROWATT|ABM 5-LS-B1-H": { amountNgn: 860000, display: "860,000", page: 3 },
-  "GROWATT|HOPE5L-B1": { amountNgn: 855000, display: "855,000", page: 3 },
-  "GROWATT|HOPE16LM-A1": { amountNgn: 2325000, display: "2,325,000", page: 3 },
-  "GROWATT|SPF 6000ES": { amountNgn: 455000, display: "455,000", page: 3 },
-  "GROWATT|SPH 3600TL-BL-UP": { amountNgn: 450000, display: "450,000", page: 3 },
-  "GROWATT|SPH 5000TL-BL-UP": { amountNgn: 500000, display: "500,000", page: 3 },
-  "GROWATT|WIT-100K-HU": { amountNgn: 11050000, display: "11,050,000.00", page: 3 },
-  "GROWATT|ACE-209H-2H": { amountNgn: 37000000, display: "37,000,000.00", page: 3 },
-  "GROWATT|SEM-XA-RM": { amountNgn: 1020000, display: "1,020,000.00", page: 3 },
-  "GROWATT|CT 600/5A": { amountNgn: 320000, display: "320,000", page: 3 },
-  "TSTY Transformer|400kva 400-400v": { amountNgn: 8500000, display: "8,500,000.00", page: 3 },
-  "TSTY Transformer|600kva 400-400v": { amountNgn: 12050000, display: "12,050,000.00", page: 3 },
-  "ANTAI|ANTAIRAILCG010-01": { amountNgn: 20500, display: "20,500", page: 4 },
-  "ANTAI|ANTAIMIDGN003-05": { amountNgn: 1000, display: "1,000", page: 4 },
-  "ANTAI|ANTAILUGTYN16-01": { amountNgn: 1000, display: "1,000", page: 4 },
-  "ANTAI|ANTAILFEETTYN353-01": { amountNgn: 1300, display: "1,300", page: 4 },
-  "ANTAI|ANTAIJOINERCG037": { amountNgn: 1200, display: "1,200", page: 4 },
-  "ANTAI|ANTAIENDCG018-01": { amountNgn: 1000, display: "1,000", page: 4 },
-  "SUNTREE|SUNACGUARD63A-230V": { amountNgn: 7500, display: "7,500.00", page: 4 },
-  "SUNTREE|SUNACSURGE20KA-275V": { amountNgn: 6000, display: "6,000.00", page: 4 },
-  "SUNTREE|SUNACSURGE20KA-385V": { amountNgn: 12000, display: "12,000.00", page: 4 },
-  "SUNTREE|SUNBRKAC100AMPS-2P": { amountNgn: 7000, display: "7,000.00", page: 4 },
-  "SUNTREE|SUNBRKAC100AMPS-4P": { amountNgn: 14000, display: "14,000.00", page: 4 },
-  "SUNTREE|SUNBRKAC20AMPS-2P": { amountNgn: 2450, display: "2,450.00", page: 4 },
-  "SUNTREE|SUNBRKAC25AMPS-2P": { amountNgn: 2450, display: "2,450.00", page: 4 },
-  "SUNTREE|SUNBRKAC25AMPS-4P": { amountNgn: 4800, display: "4,800.00", page: 4 },
-  "SUNTREE|SUNBRKAC32AMPS-2P": { amountNgn: 2700, display: "2,700.00", page: 4 },
-  "SUNTREE|SUNBRKAC32AMPS-4P": { amountNgn: 4900, display: "4,900.00", page: 4 },
-  "SUNTREE|SUNBRKAC40AMPS-2P": { amountNgn: 2900, display: "2,900.00", page: 4 },
-  "SUNTREE|SUNBRKAC63AMPS-2P": { amountNgn: 3500, display: "3,500.00", page: 4 },
-  "SUNTREE|SUNBRKAC63AMPS-4P": { amountNgn: 6300, display: "6,300.00", page: 4 },
-  "SUNTREE|SUNBRKDC125A-2P": { amountNgn: 22500, display: "22,500.00", page: 4 },
-  "SUNTREE|SUNBRKDC63A-2P": { amountNgn: 13000, display: "13,000.00", page: 4 },
-  "SUNTREE|SUNDB4WAY": { amountNgn: 3300, display: "3,300.00", page: 4 },
-  "SUNTREE|SUNDB6WAY": { amountNgn: 4500, display: "4,500.00", page: 4 },
-  "SUNTREE|SUNDB12WAY": { amountNgn: 7000, display: "7,000.00", page: 4 },
-  "SUNTREE|SUNDB18WAY": { amountNgn: 11000, display: "11,000.00", page: 4 },
-  "SUNTREE|SUNDB18WAYIP65": { amountNgn: 21000, display: "21,000.00", page: 4 },
-  "SUNTREE|SUNDB24WAY": { amountNgn: null, display: null, page: 4 },
-  "SUNTREE|SUNDB24WAYIP65": { amountNgn: 32000, display: "32,000.00", page: 4 },
-  "SUNTREE|SUNDCISO25A-1500V": { amountNgn: 20000, display: "20,000.00", page: 4 },
-  "SUNTREE|SUNDCISO32A-1000V-4P": { amountNgn: 18000, display: "18,000.00", page: 4 },
-  "SUNTREE|SUNACMCCB100A-4P": { amountNgn: 60000, display: "60,000.00", page: 4 },
-  "SUNTREE|SUNACMCCB-SM8E-125M": { amountNgn: 165000, display: "165,000.00", page: 4 },
-  "SUNTREE|SUNACMCCB160A-4P": { amountNgn: 89000, display: "89,000.00", page: 4 },
-  "SUNTREE|SUNMCCB250A-2P": { amountNgn: 80000, display: "80,000.00", page: 4 },
-  "SUNTREE|SUNACMCCB-SM8E-250M": { amountNgn: 195000, display: "195,000.00", page: 4 },
-  "SUNTREE|SUNDCMCCB400A-2P": { amountNgn: 195000, display: "195,000.00", page: 4 },
-  "SUNTREE|SUNDCMCCB400A-1500V": { amountNgn: 440000, display: "440,000.00", page: 4 },
-  "SUNTREE|SUNACMCCB250A-4P": { amountNgn: 100000, display: "100,000.00", page: 4 },
-  "SUNTREE|SUNDCSURGE20KA-1000V": { amountNgn: 20000, display: "20,000.00", page: 4 },
-  "SUNTREE|SUNENCLOSURE20X25X15": { amountNgn: 28300, display: "28,300.00", page: 4 },
-  "SUNTREE|SUNENCLOSURE25X35X15": { amountNgn: 30500, display: "30,500.00", page: 4 },
-  "SUNTREE|SUNENCLOSURE40X60X20": { amountNgn: 57000, display: "57,000.00", page: 4 },
-  "SUNTREE|SUNENCLOSURE50X70X20": { amountNgn: 73000, display: "73,000.00", page: 4 },
-  "SUNTREE|SUNENCLOSURE60X80X25": { amountNgn: 104000, display: "104,000.00", page: 4 },
-  "SUNTREE|SUNFUSEDC20A-1000V": { amountNgn: 3000, display: "3,000.00", page: 5 },
-  "SUNTREE|SUNMC4-45A": { amountNgn: 1200, display: "1,200.00", page: 5 },
-  "SUNTREE|SUNPVCABLE1C6MMRED": { amountNgn: 1500, display: "1,500.00", page: 5 },
-  "SUNTREE|SUNPVCABLE1C6MMBLACK": { amountNgn: 1500, display: "1,500.00", page: 5 }
+  "JINKO|525M-72HL4-TV": { amountNgn: 83000, display: "83,000" },
+  "JINKO|595N-72HL4-BD": { amountNgn: 112000, display: "112,000" },
+  "JINKO|620N-66HL4-BD": { amountNgn: 122500, display: "122,500" },
+  "JINKO|625N-66HL4-BD": { amountNgn: 124000, display: "124,000" },
+  "JINKO|630N-66HL4-BD": { amountNgn: 125500, display: "125,500" },
+  "JINKO|640N-66HL4-BD": { amountNgn: 127000, display: "127,000" },
+  "JINKO|650N-66QL6-BD": { amountNgn: 140000, display: "140,000" },
+  "JINKO|725N-66HL5-BD": { amountNgn: 155000, display: "155,000" },
+  "HISENSE|INV6KS-AA1": { amountNgn: 359000, display: "359,000" },
+  "HISENSE|BATHEL5-E-BB1": { amountNgn: 810000, display: "810,000" },
+  "HISENSE|KETRANS50KVA-11/04": { amountNgn: 2700000, display: "2,700,000" },
+  "HISENSE|KETRANS100KVA-11/04": { amountNgn: 3750000, display: "3,750,000" },
+  "HISENSE|KETRANS200KVA-11/04": { amountNgn: 5600000, display: "5,600,000" },
+  "HISENSE|KETRANS315KVA-11/04": { amountNgn: 7350000, display: "7,350,000" },
+  "HISENSE|KETRANS500KVA-11/04": { amountNgn: 9550000, display: "9,550,000" },
+  "HISENSE|KETRANS800KVA-11/04": { amountNgn: 15250000, display: "15,250,000" },
+  "HISENSE|KETRANS1000KVA-11/04": { amountNgn: 16450000, display: "16,450,000" },
+  "DEYE|6/6KOG03LP1": { amountNgn: 463000, display: "463,000" },
+  "DEYE|8K-SG06LP1-EU": { amountNgn: 1255000, display: "1,255,000.00" },
+  "DEYE|12K-SG05LP3-E": { amountNgn: 1859000, display: "1,859,000.00" },
+  "DEYE|16K-SG01LP1-E": { amountNgn: 2275000, display: "2,275,000.00" },
+  "DEYE|20K-SG05LP3-E": { amountNgn: 2775000, display: "2,775,000.00" },
+  "DEYE|12K-SG06LP1-E": { amountNgn: 1799000, display: "1,799,000.00" },
+  "DEYE|50K-SG01HP3-E": { amountNgn: 4750000, display: "4,750,000.00" },
+  "DEYE|80K-SG02HP3-E": { amountNgn: 6500000, display: "6,500,000.00" },
+  "DEYE|125K-SG02HP3": { amountNgn: 8750000, display: "8,750,000.00" },
+  "DEYE|100K-G": { amountNgn: 3225000, display: "3,225,000.00" },
+  "DEYE|136K-G": { amountNgn: 4599000, display: "4,599,000.00" },
+  "DEYE|BATSE-F16-C": { amountNgn: 2250000, display: "2,250,000.00" },
+  "DEYE|SE-F5-L": { amountNgn: 849000, display: "849,000.00" },
+  "DEYE|BOS-GM-5.1 HV": { amountNgn: 1015000, display: "1,015,000.00" },
+  "DEYE|BOS-G-PRO51": { amountNgn: 1026500, display: "1,026,500.00" },
+  "DEYE|GB-W-12": { amountNgn: 2020000, display: "2,020,000.00" },
+  "DEYE|BOS-B-PACK16": { amountNgn: 2325000, display: "2,325,000.00" },
+  "DEYE|PDU-GB-W-2": { amountNgn: 1402000, display: "1,402,000.00" },
+  "DEYE|ACC-GB-W-PARTS": { amountNgn: 392000, display: "392,000" },
+  "DEYE|PCS 125K-L01HP3": { amountNgn: 5195000, display: "5,195,000.00" },
+  "DEYE|MPPT 200KW": { amountNgn: 2250000, display: "2,250,000.00" },
+  "DEYE|CONTROL BOX HV BOS-B-PDU-2-A": { amountNgn: 1950000, display: "1,950,000.00" },
+  "DEYE|STS 500L": { amountNgn: 7227500, display: "7,227,500.00" },
+  "DEYE|CONTROL BOX HV BOS-G-PDU-PRO": { amountNgn: 1015000, display: "1,015,000.00" },
+  "DEYE|DEYERACK-3U-H": { amountNgn: 565000, display: "565,000.00" },
+  "PYLON-TECH|PYLONBATFB-L-16 ( 16 Kwh )": { amountNgn: 2325000, display: "2,325,000" },
+  "PYLON-TECH|UF5000 (5.12 Kwh)": { amountNgn: 999000, display: "999,000.00" },
+  "PYLON-TECH|KIT-USC": { amountNgn: 40000, display: "40,000.00" },
+  "HUAWEI|POWER CABINET": { amountNgn: 7500000, display: "7,500,000" },
+  "HUAWEI|BATTERY CABINET": { amountNgn: 4375000, display: "4,375,000" },
+  "HUAWEI|ESM-48200A1": { amountNgn: 3850000, display: "3,850,000" },
+  "HUAWEI|ESM-48100A7": { amountNgn: 1999000, display: "1,999,000" },
+  "HUAWEI|I23003": { amountNgn: 327000, display: "327,000" },
+  "HUAWEI|PVDU-8kW": { amountNgn: 448500, display: "448,500" },
+  "HUAWEI|S4875": { amountNgn: 285500, display: "285,500" },
+  "HUAWEI|HUWINV100KTL-M2": { amountNgn: 5350000, display: "5,350,000" },
+  "HUAWEI|HUWINV150K-MG0": { amountNgn: 7350000, display: "7,350,000" },
+  "HUAWEI|LUNA 2000-97KWH": { amountNgn: 56500000, display: "56,500,000" },
+  "HUAWEI|LUNA 2000-129KWH": { amountNgn: 63000000, display: "63,000,000" },
+  "HUAWEI|LUNA 2000-215KWH": { amountNgn: 76800000, display: "76,800,000" },
+  "HUAWEI|INSTALLATION TRAY": { amountNgn: 2150000, display: "2,150,000" },
+  "HUAWEI|ATS 63A": { amountNgn: 1040000, display: "1,040,000" },
+  "HUAWEI|ATS 100A": { amountNgn: 1525000, display: "1,525,000" },
+  "HUAWEI|LQUID LEVEL SENSOR": { amountNgn: 795000, display: "795,000" },
+  "HUAWEI|TOUCH SCREEN": { amountNgn: 440000, display: "440,000" },
+  "HUAWEI|MERC-1300WP": { amountNgn: 95000, display: "95,000" },
+  "HUAWEI|DTSU666-HW": { amountNgn: 160000, display: "160,000" },
+  "HUAWEI|HUWSMARTMODUL1000A01": { amountNgn: 800000, display: "800,000" },
+  "HUAWEI|SMART LOGGER 3000A01EU": { amountNgn: 619000, display: "619,000" },
+  "GROWATT|SIM 6000ES PLUS-H + BATTERY + BASE 6KW + 5.5 KWH": { amountNgn: 1492000, display: "1,492,000" },
+  "GROWATT|ABM 5.5-A1-H": { amountNgn: 899000, display: "899,000" },
+  "GROWATT|SIM 6000ES PLUS-H + BATTERY + BASE 6KW + 5.12 kwh": { amountNgn: 1453000, display: "1,453,000" },
+  "GROWATT|ABM 5-LS-B1-H": { amountNgn: 860000, display: "860,000" },
+  "GROWATT|HOPE5L-B1": { amountNgn: 855000, display: "855,000" },
+  "GROWATT|HOPE16LM-A1": { amountNgn: 2325000, display: "2,325,000" },
+  "GROWATT|SPF 6000ES": { amountNgn: 455000, display: "455,000" },
+  "GROWATT|SPH 3600TL-BL-UP": { amountNgn: 450000, display: "450,000" },
+  "GROWATT|SPH 5000TL-BL-UP": { amountNgn: 500000, display: "500,000" },
+  "GROWATT|WIT-100K-HU": { amountNgn: 11050000, display: "11,050,000.00" },
+  "GROWATT|ACE-209H-2H": { amountNgn: 37000000, display: "37,000,000.00" },
+  "GROWATT|SEM-XA-RM": { amountNgn: 1020000, display: "1,020,000.00" },
+  "GROWATT|CT 600/5A": { amountNgn: 320000, display: "320,000" },
+  "TSTY Transformer|400kva 400-400v": { amountNgn: 8500000, display: "8,500,000.00" },
+  "TSTY Transformer|600kva 400-400v": { amountNgn: 12050000, display: "12,050,000.00" },
+  "ANTAI|ANTAIRAILCG010-01": { amountNgn: 20500, display: "20,500" },
+  "ANTAI|ANTAIMIDGN003-05": { amountNgn: 1000, display: "1,000" },
+  "ANTAI|ANTAILUGTYN16-01": { amountNgn: 1000, display: "1,000" },
+  "ANTAI|ANTAILFEETTYN353-01": { amountNgn: 1300, display: "1,300" },
+  "ANTAI|ANTAIJOINERCG037": { amountNgn: 1200, display: "1,200" },
+  "ANTAI|ANTAIENDCG018-01": { amountNgn: 1000, display: "1,000" },
+  "SUNTREE|SUNACGUARD63A-230V": { amountNgn: 7500, display: "7,500.00" },
+  "SUNTREE|SUNACSURGE20KA-275V": { amountNgn: 6000, display: "6,000.00" },
+  "SUNTREE|SUNACSURGE20KA-385V": { amountNgn: 12000, display: "12,000.00" },
+  "SUNTREE|SUNBRKAC100AMPS-2P": { amountNgn: 7000, display: "7,000.00" },
+  "SUNTREE|SUNBRKAC100AMPS-4P": { amountNgn: 14000, display: "14,000.00" },
+  "SUNTREE|SUNBRKAC20AMPS-2P": { amountNgn: 2450, display: "2,450.00" },
+  "SUNTREE|SUNBRKAC25AMPS-2P": { amountNgn: 2450, display: "2,450.00" },
+  "SUNTREE|SUNBRKAC25AMPS-4P": { amountNgn: 4800, display: "4,800.00" },
+  "SUNTREE|SUNBRKAC32AMPS-2P": { amountNgn: 2700, display: "2,700.00" },
+  "SUNTREE|SUNBRKAC32AMPS-4P": { amountNgn: 4900, display: "4,900.00" },
+  "SUNTREE|SUNBRKAC40AMPS-2P": { amountNgn: 2900, display: "2,900.00" },
+  "SUNTREE|SUNBRKAC63AMPS-2P": { amountNgn: 3500, display: "3,500.00" },
+  "SUNTREE|SUNBRKAC63AMPS-4P": { amountNgn: 6300, display: "6,300.00" },
+  "SUNTREE|SUNBRKDC125A-2P": { amountNgn: 22500, display: "22,500.00" },
+  "SUNTREE|SUNBRKDC63A-2P": { amountNgn: 13000, display: "13,000.00" },
+  "SUNTREE|SUNDB4WAY": { amountNgn: 3300, display: "3,300.00" },
+  "SUNTREE|SUNDB6WAY": { amountNgn: 4500, display: "4,500.00" },
+  "SUNTREE|SUNDB12WAY": { amountNgn: 7000, display: "7,000.00" },
+  "SUNTREE|SUNDB18WAY": { amountNgn: 11000, display: "11,000.00" },
+  "SUNTREE|SUNDB18WAYIP65": { amountNgn: 21000, display: "21,000.00" },
+  "SUNTREE|SUNDB24WAY": { amountNgn: null, display: null },
+  "SUNTREE|SUNDB24WAYIP65": { amountNgn: 32000, display: "32,000.00" },
+  "SUNTREE|SUNDCISO25A-1500V": { amountNgn: 20000, display: "20,000.00" },
+  "SUNTREE|SUNDCISO32A-1000V-4P": { amountNgn: 18000, display: "18,000.00" },
+  "SUNTREE|SUNACMCCB100A-4P": { amountNgn: 60000, display: "60,000.00" },
+  "SUNTREE|SUNACMCCB-SM8E-125M": { amountNgn: 165000, display: "165,000.00" },
+  "SUNTREE|SUNACMCCB160A-4P": { amountNgn: 89000, display: "89,000.00" },
+  "SUNTREE|SUNMCCB250A-2P": { amountNgn: 80000, display: "80,000.00" },
+  "SUNTREE|SUNACMCCB-SM8E-250M": { amountNgn: 195000, display: "195,000.00" },
+  "SUNTREE|SUNDCMCCB400A-2P": { amountNgn: 195000, display: "195,000.00" },
+  "SUNTREE|SUNDCMCCB400A-1500V": { amountNgn: 440000, display: "440,000.00" },
+  "SUNTREE|SUNACMCCB250A-4P": { amountNgn: 100000, display: "100,000.00" },
+  "SUNTREE|SUNDCSURGE20KA-1000V": { amountNgn: 20000, display: "20,000.00" },
+  "SUNTREE|SUNENCLOSURE20X25X15": { amountNgn: 28300, display: "28,300.00" },
+  "SUNTREE|SUNENCLOSURE25X35X15": { amountNgn: 30500, display: "30,500.00" },
+  "SUNTREE|SUNENCLOSURE40X60X20": { amountNgn: 57000, display: "57,000.00" },
+  "SUNTREE|SUNENCLOSURE50X70X20": { amountNgn: 73000, display: "73,000.00" },
+  "SUNTREE|SUNENCLOSURE60X80X25": { amountNgn: 104000, display: "104,000.00" },
+  "SUNTREE|SUNFUSEDC20A-1000V": { amountNgn: 3000, display: "3,000.00" },
+  "SUNTREE|SUNMC4-45A": { amountNgn: 1200, display: "1,200.00" },
+  "SUNTREE|SUNPVCABLE1C6MMRED": { amountNgn: 1500, display: "1,500.00" },
+  "SUNTREE|SUNPVCABLE1C6MMBLACK": { amountNgn: 1500, display: "1,500.00" }
 });
 const priceAdjustmentId = "energy-price-adjustments-2026-11-phase-1";
 const additionalPriceAdjustmentId = "energy-price-additions-2026-11-phase-2";
@@ -338,7 +335,6 @@ function makeProduct(brand, details) {
     : adjustmentAmountNgn > 0
       ? formatAdjustedPrice(priceNgn, confirmedPrice.display)
       : confirmedPrice.display;
-  const sourceNote = details.sourceNote || (brand === "HUAWEI" ? sourceDataSheetNote : null);
   return Object.freeze({
     id: slug,
     brand,
@@ -353,15 +349,7 @@ function makeProduct(brand, details) {
     priceNgn,
     priceDisplay,
     ...(priceAdjustment ? { priceAdjustment } : {}),
-    priceSource: Object.freeze({
-      document: priceSourceDocument,
-      page: confirmedPrice?.page ?? details.page
-    }),
     ...(details.warranty ? { warranty: details.warranty } : {}),
-    source: Object.freeze({ document: sourceDocument, page: details.page }),
-    ...(sourceNote ? { sourceNote } : {}),
-    ...(details.sourceUrl ? { sourceUrl: details.sourceUrl } : {}),
-    ...(details.reviewNote ? { reviewNote: details.reviewNote } : {}),
     ...(details.video ? { video: details.video } : {}),
     image: Object.freeze({
       url: image.url,
@@ -427,7 +415,6 @@ const products = [
         url: "../assets/catalogue/energy/products/jinko/images (3).jpeg",
         alt: "Jinko solar panels product photograph; wattage-specific model is not identified."
       },
-    page: 1
   })),
 
   makeProduct("HUAWEI", {
@@ -440,7 +427,6 @@ const products = [
       alt: "Huawei power cabinet and battery cabinet shown together."
     },
     warranty: "5 Years",
-    page: 2
   }),
   makeProduct("HUAWEI", {
     name: "Battery Cabinet",
@@ -452,7 +438,6 @@ const products = [
       alt: "Huawei power cabinet and battery cabinet shown together."
     },
     warranty: "5 Years",
-    page: 2
   }),
   makeProduct("HUAWEI", {
     name: "Lithium Battery (10 kWh)",
@@ -465,7 +450,6 @@ const products = [
       alt: "Huawei lithium battery cabinet."
     },
     warranty: "5 Years",
-    page: 2
   }),
   makeProduct("HUAWEI", {
     name: "Lithium Battery (5 kWh)",
@@ -478,7 +462,6 @@ const products = [
       alt: "Huawei lithium battery cabinet."
     },
     warranty: "5 Years",
-    page: 2
   }),
   makeProduct("HUAWEI", {
     name: "High Efficiency Inverter Module",
@@ -491,7 +474,6 @@ const products = [
       alt: "Huawei high-efficiency inverter module."
     },
     warranty: "5 Years",
-    page: 2
   }),
   makeProduct("HUAWEI", {
     name: "PV Distribution Unit",
@@ -504,7 +486,6 @@ const products = [
       alt: "Huawei PVDU-8kW PV distribution unit."
     },
     warranty: "5 Years",
-    page: 3
   }),
   makeProduct("HUAWEI", {
     name: "High Efficiency Solar Module",
@@ -517,7 +498,6 @@ const products = [
       alt: "Huawei high-efficiency solar module."
     },
     warranty: "5 Years",
-    page: 3
   }),
   makeProduct("HUAWEI", {
     name: "Smart PV Controller",
@@ -530,8 +510,6 @@ const products = [
       alt: "Huawei HUWINV100KTL-M2 smart PV controller."
     },
     warranty: "5 Years",
-    reviewNote: "The source associates model HUWINV100KTL-M2 with a 150 KW description; retain both as printed and verify before advising.",
-    page: 3
   }),
   makeProduct("HUAWEI", {
     name: "Smart PV Controller",
@@ -544,8 +522,6 @@ const products = [
       alt: "Huawei HUWINV150K-MG0 smart PV controller; the requested HUWINV100KTL-M2 photograph is used."
     },
     warranty: "5 Years",
-    reviewNote: "The source associates model HUWINV150K-MG0 with a 100 KW description; retain both as printed and verify before advising.",
-    page: 3
   }),
   ...[
     ["LUNA 2000-97KWH", "97KWH", "BESS 97KWH (Door Mounted distributed air conditioners, battery packs, battery rack, smart rack controller, PCS, Abort button)"],
@@ -557,13 +533,11 @@ const products = [
     category: "energy-storage-systems",
     description,
     specifications: [capacity],
-    sourceUrl: "https://solar.huawei.com/en/professionals/all-products/LUNA2000-97-129-161-200kwh/specs",
     image: {
       url: "/energy/LUNA%202000-97KWH.png",
       alt: `Huawei ${model} battery energy storage system; the requested LUNA 2000-97KWH photograph is used.`
     },
     warranty: "5 Years",
-    page: 3
   })),
   makeProduct("HUAWEI", {
     name: "LUNA BESS Battery Installation Tray",
@@ -574,7 +548,6 @@ const products = [
       url: "/energy/Huawei%20installation%20tray.webp",
       alt: "Installation tray for a Huawei LUNA battery energy storage system."
     },
-    page: 3
   }),
   makeProduct("HUAWEI", {
     name: "Auto Transform Switch",
@@ -587,7 +560,6 @@ const products = [
       alt: "63A automatic transfer switch."
     },
     warranty: "5 Years",
-    page: 3
   }),
   makeProduct("HUAWEI", {
     name: "Auto Transform Switch",
@@ -600,7 +572,6 @@ const products = [
       alt: "Huawei 100A automatic transfer switch."
     },
     warranty: "5 Years",
-    page: 3
   }),
   makeProduct("HUAWEI", {
     name: "Liquid Level Sensor",
@@ -613,7 +584,6 @@ const products = [
       alt: "Liquid-level sensor probe with cable."
     },
     warranty: "5 Years",
-    page: 3
   }),
   makeProduct("HUAWEI", {
     name: "Touch Screen",
@@ -621,7 +591,6 @@ const products = [
     category: "energy-storage-components",
     description: "Power-S Touch Screen Installed on the Indoor Cabinet",
     warranty: "5 Years",
-    page: 3
   }),
   makeProduct("HUAWEI", {
     name: "Smart Optimizer",
@@ -634,7 +603,6 @@ const products = [
       alt: "Huawei MERC-1300WP smart power optimizer."
     },
     warranty: "5 Years",
-    page: 3
   }),
   makeProduct("HUAWEI", {
     name: "Smart Power Meter",
@@ -645,7 +613,6 @@ const products = [
       url: "/energy/DTSU666-HW.avif",
       alt: "Huawei DTSU666-HW smart power meter."
     },
-    page: 3
   }),
   makeProduct("HUAWEI", {
     name: "Smart Module / Data Logger",
@@ -657,7 +624,6 @@ const products = [
       url: "/energy/HUWSMARTMODUL1000A01.webp",
       alt: "Huawei SmartModule for PV system monitoring."
     },
-    page: 3
   }),
   makeProduct("HUAWEI", {
     name: "Smart Logger",
@@ -670,7 +636,6 @@ const products = [
       alt: "Huawei SmartLogger 3000A01EU."
     },
     warranty: "5 Years",
-    page: 3
   }),
 
   makeProduct("HISENSE", {
@@ -684,7 +649,6 @@ const products = [
       alt: "Hisense inverter product photo; exact model is not visible."
     },
     warranty: "2 Years",
-    page: 1
   }),
   makeProduct("HISENSE", {
     name: "Low Voltage Battery",
@@ -698,7 +662,6 @@ const products = [
       note: "The image shows a 51.2V 100Ah battery and parallel cable kit; the exact model is not visible."
     },
     warranty: "5 Years",
-    page: 1
   }),
 
   ...[
@@ -720,7 +683,6 @@ const products = [
       alt: `Hisense transformer product photo for the ${rating} model.`
     },
     warranty: "2 Years",
-    page: 1
   })),
 
   ...[
@@ -737,9 +699,6 @@ const products = [
       alt: `Growatt SIM 6000 integrated system for ${specifications[1]} battery capacity.`
     },
     warranty: "INVERTER 2 YEARS & BATTEY 5 YEARS",
-    sourceNote: sourceDataSheetNote,
-    reviewNote: "The source warranty cell spans the integrated system and battery rows.",
-    page: 3
   })),
   makeProduct("GROWATT", {
     name: "Lithium-ion Battery",
@@ -751,8 +710,6 @@ const products = [
       url: "/energy/ABM%205.5-A1-H.webp",
       alt: "Growatt ABM 5.5-A1-H lithium-ion battery."
     },
-    sourceNote: sourceDataSheetNote,
-    page: 3
   }),
   makeProduct("GROWATT", {
     name: "Lithium-ion Battery",
@@ -764,8 +721,6 @@ const products = [
       url: "/energy/ABM%205.5-A1-H.webp",
       alt: "Growatt ABM 5.5-A1-H battery image used for the ABM 5-LS-B1-H product listing."
     },
-    sourceNote: sourceDataSheetNote,
-    page: 3
   }),
   makeProduct("GROWATT", {
     name: "Lithium-ion Battery",
@@ -778,8 +733,6 @@ const products = [
       alt: "Growatt HOPE5L-B1 lithium-ion battery."
     },
     warranty: "5 Years",
-    sourceNote: sourceDataSheetNote,
-    page: 3
   }),
   makeProduct("GROWATT", {
     name: "Lithium-ion Battery",
@@ -792,8 +745,6 @@ const products = [
       alt: "Growatt HOPE16LM-A1 lithium-ion battery."
     },
     warranty: "5 Years",
-    sourceNote: sourceDataSheetNote,
-    page: 3
   }),
   ...[
     ["SPF 6000ES", "HYBRID, 6KW, 48V, 2 MPPT, Work with or without Battery, Configurable grid or solar input priority, WIFI Dongle Included for Monitoring, Parallel Up to 6 Units, Two AC input terminals with integrated transfer switch, Maximum PV Array Powe 8000W, Maximum PV input voltage up to 500VDC,", ["6KW", "48V", "2 MPPT", "Parallel Up to 6 Units", "Maximum PV Array Powe 8000W", "Maximum PV input voltage up to 500VDC"], "2 Years"],
@@ -817,8 +768,6 @@ const products = [
       alt: `Growatt ${model} inverter.`
     },
     warranty,
-    sourceNote: sourceDataSheetNote,
-    page: 3
   })),
   makeProduct("GROWATT", {
     name: "Battery Energy Storage System",
@@ -831,8 +780,6 @@ const products = [
       alt: "Growatt ACE-209H-2H battery energy storage system."
     },
     warranty: "5 Years",
-    sourceNote: sourceDataSheetNote,
-    page: 3
   }),
   makeProduct("GROWATT", {
     name: "Smart Energy Meter",
@@ -845,8 +792,6 @@ const products = [
       alt: "Growatt SEM-XA-RM smart energy meter."
     },
     warranty: "1 Year",
-    sourceNote: sourceDataSheetNote,
-    page: 3
   }),
   makeProduct("GROWATT", {
     name: "Current Transformer",
@@ -859,8 +804,6 @@ const products = [
       alt: "Growatt 600A/5A current transformer."
     },
     warranty: "1 Year",
-    sourceNote: sourceDataSheetNote,
-    page: 3
   }),
 
   ...[
@@ -886,8 +829,6 @@ const products = [
       alt: "Deye inverter product photograph; the exact model is not visible."
     },
     warranty: "5 Years",
-    sourceNote: sourceDataSheetNote,
-    page: ["6/6KOG03LP1", "8K-SG06LP1-EU", "12K-SG05LP3-E", "16K-SG01LP1-E", "20K-SG05LP3-E", "12K-SG06LP1-E"].includes(model) ? 1 : 2
   })),
   ...[
     ["BATSE-F16-C", "Rechargeable Lithium Ion Low Voltage Battery, 16 KWH , 48 V , parallel up to 32 units in parallel", ["16 KWH", "48 V", "Parallel up to 32 units"], "10 Years"],
@@ -907,8 +848,6 @@ const products = [
       alt: "Deye battery product photograph; the exact model is not visible."
     },
     warranty,
-    sourceNote: sourceDataSheetNote,
-    page: 2
   })),
   ...[
     ["PDU-GB-W-2", "Battery Control Box", "GB-W HV CONTROL BOX+BASE", ["GB-W"]],
@@ -933,8 +872,6 @@ const products = [
       }
     } : {}),
     warranty: "5 Years",
-    sourceNote: sourceDataSheetNote,
-    page: 2
   })),
 
   makeProduct("PYLON-TECH", {
@@ -948,8 +885,6 @@ const products = [
       alt: "Pylontech 16 kWh lithium battery."
     },
     warranty: "5 Years",
-    sourceNote: sourceDataSheetNote,
-    page: 2
   }),
   makeProduct("PYLON-TECH", {
     name: "Lithium Battery",
@@ -962,16 +897,12 @@ const products = [
       alt: "Pylontech UF5000 5.12 kWh lithium battery."
     },
     warranty: "5 Years",
-    sourceNote: sourceDataSheetNote,
-    page: 2
   }),
   makeProduct("PYLON-TECH", {
     name: "External Cable Kit",
     model: "KIT-USC",
     category: "energy-storage-components",
     description: "External Cable Kit-USC (Connect Battery to Inverter)",
-    sourceNote: sourceDataSheetNote,
-    page: 2
   }),
 
   makeProduct("TSTY Transformer", {
@@ -985,8 +916,6 @@ const products = [
       alt: "TSTY 400kVA 400-400V oil-immersed isolation transformer."
     },
     warranty: "2 Years",
-    sourceNote: sourceDataSheetNote,
-    page: 3
   }),
   makeProduct("TSTY Transformer", {
     name: "Oil-immersed isolation transformer",
@@ -999,9 +928,6 @@ const products = [
       alt: "TSTY 400kVA 400-400V transformer image used for the 600kVA catalogue listing."
     },
     warranty: "2 Years",
-    sourceNote: sourceDataSheetNote,
-    reviewNote: "The source model label says 600kva while its description says 650 Kva; both values are retained as printed.",
-    page: 3
   }),
 
   makeProduct("ANTAI", {
@@ -1010,7 +936,6 @@ const products = [
     category: "mounting-accessories",
     description: "Kit for 8 units of solar panels of frame size 30/35mm. Set includes 4 units rail 4.7 meters each, 2 rail joiner, 14 mid clamps, 8 end clamps, 16 L-foot, 2 grounding lugs.",
     specifications: ["For 8 solar panels", "Frame size 30/35mm", "4 rails, 4.7 meters each", "2 rail joiners", "14 mid clamps", "8 end clamps", "16 L-foot", "2 grounding lugs"],
-    page: 4
   }),
   ...[
     ["ANTAIRAILCG010-01", "Rail", "ANTAI RAIL 4.7M", ["4.7M"]],
@@ -1025,7 +950,6 @@ const products = [
     category: "mounting-accessories",
     description,
     specifications,
-    page: 4
   })),
 
   ...[
@@ -1078,7 +1002,6 @@ const products = [
     description,
     specifications,
     ...(warranty ? { warranty } : {}),
-    page: category === "fuses" || category === "solar-connectors" || category === "solar-cables" ? 5 : 4
   }))
 ];
 

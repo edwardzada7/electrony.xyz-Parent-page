@@ -2517,8 +2517,7 @@
 
 .energy-product-dialog__category,
 .energy-product-dialog__description,
-.energy-product-dialog__warranty,
-.energy-product-dialog__source {
+.energy-product-dialog__warranty {
   color: var(--energy-muted);
   line-height: 1.65;
 }
@@ -2554,10 +2553,6 @@
   padding-top: 0.7rem;
   border-top: 1px solid var(--energy-line);
   font-weight: 600;
-}
-
-.energy-product-dialog__source {
-  font-size: 0.78rem;
 }
 
 .energy-product-dialog__video,
@@ -2912,7 +2907,7 @@
 .energy-package-card__capacity,
 .energy-package-card__application,
 .energy-package-card__review,
-.energy-package-card__source,
+.energy-package-card__note,
 .energy-package-card__suitability {
   margin: 0;
   color: var(--energy-muted);
@@ -3312,7 +3307,7 @@
   color: #4e3b1e;
 }
 
-.energy-package-card__source {
+.energy-package-card__note {
   margin-top: auto;
   font-size: 0.75rem;
 }
@@ -3357,13 +3352,6 @@
 .energy-package-recommendation-empty[hidden],
 .energy-package-recommendations > div[hidden] {
   display: none;
-}
-
-.energy-package-source-note {
-  margin-top: 1.25rem;
-  color: var(--energy-muted);
-  font-size: 0.8rem;
-  line-height: 1.65;
 }
 
 .energy-catalogue-price-note {

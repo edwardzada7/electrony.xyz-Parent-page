@@ -5,6 +5,7 @@ const vm = require("node:vm");
 const { test } = require("node:test");
 
 const projectRoot = path.resolve(__dirname, "..");
+const internalProvenance = JSON.parse(fs.readFileSync(path.join(projectRoot, "internal/catalogue-provenance.json"), "utf8"));
 const adjustmentId = "energy-price-adjustments-2026-11-phase-1";
 const additionalAdjustmentId = "energy-price-additions-2026-11-phase-2";
 const growattAdjustmentId = "energy-price-additions-2026-11-phase-3";
@@ -300,13 +301,15 @@ test("Catalogue image assignments use the requested local assets only", () => {
   assertImage(byModel.get("HISENSE|INV6KS-AA1"), "Hisense inverter.webp");
   assertImage(byModel.get("HISENSE|BATHEL5-E-BB1"), "Hisense battery.webp");
   assert.ok(products.filter((product) => product.brand === "HUAWEI")
-    .every((product) => product.sourceNote === "Please ask your sales rep for date sheet"));
+    .every((product) => internalProvenance.energy.products[product.id].sourceNote === "Please ask your sales rep for date sheet"));
   [
     "LUNA 2000-97KWH",
     "LUNA 2000-129KWH",
     "LUNA 2000-215KWH"
   ].forEach((model) => {
-    assert.equal(byModel.get(`HUAWEI|${model}`).sourceUrl, "https://solar.huawei.com/en/professionals/all-products/LUNA2000-97-129-161-200kwh/specs");
+    const product = byModel.get(`HUAWEI|${model}`);
+    assert.equal(internalProvenance.energy.products[product.id].sourceUrl, "https://solar.huawei.com/en/professionals/all-products/LUNA2000-97-129-161-200kwh/specs");
+    assert.equal(product.sourceUrl, undefined);
   });
 });
 
